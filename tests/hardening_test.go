@@ -7,15 +7,15 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tinywasm/json"
-	"github.com/tinywasm/orm"
-	"github.com/tinywasm/router"
-	"github.com/tinywasm/router/mock"
-	"github.com/tinywasm/sqlite"
-	"github.com/tinywasm/auth"
-	"github.com/tinywasm/auth/authority"
-	emailpassword "github.com/tinywasm/auth/email_password"
-	"github.com/tinywasm/auth/session/jwt"
+	"webtyp.com/json"
+	"webtyp.com/orm"
+	"webtyp.com/router"
+	"webtyp.com/router/mock"
+	"webtyp.com/sqlite"
+	"webtyp.com/auth"
+	"webtyp.com/auth/authority"
+	emailpassword "webtyp.com/auth/email_password"
+	"webtyp.com/auth/session/jwt"
 )
 
 func TestCookieSecurity(t *testing.T) {

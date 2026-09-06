@@ -5,11 +5,11 @@ package tests
 import (
 	"testing"
 
-	"github.com/tinywasm/router/mock"
-	"github.com/tinywasm/auth"
-	"github.com/tinywasm/auth/authority"
-	"github.com/tinywasm/auth/oauth2"
-	"github.com/tinywasm/auth/oauth2/provider/google"
+	"webtyp.com/router/mock"
+	"webtyp.com/auth"
+	"webtyp.com/auth/authority"
+	"webtyp.com/auth/oauth2"
+	"webtyp.com/auth/oauth2/provider/google"
 )
 
 func TestOAuthRoutesMatchExportedPaths(t *testing.T) {

@@ -1,6 +1,6 @@
 package tests
 
-import "github.com/tinywasm/model"
+import "webtyp.com/model"
 
 // view (v0.2.0+) wraps every write in an UNEXPORTED args struct — save ships
 // saveArgs{records:[...]}, delete ships deleteArgs{ids:[...]}, both plural

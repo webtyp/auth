@@ -5,9 +5,9 @@ package tests
 import (
 	"testing"
 
-	"github.com/tinywasm/model"
-	"github.com/tinywasm/auth"
-	"github.com/tinywasm/view"
+	"webtyp.com/model"
+	"webtyp.com/auth"
+	"webtyp.com/view"
 )
 
 type fakeCaller struct {

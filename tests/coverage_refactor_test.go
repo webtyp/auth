@@ -6,17 +6,17 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tinywasm/json"
-	"github.com/tinywasm/model"
-	"github.com/tinywasm/router"
-	"github.com/tinywasm/router/mock"
-	"github.com/tinywasm/auth"
-	"github.com/tinywasm/auth/authority"
-	emailpassword "github.com/tinywasm/auth/email_password"
-	"github.com/tinywasm/auth/oauth2"
-	"github.com/tinywasm/auth/session/cookie"
-	jwt "github.com/tinywasm/auth/session/jwt"
-	trustedip "github.com/tinywasm/auth/trusted_ip"
+	"webtyp.com/json"
+	"webtyp.com/model"
+	"webtyp.com/router"
+	"webtyp.com/router/mock"
+	"webtyp.com/auth"
+	"webtyp.com/auth/authority"
+	emailpassword "webtyp.com/auth/email_password"
+	"webtyp.com/auth/oauth2"
+	"webtyp.com/auth/session/cookie"
+	jwt "webtyp.com/auth/session/jwt"
+	trustedip "webtyp.com/auth/trusted_ip"
 )
 
 func TestCoverage_SessionCookie(t *testing.T) {

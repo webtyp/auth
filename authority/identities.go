@@ -1,11 +1,11 @@
 package authority
 
 import (
-	"github.com/tinywasm/time"
+	"webtyp.com/time"
 
-	"github.com/tinywasm/model"
-	"github.com/tinywasm/orm"
-	"github.com/tinywasm/auth"
+	"webtyp.com/model"
+	"webtyp.com/orm"
+	"webtyp.com/auth"
 )
 
 func createIdentity(db *orm.DB, ids model.IDGenerator, userID, provider, providerID, email string) error {

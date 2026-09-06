@@ -6,14 +6,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tinywasm/auth"
-	"github.com/tinywasm/auth/authority"
-	"github.com/tinywasm/auth/oauth2"
-	"github.com/tinywasm/ddl"
-	"github.com/tinywasm/orm"
-	"github.com/tinywasm/router"
-	"github.com/tinywasm/router/mock"
-	"github.com/tinywasm/sqlite"
+	"webtyp.com/auth"
+	"webtyp.com/auth/authority"
+	"webtyp.com/auth/oauth2"
+	"webtyp.com/ddl"
+	"webtyp.com/orm"
+	"webtyp.com/router"
+	"webtyp.com/router/mock"
+	"webtyp.com/sqlite"
 )
 
 func setupOAuthTestModule(t *testing.T) (*authority.Module, *mockPublisher, *mock.Router) {

@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/tinywasm/events"
-	"github.com/tinywasm/model"
-	"github.com/tinywasm/router"
-	"github.com/tinywasm/auth"
+	"webtyp.com/events"
+	"webtyp.com/model"
+	"webtyp.com/router"
+	"webtyp.com/auth"
 )
 
 type testIDGenerator struct {

@@ -5,11 +5,11 @@ package tests
 import (
 	"testing"
 
-	"github.com/tinywasm/auth"
-	"github.com/tinywasm/auth/authority"
-	jwtstrategy "github.com/tinywasm/auth/session/jwt"
-	"github.com/tinywasm/router"
-	"github.com/tinywasm/router/mock"
+	"webtyp.com/auth"
+	"webtyp.com/auth/authority"
+	jwtstrategy "webtyp.com/auth/session/jwt"
+	"webtyp.com/router"
+	"webtyp.com/router/mock"
 )
 
 // TestWithDomain_Issue proves WithDomain(".velty.cl") produces a

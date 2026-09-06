@@ -5,11 +5,11 @@ package tests
 import (
 	"testing"
 
-	"github.com/tinywasm/json"
-	"github.com/tinywasm/router/mock"
-	"github.com/tinywasm/auth"
-	"github.com/tinywasm/auth/authority"
-	emailpassword "github.com/tinywasm/auth/email_password"
+	"webtyp.com/json"
+	"webtyp.com/router/mock"
+	"webtyp.com/auth"
+	"webtyp.com/auth/authority"
+	emailpassword "webtyp.com/auth/email_password"
 )
 
 func TestOWASP(t *testing.T) {

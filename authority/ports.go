@@ -1,15 +1,15 @@
 package authority
 
 import (
-	"github.com/tinywasm/base64"
-	"github.com/tinywasm/crypto/hmac"
-	"github.com/tinywasm/crypto/rand"
-	"github.com/tinywasm/fmt"
-	"github.com/tinywasm/orm"
-	"github.com/tinywasm/router"
-	"github.com/tinywasm/time"
-	"github.com/tinywasm/auth"
-	"github.com/tinywasm/user"
+	"webtyp.com/base64"
+	"webtyp.com/crypto/hmac"
+	"webtyp.com/crypto/rand"
+	"webtyp.com/fmt"
+	"webtyp.com/orm"
+	"webtyp.com/router"
+	"webtyp.com/time"
+	"webtyp.com/auth"
+	"webtyp.com/user"
 )
 
 // oauthStateBytes: 32 bytes. El state es el token anti-CSRF del intercambio

@@ -4,7 +4,7 @@ import "testing"
 
 // TestLegacyHashStillVerifies comprueba que un hash de bcrypt guardado por la
 // implementación anterior —golang.org/x/crypto/bcrypt— sigue verificando
-// correctamente contra tinywasm/crypto/bcrypt. Es el único criterio no
+// correctamente contra webtyp/crypto/bcrypt. Es el único criterio no
 // negociable del cambio de bcrypt: si esto falla, todas las contraseñas
 // guardadas en producción quedan inservibles y nadie lo nota hasta que un
 // cliente no puede entrar a su cuenta.

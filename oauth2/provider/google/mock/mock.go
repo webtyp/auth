@@ -1,8 +1,8 @@
 package mock
 
 import (
-	"github.com/tinywasm/auth"
-	"github.com/tinywasm/auth/oauth2/provider/google"
+	"webtyp.com/auth"
+	"webtyp.com/auth/oauth2/provider/google"
 )
 
 // MockProvider simula Google OAuth sin red, manteniendo el mismo flujo y rutas

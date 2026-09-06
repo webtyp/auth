@@ -1,8 +1,8 @@
 package cookie
 
 import (
-	"github.com/tinywasm/router"
-	"github.com/tinywasm/auth"
+	"webtyp.com/router"
+	"webtyp.com/auth"
 )
 
 // Strategy is the default SessionStrategy: an opaque session ID in an HttpOnly

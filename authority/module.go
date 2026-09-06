@@ -1,13 +1,13 @@
 package authority
 
 import (
-	"github.com/tinywasm/events"
-	"github.com/tinywasm/fmt"
-	"github.com/tinywasm/model"
-	"github.com/tinywasm/orm"
-	"github.com/tinywasm/time"
-	"github.com/tinywasm/auth"
-	"github.com/tinywasm/auth/session/cookie"
+	"webtyp.com/events"
+	"webtyp.com/fmt"
+	"webtyp.com/model"
+	"webtyp.com/orm"
+	"webtyp.com/time"
+	"webtyp.com/auth"
+	"webtyp.com/auth/session/cookie"
 )
 
 // Module is the user/auth/rbac handle. All backend operations are methods on

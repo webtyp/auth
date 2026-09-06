@@ -1,28 +1,28 @@
-module github.com/tinywasm/auth
+module webtyp.com/auth
 
 go 1.25.2
 
 require (
-	github.com/tinywasm/base64 v0.0.5
-	github.com/tinywasm/crypto v0.0.26
-	github.com/tinywasm/ddl v0.0.12
-	github.com/tinywasm/events v0.0.2
-	github.com/tinywasm/fetch v0.1.27
-	github.com/tinywasm/fmt v0.25.7
-	github.com/tinywasm/form v0.4.0
-	github.com/tinywasm/input v0.0.5
-	github.com/tinywasm/json v0.5.23
-	github.com/tinywasm/jwt v0.1.18
-	github.com/tinywasm/model v0.1.7
-	github.com/tinywasm/orm v0.12.0
-	github.com/tinywasm/router v0.1.30
-	github.com/tinywasm/server v0.2.43
-	github.com/tinywasm/sqlite v0.3.2
-	github.com/tinywasm/time v0.5.4
-	github.com/tinywasm/unixid v0.2.26
-	github.com/tinywasm/user v0.3.11
-	github.com/tinywasm/view v0.5.1
 	modernc.org/sqlite v1.57.0
+	webtyp.com/base64 v0.0.5
+	webtyp.com/crypto v0.0.26
+	webtyp.com/ddl v0.0.12
+	webtyp.com/events v0.0.2
+	webtyp.com/fetch v0.1.27
+	webtyp.com/fmt v0.25.7
+	webtyp.com/form v0.4.0
+	webtyp.com/input v0.0.5
+	webtyp.com/json v0.5.23
+	webtyp.com/jwt v0.1.18
+	webtyp.com/model v0.1.7
+	webtyp.com/orm v0.12.0
+	webtyp.com/router v0.1.30
+	webtyp.com/server v0.2.43
+	webtyp.com/sqlite v0.3.2
+	webtyp.com/time v0.5.4
+	webtyp.com/unixid v0.2.26
+	webtyp.com/user v0.3.11
+	webtyp.com/view v0.5.1
 )
 
 require (
@@ -32,10 +32,6 @@ require (
 	github.com/ncruces/go-strftime v1.0.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/smallstep/truststore v0.13.0 // indirect
-	github.com/tinywasm/dom v0.13.9 // indirect
-	github.com/tinywasm/sqlt v0.0.8 // indirect
-	github.com/tinywasm/storage v0.0.6 // indirect
-	github.com/tinywasm/widget v0.6.23 // indirect
 	golang.org/x/crypto v0.55.0 // indirect
 	golang.org/x/net v0.57.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
@@ -44,4 +40,8 @@ require (
 	modernc.org/libc v1.74.4 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
+	webtyp.com/dom v0.13.9 // indirect
+	webtyp.com/sqlt v0.0.8 // indirect
+	webtyp.com/storage v0.0.6 // indirect
+	webtyp.com/widget v0.6.23 // indirect
 )

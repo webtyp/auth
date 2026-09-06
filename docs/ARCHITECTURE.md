@@ -1,19 +1,19 @@
 # Architecture
 
-`tinywasm/auth` owns authentication mechanisms: subjects and their external
+`webtyp/auth` owns authentication mechanisms: subjects and their external
 identities, login flows, session lifecycle, OAuth state, and concrete providers.
-It depends on `tinywasm/user` only for the stable `Subject` value contract.
+It depends on `webtyp/user` only for the stable `Subject` value contract.
 
 It never decides roles or permissions. Applications compose its authentication
-middleware with `tinywasm/rbac` explicitly. `auth` and `rbac` are siblings;
+middleware with `webtyp/rbac` explicitly. `auth` and `rbac` are siblings;
 neither imports the other.
 
 ## Dependency Direction
 
 ```mermaid
 flowchart TD
-    U[github.com/tinywasm/user<br/>SubjectID + Subject] --> A[github.com/tinywasm/auth]
-    U --> R[github.com/tinywasm/rbac<br/>never imports auth]
+    U[webtyp.com/user<br/>SubjectID + Subject] --> A[webtyp.com/auth]
+    U --> R[webtyp.com/rbac<br/>never imports auth]
     A --> C[application composition root]
     R --> C
     A -.->|never| R
@@ -70,7 +70,7 @@ and redirects to `AfterLogin`. It never assigns roles.
 
 ## Credenciales portadoras
 
-Cualquier valor en el sistema que actúe como credencial portadora ( bearer credential ) debe ser completamente impredecible y generarse mediante el CSPRNG del ecosistema (`github.com/tinywasm/crypto/rand`). No se utilizan generadores de identificadores correlativos o basados en tiempo (`ids`) para este tipo de valores.
+Cualquier valor en el sistema que actúe como credencial portadora ( bearer credential ) debe ser completamente impredecible y generarse mediante el CSPRNG del ecosistema (`webtyp.com/crypto/rand`). No se utilizan generadores de identificadores correlativos o basados en tiempo (`ids`) para este tipo de valores.
 
 | Campo / Valor | Origen de Aleatoriedad | Razón |
 |---|---|---|

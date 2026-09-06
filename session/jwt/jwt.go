@@ -1,11 +1,11 @@
 package jwt
 
 import (
-	"github.com/tinywasm/fmt"
-	tinyjwt "github.com/tinywasm/jwt"
-	"github.com/tinywasm/model"
-	"github.com/tinywasm/router"
-	"github.com/tinywasm/auth"
+	"webtyp.com/fmt"
+	tinyjwt "webtyp.com/jwt"
+	"webtyp.com/model"
+	"webtyp.com/router"
+	"webtyp.com/auth"
 )
 
 // errInvalidToken stays deliberately vague: telling a caller WHY a token failed

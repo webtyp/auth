@@ -1,8 +1,8 @@
 package auth
 
 import (
-	"github.com/tinywasm/input"
-	"github.com/tinywasm/model"
+	"webtyp.com/input"
+	"webtyp.com/model"
 )
 
 var UserModel = model.Definition{

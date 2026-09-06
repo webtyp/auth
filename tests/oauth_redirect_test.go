@@ -5,11 +5,11 @@ package tests
 import (
 	"testing"
 
-	"github.com/tinywasm/auth"
-	"github.com/tinywasm/auth/authority"
-	"github.com/tinywasm/auth/oauth2"
-	googlemock "github.com/tinywasm/auth/oauth2/provider/google/mock"
-	"github.com/tinywasm/router/mock"
+	"webtyp.com/auth"
+	"webtyp.com/auth/authority"
+	"webtyp.com/auth/oauth2"
+	googlemock "webtyp.com/auth/oauth2/provider/google/mock"
+	"webtyp.com/router/mock"
 )
 
 func isVeltyCl(url string) bool {

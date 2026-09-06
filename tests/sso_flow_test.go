@@ -6,15 +6,15 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tinywasm/auth"
-	"github.com/tinywasm/auth/authority"
-	"github.com/tinywasm/auth/oauth2"
-	googlemock "github.com/tinywasm/auth/oauth2/provider/google/mock"
-	sessionjwt "github.com/tinywasm/auth/session/jwt"
-	"github.com/tinywasm/ddl"
-	"github.com/tinywasm/orm"
-	"github.com/tinywasm/router/mock"
-	"github.com/tinywasm/sqlite"
+	"webtyp.com/auth"
+	"webtyp.com/auth/authority"
+	"webtyp.com/auth/oauth2"
+	googlemock "webtyp.com/auth/oauth2/provider/google/mock"
+	sessionjwt "webtyp.com/auth/session/jwt"
+	"webtyp.com/ddl"
+	"webtyp.com/orm"
+	"webtyp.com/router/mock"
+	"webtyp.com/sqlite"
 )
 
 func TestSSOLoginFlow_EndToEndWithJWTStrategy(t *testing.T) {

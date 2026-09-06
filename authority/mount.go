@@ -1,8 +1,8 @@
 package authority
 
 import (
-	"github.com/tinywasm/router"
-	"github.com/tinywasm/auth"
+	"webtyp.com/router"
+	"webtyp.com/auth"
 )
 
 var _ router.APIModule = (*Module)(nil)

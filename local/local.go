@@ -4,11 +4,11 @@
 package local
 
 import (
-	"github.com/tinywasm/auth"
-	"github.com/tinywasm/fmt"
-	"github.com/tinywasm/model"
-	"github.com/tinywasm/router"
-	"github.com/tinywasm/user"
+	"webtyp.com/auth"
+	"webtyp.com/fmt"
+	"webtyp.com/model"
+	"webtyp.com/router"
+	"webtyp.com/user"
 )
 
 // ProviderName is the stable name exposed to logs and security events.

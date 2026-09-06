@@ -1,9 +1,9 @@
 package authority
 
 import (
-	"github.com/tinywasm/model"
-	"github.com/tinywasm/orm"
-	"github.com/tinywasm/auth"
+	"webtyp.com/model"
+	"webtyp.com/orm"
+	"webtyp.com/auth"
 )
 
 // --- userCRUD ---

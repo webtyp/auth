@@ -5,8 +5,8 @@ package tests
 import (
 	"testing"
 
-	"github.com/tinywasm/auth"
-	"github.com/tinywasm/auth/authority"
+	"webtyp.com/auth"
+	"webtyp.com/auth/authority"
 )
 
 func TestSQLBoundary(t *testing.T) {

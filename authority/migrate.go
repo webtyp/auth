@@ -1,9 +1,9 @@
 package authority
 
 import (
-	"github.com/tinywasm/auth"
-	"github.com/tinywasm/ddl"
-	"github.com/tinywasm/model"
+	"webtyp.com/auth"
+	"webtyp.com/ddl"
+	"webtyp.com/model"
 )
 
 // Migrate reconciles the database schema this package owns: User, Identity,

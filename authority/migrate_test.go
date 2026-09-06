@@ -3,9 +3,9 @@ package authority_test
 import (
 	"testing"
 
-	"github.com/tinywasm/auth/authority"
-	"github.com/tinywasm/ddl"
-	"github.com/tinywasm/model"
+	"webtyp.com/auth/authority"
+	"webtyp.com/ddl"
+	"webtyp.com/model"
 )
 
 type dummyExecer struct{}

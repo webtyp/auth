@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/tinywasm/auth"
-	"github.com/tinywasm/auth/authority"
+	"webtyp.com/auth"
+	"webtyp.com/auth/authority"
 )
 
 func TestTimingSafeAuth(t *testing.T) {

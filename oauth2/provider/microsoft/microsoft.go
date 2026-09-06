@@ -1,11 +1,11 @@
 package microsoft
 
 import (
-	"github.com/tinywasm/fetch"
-	"github.com/tinywasm/json"
-	"github.com/tinywasm/model"
-	"github.com/tinywasm/auth"
-	"github.com/tinywasm/auth/oauth2/provider/google"
+	"webtyp.com/fetch"
+	"webtyp.com/json"
+	"webtyp.com/model"
+	"webtyp.com/auth"
+	"webtyp.com/auth/oauth2/provider/google"
 )
 
 const (

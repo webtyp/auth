@@ -1,10 +1,10 @@
 package trustedip
 
 import (
-	"github.com/tinywasm/fmt"
-	"github.com/tinywasm/model"
-	"github.com/tinywasm/router"
-	"github.com/tinywasm/auth"
+	"webtyp.com/fmt"
+	"webtyp.com/model"
+	"webtyp.com/router"
+	"webtyp.com/auth"
 )
 
 type Authenticator struct {

@@ -1,9 +1,9 @@
 package authority
 
 import (
-	emailpassword "github.com/tinywasm/auth/email_password"
+	emailpassword "webtyp.com/auth/email_password"
 
-	"github.com/tinywasm/auth"
+	"webtyp.com/auth"
 )
 
 // Login verifies email+password directly (no HTTP) — used by

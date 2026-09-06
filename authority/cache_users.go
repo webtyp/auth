@@ -3,7 +3,7 @@ package authority
 import (
 	"sync"
 
-	"github.com/tinywasm/auth"
+	"webtyp.com/auth"
 )
 
 const maxCacheUsers = 1000

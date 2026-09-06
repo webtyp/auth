@@ -1,8 +1,8 @@
 package oauth2
 
 import (
-	"github.com/tinywasm/auth"
-	"github.com/tinywasm/router"
+	"webtyp.com/auth"
+	"webtyp.com/router"
 )
 
 type Authenticator struct {

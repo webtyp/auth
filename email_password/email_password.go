@@ -1,10 +1,10 @@
 package emailpassword
 
 import (
-	"github.com/tinywasm/router"
-	"github.com/tinywasm/auth"
+	"webtyp.com/router"
+	"webtyp.com/auth"
 
-	"github.com/tinywasm/crypto/bcrypt"
+	"webtyp.com/crypto/bcrypt"
 )
 
 type Authenticator struct {

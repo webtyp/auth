@@ -1,7 +1,7 @@
 package authority
 
 import (
-	"github.com/tinywasm/router"
+	"webtyp.com/router"
 )
 
 // Authenticate returns a router.Middleware that asks the active SessionStrategy

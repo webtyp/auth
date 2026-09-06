@@ -1,11 +1,11 @@
 package auth
 
 import (
-	"github.com/tinywasm/events"
-	"github.com/tinywasm/fmt"
-	"github.com/tinywasm/model"
-	"github.com/tinywasm/router"
-	"github.com/tinywasm/user"
+	"webtyp.com/events"
+	"webtyp.com/fmt"
+	"webtyp.com/model"
+	"webtyp.com/router"
+	"webtyp.com/user"
 )
 
 var (

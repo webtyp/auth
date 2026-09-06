@@ -3,18 +3,18 @@
 package tests
 
 import (
-	"github.com/tinywasm/ddl"
-	"github.com/tinywasm/model"
-	"github.com/tinywasm/orm"
-	"github.com/tinywasm/router"
-	"github.com/tinywasm/server/httpd"
-	"github.com/tinywasm/sqlite"
-	"github.com/tinywasm/unixid"
-	"github.com/tinywasm/auth"
-	"github.com/tinywasm/auth/authority"
-	emailpassword "github.com/tinywasm/auth/email_password"
-	"github.com/tinywasm/auth/session/jwt"
-	trustedip "github.com/tinywasm/auth/trusted_ip"
+	"webtyp.com/ddl"
+	"webtyp.com/model"
+	"webtyp.com/orm"
+	"webtyp.com/router"
+	"webtyp.com/server/httpd"
+	"webtyp.com/sqlite"
+	"webtyp.com/unixid"
+	"webtyp.com/auth"
+	"webtyp.com/auth/authority"
+	emailpassword "webtyp.com/auth/email_password"
+	"webtyp.com/auth/session/jwt"
+	trustedip "webtyp.com/auth/trusted_ip"
 )
 
 func Example_mustCompile() {
@@ -25,7 +25,7 @@ func Example_mustCompile() {
 	}
 	db := orm.New(conn)
 
-	// 2. Generate required ID Generator (e.g. tinywasm/unixid)
+	// 2. Generate required ID Generator (e.g. webtyp/unixid)
 	ids, err := unixid.NewUnixID()
 	if err != nil {
 		panic(err)
@@ -64,7 +64,7 @@ func Example_mustCompile() {
 	// 7. Monta las rutas de user y arranca el servidor. El Router concreto lo crea
 	//    httpd, no el paquete router. Authn corre el middleware de identidad de forma
 	//    global; Authorize es el gate RBAC de las rutas que declaran .Requires(...).
-	//    authority nunca decide permisos — eso vive en github.com/tinywasm/rbac
+	//    authority nunca decide permisos — eso vive en webtyp.com/rbac
 	//    (rbac.Service.Can), inyectado aquí como Authorize; se omite construirlo
 	//    en este ejemplo para no acoplarlo a esa librería hermana.
 	srv := httpd.New(httpd.Config{
@@ -82,7 +82,7 @@ func Example_mustCompile() {
 	}).Requires("reports", model.Read)
 
 	// 9. Seed the first administrator's identity. Roles/permissions are a
-	// separate concern: create them with rbac.Service (github.com/tinywasm/rbac)
+	// separate concern: create them with rbac.Service (webtyp.com/rbac)
 	// and rb.AssignRole(admin.Id, roleID) — authority only ever creates the user.
 	admin, err := m.CreateUser("admin@company.com", "Administrator", "")
 	if err != nil {

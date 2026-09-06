@@ -1,10 +1,10 @@
 package google
 
 import (
-	"github.com/tinywasm/fetch"
-	"github.com/tinywasm/json"
-	"github.com/tinywasm/model"
-	"github.com/tinywasm/auth"
+	"webtyp.com/fetch"
+	"webtyp.com/json"
+	"webtyp.com/model"
+	"webtyp.com/auth"
 )
 
 const (

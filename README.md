@@ -1,9 +1,9 @@
-# tinywasm/auth
+# webtyp/auth
 <img src="docs/img/badges.svg">
 
 Authentication mechanisms, sessions, identities, and OAuth providers for the
-TinyWasm ecosystem. Authorization belongs to `tinywasm/rbac`. Both are siblings
-that depend only on `tinywasm/user` and never on each other.
+WebTyp ecosystem. Authorization belongs to `webtyp/rbac`. Both are siblings
+that depend only on `webtyp/user` and never on each other.
 
 > **BREAKING CHANGE**: `StateStore.CreateState` and `StateStore.ConsumeState` changed signatures to support browser-bound OAuth state nonces:
 > - `CreateState(provider string) (state, nonce string, err error)`
@@ -29,7 +29,7 @@ flowchart TD
   `StateStore`, `SecurityNotifier`, `SessionRepo`, `Config`, `ProfileDTO`,
   `ShellProfile`, OAuth types.
 - `authority` — Concrete module (`Module`) implementing the ports, caches,
-  migrations, and middleware. Configures a secure opaque cookie session strategy by default using 256-bit CSPRNG entropy (`tinywasm/crypto/rand`) for session IDs and OAuth states.
+  migrations, and middleware. Configures a secure opaque cookie session strategy by default using 256-bit CSPRNG entropy (`webtyp/crypto/rand`) for session IDs and OAuth states.
 - `oauth2` + `oauth2/provider/google`, `oauth2/provider/microsoft` — OAuth flow
   and providers.
 - `session/cookie`, `session/jwt` — Session transports.

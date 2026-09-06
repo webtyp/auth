@@ -5,12 +5,12 @@ package tests
 import (
 	"testing"
 
-	"github.com/tinywasm/json"
-	"github.com/tinywasm/model"
-	"github.com/tinywasm/router/mock"
-	"github.com/tinywasm/auth"
-	"github.com/tinywasm/auth/authority"
-	"github.com/tinywasm/auth/session/jwt"
+	"webtyp.com/json"
+	"webtyp.com/model"
+	"webtyp.com/router/mock"
+	"webtyp.com/auth"
+	"webtyp.com/auth/authority"
+	"webtyp.com/auth/session/jwt"
 )
 
 func TestTools_Me(t *testing.T) {

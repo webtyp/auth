@@ -5,19 +5,19 @@ package tests
 import (
 	"testing"
 
-	"github.com/tinywasm/jwt"
-	"github.com/tinywasm/router"
-	"github.com/tinywasm/router/mock"
-	"github.com/tinywasm/auth"
-	"github.com/tinywasm/auth/authority"
-	jwtstrategy "github.com/tinywasm/auth/session/jwt"
+	"webtyp.com/jwt"
+	"webtyp.com/router"
+	"webtyp.com/router/mock"
+	"webtyp.com/auth"
+	"webtyp.com/auth/authority"
+	jwtstrategy "webtyp.com/auth/session/jwt"
 )
 
 // Un token caducado es el evento más rutinario que existe: una sesión que se acaba.
 // Reportarlo como EventJWTTampered dispara la alarma más ruidosa del sistema en su caso
 // más tranquilo, y entierra las falsificaciones reales bajo el ruido.
 //
-// El bug era `if err != nil { tampered }`. La frontera vieja de tinywasm/jwt devolvía
+// El bug era `if err != nil { tampered }`. La frontera vieja de webtyp/jwt devolvía
 // (Claims, error) y PERMITÍA colapsar caducidad y falsificación en una sola rama; eso no
 // es un descuido del call site, es una API que admite un estado ilegal. Ahora el
 // desenlace es un jwt.Outcome cerrado y el compilador obliga a separarlos.

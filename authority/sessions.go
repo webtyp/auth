@@ -3,11 +3,11 @@ package authority
 import (
 	"sync"
 
-	"github.com/tinywasm/crypto/rand"
-	"github.com/tinywasm/time"
+	"webtyp.com/crypto/rand"
+	"webtyp.com/time"
 
-	"github.com/tinywasm/orm"
-	"github.com/tinywasm/auth"
+	"webtyp.com/orm"
+	"webtyp.com/auth"
 )
 
 // sessionIDBytes: 32 bytes = 256 bits de entropía para el id de sesión. Un id

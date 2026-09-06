@@ -1,12 +1,12 @@
 package authority
 
 import (
-	"github.com/tinywasm/orm"
-	"github.com/tinywasm/time"
-	trustedip "github.com/tinywasm/auth/trusted_ip"
+	"webtyp.com/orm"
+	"webtyp.com/time"
+	trustedip "webtyp.com/auth/trusted_ip"
 
-	"github.com/tinywasm/router"
-	"github.com/tinywasm/auth"
+	"webtyp.com/router"
+	"webtyp.com/auth"
 )
 
 // LoginLAN verifies a RUT + the caller's IP directly (no HTTP) — used by tests

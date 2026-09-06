@@ -6,15 +6,15 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tinywasm/crypto/bcrypt"
-	"github.com/tinywasm/form"
-	"github.com/tinywasm/json"
-	"github.com/tinywasm/model"
-	"github.com/tinywasm/router"
-	"github.com/tinywasm/router/mock"
-	"github.com/tinywasm/auth"
-	"github.com/tinywasm/auth/authority"
-	emailpassword "github.com/tinywasm/auth/email_password"
+	"webtyp.com/crypto/bcrypt"
+	"webtyp.com/form"
+	"webtyp.com/json"
+	"webtyp.com/model"
+	"webtyp.com/router"
+	"webtyp.com/router/mock"
+	"webtyp.com/auth"
+	"webtyp.com/auth/authority"
+	emailpassword "webtyp.com/auth/email_password"
 )
 
 func TestProductionWiring(t *testing.T) {

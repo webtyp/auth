@@ -5,11 +5,11 @@ package tests
 import (
 	"testing"
 
-	"github.com/tinywasm/auth"
-	"github.com/tinywasm/auth/authority"
-	"github.com/tinywasm/ddl"
-	"github.com/tinywasm/orm"
-	"github.com/tinywasm/sqlite"
+	"webtyp.com/auth"
+	"webtyp.com/auth/authority"
+	"webtyp.com/ddl"
+	"webtyp.com/orm"
+	"webtyp.com/sqlite"
 )
 
 func isAllDigits(s string) bool {

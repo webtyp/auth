@@ -3,7 +3,7 @@ package tests
 import (
 	"testing"
 
-	"github.com/tinywasm/auth"
+	"webtyp.com/auth"
 )
 
 // platformdIdentity represents the read contract declared by platformd/platformd.go.
