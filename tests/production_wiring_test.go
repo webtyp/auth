@@ -172,7 +172,7 @@ func testMeTool(t *testing.T) {
 	}
 
 	reg := &mockOpRegistry{ops: make(map[string]*mockRoute)}
-	m.MountOps(reg)
+	m.MountOperations(reg)
 
 	route := reg.ops[auth.OpMe]
 	if route == nil {

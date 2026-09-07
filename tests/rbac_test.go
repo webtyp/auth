@@ -26,7 +26,7 @@ func TestTools_Me(t *testing.T) {
 
 	t.Run("Authenticated me returns profile", func(t *testing.T) {
 		reg := &mockOpRegistry{ops: make(map[string]*mockRoute)}
-		m.MountOps(reg)
+		m.MountOperations(reg)
 
 		route := reg.ops[auth.OpMe]
 		if route == nil {
@@ -56,7 +56,7 @@ func TestTools_Me(t *testing.T) {
 
 	t.Run("Anonymous me returns error", func(t *testing.T) {
 		reg := &mockOpRegistry{ops: make(map[string]*mockRoute)}
-		m.MountOps(reg)
+		m.MountOperations(reg)
 
 		route := reg.ops[auth.OpMe]
 		ctx := &mock.Context{}
@@ -72,9 +72,9 @@ func TestAdminOps(t *testing.T) {
 	db := newTestDB(t)
 	m, _ := authority.New(db, auth.Config{IDs: testIDs})
 
-	// 1. Verify MountOps registration and Gates
+	// 1. Verify MountOperations registration and Gates
 	reg := &mockOpRegistry{ops: make(map[string]*mockRoute)}
-	m.MountOps(reg)
+	m.MountOperations(reg)
 
 	listRoute := reg.ops[auth.OpListUsers]
 	if listRoute == nil {

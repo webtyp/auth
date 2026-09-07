@@ -6,13 +6,13 @@ import (
 	"webtyp.com/auth"
 )
 
-var _ router.OpModule = (*Module)(nil)
+var _ router.OperationModule = (*Module)(nil)
 
-func (m *Module) MountOps(reg router.OpRegistry) {
-	reg.Op(auth.OpMe, m.opMe).Authenticated()
-	reg.Op(auth.OpListUsers, m.opListUsers).Requires("users", model.Read)
-	reg.Op(auth.OpUpsertUser, m.opUpsertUser).Requires("users", model.Create|model.Update).Accepts(&auth.User{})
-	reg.Op(auth.OpDeleteUser, m.opDeleteUser).Requires("users", model.Delete).Accepts(&auth.User{})
+func (m *Module) MountOperations(reg router.OperationRegistry) {
+	reg.Operation(auth.OpMe, m.opMe).Authenticated()
+	reg.Operation(auth.OpListUsers, m.opListUsers).Requires("users", model.Read)
+	reg.Operation(auth.OpUpsertUser, m.opUpsertUser).Requires("users", model.Create|model.Update).Accepts(&auth.User{})
+	reg.Operation(auth.OpDeleteUser, m.opDeleteUser).Requires("users", model.Delete).Accepts(&auth.User{})
 }
 
 func (m *Module) opMe(ctx router.Context) {

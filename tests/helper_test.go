@@ -85,7 +85,7 @@ type mockOpRegistry struct {
 	ops map[string]*mockRoute
 }
 
-func (reg *mockOpRegistry) Op(name string, h router.HandlerFunc) router.Route {
+func (reg *mockOpRegistry) Operation(name string, h router.HandlerFunc) router.Route {
 	r := &mockRoute{handler: h}
 	reg.ops[name] = r
 	return r
