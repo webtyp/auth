@@ -7,7 +7,7 @@ require (
 	webtyp.com/base64 v0.0.6
 	webtyp.com/crypto v0.0.27
 	webtyp.com/ddl v0.0.15
-	webtyp.com/events v0.0.4
+	webtyp.com/events v0.0.5
 	webtyp.com/fetch v0.1.28
 	webtyp.com/fmt v1.0.0
 	webtyp.com/form v0.4.8
