@@ -40,7 +40,7 @@ require (
 	modernc.org/libc v1.74.4 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
-	webtyp.com/dom v0.13.11 // indirect
+	webtyp.com/dom v0.13.12 // indirect
 	webtyp.com/sqlt v0.0.10 // indirect
 	webtyp.com/storage v0.0.7 // indirect
 	webtyp.com/widget v0.6.24 // indirect
