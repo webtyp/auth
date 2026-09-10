@@ -43,5 +43,5 @@ require (
 	webtyp.com/dom v0.13.12 // indirect
 	webtyp.com/sqlt v0.0.10 // indirect
 	webtyp.com/storage v0.0.7 // indirect
-	webtyp.com/widget v0.6.25 // indirect
+	webtyp.com/widget v0.6.29 // indirect
 )
