@@ -10,7 +10,7 @@ require (
 	webtyp.com/events v0.0.5
 	webtyp.com/fetch v0.1.28
 	webtyp.com/fmt v1.0.0
-	webtyp.com/form v0.4.8
+	webtyp.com/form v0.4.11
 	webtyp.com/input v0.0.6
 	webtyp.com/json v0.5.25
 	webtyp.com/jwt v0.1.19
@@ -40,7 +40,7 @@ require (
 	modernc.org/libc v1.74.4 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
-	webtyp.com/dom v0.13.12 // indirect
+	webtyp.com/dom v0.13.14 // indirect
 	webtyp.com/sqlt v0.0.10 // indirect
 	webtyp.com/storage v0.0.7 // indirect
 	webtyp.com/widget v0.6.29 // indirect
