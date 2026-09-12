@@ -164,16 +164,12 @@ func TestCoverage_EmailPassword(t *testing.T) {
 
 	t.Run("Rate limit error emission", func(t *testing.T) {
 		blockedIP := "100.100.100.100"
-		rateLimitFn := func(ip string) error {
-			if ip == blockedIP {
-				return auth.ErrInvalidCredentials
-			}
-			return nil
-		}
+		limiter := auth.NewIPLimiter(1, 60, 60) // 1 failure blocks immediately
+		limiter.Fail(blockedIP)
 
 		// Recreate with rate limit
 		m2, _ := authority.New(db, auth.Config{IDs: testIDs, Events: pub})
-		m2.Enable(emailpassword.New(m2, m2, m2, emailpassword.WithRateLimit(rateLimitFn)))
+		m2.Enable(emailpassword.New(m2, m2, m2, emailpassword.WithRateLimit(limiter)))
 		r2 := &mock.Router{}
 		m2.MountAPI(r2)
 
@@ -254,13 +250,13 @@ func TestCoverage_TrustedIP(t *testing.T) {
 	t.Run("RUT valid and trusted IP success", func(t *testing.T) {
 		ctx := &mock.Context{
 			InMethod: "POST",
-			InPath:   "/login/rut",
+			InPath:   auth.PathLoginRUT,
 		}
 		ctx.SetHeader("Content-Type", "application/json")
 		ctx.SetValue("RemoteAddr", "192.168.10.10:1234")
-		ctx.InBody = []byte(`{"rut":"12345678-5"}`)
+		ctx.InBody = []byte(`{"code":"12345678-5"}`)
 
-		r.Invoke("POST", "/login/rut", ctx)
+		r.Invoke("POST", auth.PathLoginRUT, ctx)
 		if ctx.Status != 302 {
 			t.Errorf("expected 302, got %d", ctx.Status)
 		}
@@ -269,13 +265,13 @@ func TestCoverage_TrustedIP(t *testing.T) {
 	t.Run("RUT valid but IP mismatch", func(t *testing.T) {
 		ctx := &mock.Context{
 			InMethod: "POST",
-			InPath:   "/login/rut",
+			InPath:   auth.PathLoginRUT,
 		}
 		ctx.SetHeader("Content-Type", "application/json")
 		ctx.SetValue("RemoteAddr", "192.168.10.99:1234")
-		ctx.InBody = []byte(`{"rut":"12345678-5"}`)
+		ctx.InBody = []byte(`{"code":"12345678-5"}`)
 
-		r.Invoke("POST", "/login/rut", ctx)
+		r.Invoke("POST", auth.PathLoginRUT, ctx)
 		if ctx.Status != 401 {
 			t.Errorf("expected 401, got %d", ctx.Status)
 		}
@@ -294,12 +290,12 @@ func TestCoverage_TrustedIP(t *testing.T) {
 	t.Run("RUT invalid does not touch store", func(t *testing.T) {
 		ctx := &mock.Context{
 			InMethod: "POST",
-			InPath:   "/login/rut",
+			InPath:   auth.PathLoginRUT,
 		}
 		ctx.SetHeader("Content-Type", "application/json")
-		ctx.InBody = []byte(`{"rut":"invalid-rut"}`)
+		ctx.InBody = []byte(`{"code":"invalid-rut"}`)
 
-		r.Invoke("POST", "/login/rut", ctx)
+		r.Invoke("POST", auth.PathLoginRUT, ctx)
 		if ctx.Status != 401 {
 			t.Errorf("expected 401, got %d", ctx.Status)
 		}
@@ -421,7 +417,7 @@ func TestCoverage_CompositionIsolatedRoutes(t *testing.T) {
 		if rt.Path == auth.PathLogin {
 			hasLogin = true
 		}
-		if rt.Path == "/login/rut" {
+		if rt.Path == auth.PathLoginRUT {
 			hasRUTLogin = true
 		}
 	}
@@ -430,7 +426,7 @@ func TestCoverage_CompositionIsolatedRoutes(t *testing.T) {
 		t.Error("expected login route to be mounted")
 	}
 	if hasRUTLogin {
-		t.Error("did not expect /login/rut route to be mounted since trusted_ip is not enabled")
+		t.Errorf("did not expect %s route to be mounted since trusted_ip is not enabled", auth.PathLoginRUT)
 	}
 }
 

@@ -81,13 +81,9 @@ func TestOWASP(t *testing.T) {
 			IDs:    testIDs,
 			Events: pub,
 		})
-		rateLimitFn := func(ip string) error {
-			if ip == "1.2.3.4" {
-				return auth.ErrInvalidCredentials // Simulating rejection
-			}
-			return nil
-		}
-		m.Enable(emailpassword.New(m, m, m, emailpassword.WithRateLimit(rateLimitFn)))
+		limiter := auth.NewIPLimiter(1, 60, 60) // 1 failure blocks immediately
+		limiter.Fail("1.2.3.4")
+		m.Enable(emailpassword.New(m, m, m, emailpassword.WithRateLimit(limiter)))
 		r := &mock.Router{}
 		m.MountAPI(r)
 

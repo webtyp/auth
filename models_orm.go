@@ -47,6 +47,8 @@ func (m *User) DecodeFields(r model.FieldReader) {
 
 type UserList []*User
 
+func (s *UserList) Schema() []model.Field { return nil }
+func (s *UserList) Pointers() []any     { return nil }
 func (s *UserList) Len() int             { return len(*s) }
 func (s *UserList) At(i int) model.Fielder { return (*s)[i] }
 func (s *UserList) Append() model.Fielder  { v := &User{}; *s = append(*s, v); return v }
@@ -130,6 +132,8 @@ func (m *Session) DecodeFields(r model.FieldReader) {
 
 type SessionList []*Session
 
+func (s *SessionList) Schema() []model.Field { return nil }
+func (s *SessionList) Pointers() []any     { return nil }
 func (s *SessionList) Len() int             { return len(*s) }
 func (s *SessionList) At(i int) model.Fielder { return (*s)[i] }
 func (s *SessionList) Append() model.Fielder  { v := &Session{}; *s = append(*s, v); return v }
@@ -217,6 +221,8 @@ func (m *Identity) DecodeFields(r model.FieldReader) {
 
 type IdentityList []*Identity
 
+func (s *IdentityList) Schema() []model.Field { return nil }
+func (s *IdentityList) Pointers() []any     { return nil }
 func (s *IdentityList) Len() int             { return len(*s) }
 func (s *IdentityList) At(i int) model.Fielder { return (*s)[i] }
 func (s *IdentityList) Append() model.Fielder  { v := &Identity{}; *s = append(*s, v); return v }
@@ -301,6 +307,8 @@ func (m *LANIP) DecodeFields(r model.FieldReader) {
 
 type LANIPList []*LANIP
 
+func (s *LANIPList) Schema() []model.Field { return nil }
+func (s *LANIPList) Pointers() []any     { return nil }
 func (s *LANIPList) Len() int             { return len(*s) }
 func (s *LANIPList) At(i int) model.Fielder { return (*s)[i] }
 func (s *LANIPList) Append() model.Fielder  { v := &LANIP{}; *s = append(*s, v); return v }
@@ -383,6 +391,8 @@ func (m *OAuthState) DecodeFields(r model.FieldReader) {
 
 type OAuthStateList []*OAuthState
 
+func (s *OAuthStateList) Schema() []model.Field { return nil }
+func (s *OAuthStateList) Pointers() []any     { return nil }
 func (s *OAuthStateList) Len() int             { return len(*s) }
 func (s *OAuthStateList) At(i int) model.Fielder { return (*s)[i] }
 func (s *OAuthStateList) Append() model.Fielder  { v := &OAuthState{}; *s = append(*s, v); return v }
@@ -450,6 +460,8 @@ func (m *LoginData) DecodeFields(r model.FieldReader) {
 
 type LoginDataList []*LoginData
 
+func (s *LoginDataList) Schema() []model.Field { return nil }
+func (s *LoginDataList) Pointers() []any     { return nil }
 func (s *LoginDataList) Len() int             { return len(*s) }
 func (s *LoginDataList) At(i int) model.Fielder { return (*s)[i] }
 func (s *LoginDataList) Append() model.Fielder  { v := &LoginData{}; *s = append(*s, v); return v }
@@ -462,27 +474,29 @@ func (m *LoginData) Validate(action byte) error {
 }
 
 type RUTLoginData struct {
-	Rut string
+	Code string
 }
 
 func (m *RUTLoginData) ModelName() string { return "rut_login_data" }
 
 func (m *RUTLoginData) Schema() []model.Field { return RUTLoginDataModel.Fields }
 
-func (m *RUTLoginData) Pointers() []any { return []any{&m.Rut} }
+func (m *RUTLoginData) Pointers() []any { return []any{&m.Code} }
 
 func (m *RUTLoginData) IsNil() bool { return m == nil }
 
 func (m *RUTLoginData) EncodeFields(w model.FieldWriter) {
-	w.String("rut", m.Rut)
+	w.String("code", m.Code)
 }
 
 func (m *RUTLoginData) DecodeFields(r model.FieldReader) {
-	if v, ok := r.String("rut"); ok { m.Rut = v }
+	if v, ok := r.String("code"); ok { m.Code = v }
 }
 
 type RUTLoginDataList []*RUTLoginData
 
+func (s *RUTLoginDataList) Schema() []model.Field { return nil }
+func (s *RUTLoginDataList) Pointers() []any     { return nil }
 func (s *RUTLoginDataList) Len() int             { return len(*s) }
 func (s *RUTLoginDataList) At(i int) model.Fielder { return (*s)[i] }
 func (s *RUTLoginDataList) Append() model.Fielder  { v := &RUTLoginData{}; *s = append(*s, v); return v }
@@ -525,6 +539,8 @@ func (m *RegisterData) DecodeFields(r model.FieldReader) {
 
 type RegisterDataList []*RegisterData
 
+func (s *RegisterDataList) Schema() []model.Field { return nil }
+func (s *RegisterDataList) Pointers() []any     { return nil }
 func (s *RegisterDataList) Len() int             { return len(*s) }
 func (s *RegisterDataList) At(i int) model.Fielder { return (*s)[i] }
 func (s *RegisterDataList) Append() model.Fielder  { v := &RegisterData{}; *s = append(*s, v); return v }
@@ -561,6 +577,8 @@ func (m *ProfileData) DecodeFields(r model.FieldReader) {
 
 type ProfileDataList []*ProfileData
 
+func (s *ProfileDataList) Schema() []model.Field { return nil }
+func (s *ProfileDataList) Pointers() []any     { return nil }
 func (s *ProfileDataList) Len() int             { return len(*s) }
 func (s *ProfileDataList) At(i int) model.Fielder { return (*s)[i] }
 func (s *ProfileDataList) Append() model.Fielder  { v := &ProfileData{}; *s = append(*s, v); return v }
@@ -600,6 +618,8 @@ func (m *PasswordData) DecodeFields(r model.FieldReader) {
 
 type PasswordDataList []*PasswordData
 
+func (s *PasswordDataList) Schema() []model.Field { return nil }
+func (s *PasswordDataList) Pointers() []any     { return nil }
 func (s *PasswordDataList) Len() int             { return len(*s) }
 func (s *PasswordDataList) At(i int) model.Fielder { return (*s)[i] }
 func (s *PasswordDataList) Append() model.Fielder  { v := &PasswordData{}; *s = append(*s, v); return v }
@@ -636,6 +656,8 @@ func (m *RegisterLANArgs) DecodeFields(r model.FieldReader) {
 
 type RegisterLANArgsList []*RegisterLANArgs
 
+func (s *RegisterLANArgsList) Schema() []model.Field { return nil }
+func (s *RegisterLANArgsList) Pointers() []any     { return nil }
 func (s *RegisterLANArgsList) Len() int             { return len(*s) }
 func (s *RegisterLANArgsList) At(i int) model.Fielder { return (*s)[i] }
 func (s *RegisterLANArgsList) Append() model.Fielder  { v := &RegisterLANArgs{}; *s = append(*s, v); return v }
@@ -669,6 +691,8 @@ func (m *LANUserArgs) DecodeFields(r model.FieldReader) {
 
 type LANUserArgsList []*LANUserArgs
 
+func (s *LANUserArgsList) Schema() []model.Field { return nil }
+func (s *LANUserArgsList) Pointers() []any     { return nil }
 func (s *LANUserArgsList) Len() int             { return len(*s) }
 func (s *LANUserArgsList) At(i int) model.Fielder { return (*s)[i] }
 func (s *LANUserArgsList) Append() model.Fielder  { v := &LANUserArgs{}; *s = append(*s, v); return v }
@@ -705,6 +729,8 @@ func (m *LANIdentity) DecodeFields(r model.FieldReader) {
 
 type LANIdentityList []*LANIdentity
 
+func (s *LANIdentityList) Schema() []model.Field { return nil }
+func (s *LANIdentityList) Pointers() []any     { return nil }
 func (s *LANIdentityList) Len() int             { return len(*s) }
 func (s *LANIdentityList) At(i int) model.Fielder { return (*s)[i] }
 func (s *LANIdentityList) Append() model.Fielder  { v := &LANIdentity{}; *s = append(*s, v); return v }

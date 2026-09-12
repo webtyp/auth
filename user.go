@@ -209,13 +209,28 @@ func ClientIP(ctx router.Context, trustProxy bool) string {
 		}
 	}
 	if addr := ctx.Value(router.ContextKeyRemoteAddr); addr != "" {
-		parts := fmt.Split(addr, ":")
-		if len(parts) > 0 {
-			return parts[0]
+		return HostFromAddr(addr)
+	}
+	return ""
+}
+
+// HostFromAddr splits the host out of a net/http-style "host:port" address,
+// respecting the brackets net.JoinHostPort puts around an IPv6 literal
+// ("[::1]:54321" → "::1"). Splitting naively on ":" (this function's
+// predecessor) returns "[" for any IPv6 address — a real bug, previously
+// leaf-patched in veltylabs/staff_manager (normalizeIP/ipsEqual) instead of
+// fixed here; that patch is retired once this ships.
+func HostFromAddr(addr string) string {
+	if len(addr) > 0 && addr[0] == '[' {
+		if end := fmt.Index(addr, "]"); end != -1 {
+			return addr[1:end]
 		}
 		return addr
 	}
-	return ""
+	if idx := fmt.LastIndex(addr, ":"); idx != -1 {
+		return addr[:idx]
+	}
+	return addr
 }
 
 // ActionResolver resolves which actions a subject holds on one resource.
@@ -278,10 +293,16 @@ const (
 	PathLogout     = "/logout"
 	PathAfterLogin = "/"
 
-	// PathLoginRUT is where trusted_ip.Authenticator mounts the LAN RUT
-	// login route. A client builds its login form from RUTLoginDataModel
-	// and posts here — no hardcoded literal anywhere else in the repo.
-	PathLoginRUT = "/login/rut"
+	// PathLoginRUT is where trusted_ip.Authenticator mounts the LAN
+	// device-trust login route. A client builds its login form from
+	// RUTLoginDataModel and posts here — no hardcoded literal anywhere else
+	// in the repo. The value is deliberately generic ("/session", not
+	// "/login/rut"): this mode's whole point is that an outsider watching
+	// network traffic must not learn what kind of credential the single
+	// field asks for. The Go symbol keeps naming the mode it belongs to;
+	// only the wire value is neutral. Do not "fix" it back — see
+	// docs/PLAN.md in veltylabs/mjosefa-cms for the leak this closed.
+	PathLoginRUT = "/session"
 
 	// PathOAuthPrefix es la raiz bajo la que oauth2.Authenticator monta sus
 	// rutas. Es la unica definicion de esa cadena en el repositorio.

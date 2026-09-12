@@ -72,10 +72,15 @@ var LoginDataModel = model.Definition{
 	},
 }
 
+// RUTLoginDataModel's wire field is named "code", not "rut": the whole
+// point of trusted_ip is that neither the request nor the rendered <input
+// name=…> should tell an outsider what kind of credential this asks for.
+// ValidateRUT still runs the real checksum server-side under this generic
+// name.
 var RUTLoginDataModel = model.Definition{
 	Name: "rut_login_data",
 	Fields: model.Fields{
-		{Name: "rut", Type: input.Text(), NotNull: true},
+		{Name: "code", Type: input.Text(), NotNull: true},
 	},
 }
 

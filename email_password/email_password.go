@@ -12,15 +12,18 @@ type Authenticator struct {
 	sessions   auth.SessionIssuer
 	notify     auth.SecurityNotifier
 	afterLogin string
-	rateLimit  func(ip string) error
+	rateLimit  auth.RateLimiter
 	trustProxy bool
 }
 
 type Option func(*Authenticator)
 
 func WithAfterLogin(path string) Option { return func(a *Authenticator) { a.afterLogin = path } }
-func WithRateLimit(fn func(ip string) error) Option {
-	return func(a *Authenticator) { a.rateLimit = fn }
+
+// WithRateLimit gates login attempts through l before any credential check —
+// see auth.RateLimiter and auth.NewIPLimiter for the built-in implementation.
+func WithRateLimit(l auth.RateLimiter) Option {
+	return func(a *Authenticator) { a.rateLimit = l }
 }
 func WithTrustProxy(v bool) Option { return func(a *Authenticator) { a.trustProxy = v } }
 
@@ -52,7 +55,7 @@ func (a *Authenticator) Mount(r router.Router) {
 		}
 
 		if a.rateLimit != nil {
-			if err := a.rateLimit(ip); err != nil {
+			if err := a.rateLimit.Check(ip); err != nil {
 				a.notify.Notify(auth.SecurityEvent{Type: auth.EventRateLimited, IP: ip, UserID: data.Email})
 				ctx.WriteStatus(429)
 				ctx.Write([]byte(err.Error()))
@@ -63,6 +66,9 @@ func (a *Authenticator) Mount(r router.Router) {
 		u, err := a.store.UserByEmail(data.Email)
 		if err != nil {
 			DummyCompare(data.Password, DefaultHashCost)
+			if a.rateLimit != nil {
+				a.rateLimit.Fail(ip)
+			}
 			ctx.WriteStatus(401)
 			ctx.Write([]byte(auth.ErrInvalidCredentials.Error()))
 			return
@@ -70,6 +76,9 @@ func (a *Authenticator) Mount(r router.Router) {
 		if u.Status != "active" {
 			a.notify.Notify(auth.SecurityEvent{Type: auth.EventNonActiveAccess, UserID: u.Id})
 			DummyCompare(data.Password, DefaultHashCost)
+			if a.rateLimit != nil {
+				a.rateLimit.Fail(ip)
+			}
 			ctx.WriteStatus(401)
 			ctx.Write([]byte(auth.ErrInvalidCredentials.Error()))
 			return
@@ -78,17 +87,26 @@ func (a *Authenticator) Mount(r router.Router) {
 		identity, err := a.store.IdentityFor(u.Id, "email_password")
 		if err != nil {
 			DummyCompare(data.Password, DefaultHashCost)
+			if a.rateLimit != nil {
+				a.rateLimit.Fail(ip)
+			}
 			ctx.WriteStatus(401)
 			ctx.Write([]byte(auth.ErrInvalidCredentials.Error()))
 			return
 		}
 		if err := VerifyPassword(identity.ProviderId, data.Password); err != nil {
 			a.notify.Notify(auth.SecurityEvent{Type: auth.EventAccessDenied, IP: ip, UserID: u.Id})
+			if a.rateLimit != nil {
+				a.rateLimit.Fail(ip)
+			}
 			ctx.WriteStatus(401)
 			ctx.Write([]byte(err.Error()))
 			return
 		}
 
+		if a.rateLimit != nil {
+			a.rateLimit.Reset(ip)
+		}
 		if err := a.sessions.IssueSession(ctx, u.Id); err != nil {
 			ctx.WriteStatus(500)
 			ctx.Write([]byte(err.Error()))

@@ -13,11 +13,22 @@ type Authenticator struct {
 	notify     auth.SecurityNotifier
 	trustProxy bool
 	afterLogin string
+	rateLimit  auth.RateLimiter
 }
 
 type Option func(*Authenticator)
 
 func WithAfterLogin(path string) Option { return func(a *Authenticator) { a.afterLogin = path } }
+
+// WithRateLimit gates login attempts through l before any RUT/IP check —
+// see auth.RateLimiter and auth.NewIPLimiter for the built-in implementation.
+// A blocked attempt returns the exact same 401 body as any other rejected
+// login (see Mount): this mode exists to keep an outsider from learning what
+// kind of value the field even validates, so the block must not out itself
+// with a different status code or message.
+func WithRateLimit(l auth.RateLimiter) Option {
+	return func(a *Authenticator) { a.rateLimit = l }
+}
 
 // New builds the trusted-IP mode. trustProxy is required (not an Option): this
 // mode's entire security property is "the request's real IP is on the
@@ -41,23 +52,48 @@ func (a *Authenticator) Mount(r router.Router) {
 
 	r.Post(auth.PathLoginRUT, func(ctx router.Context) {
 		ip := auth.ClientIP(ctx, a.trustProxy)
+
+		// Checked before decoding the body or touching the store: a blocked IP
+		// gets the exact same 401 + generic body as any other rejected login
+		// (see WithRateLimit's doc comment) — never a 429 or a distinct
+		// message, either of which would tell an outsider the block exists.
+		if a.rateLimit != nil {
+			if err := a.rateLimit.Check(ip); err != nil {
+				a.notify.Notify(auth.SecurityEvent{Type: auth.EventRateLimited, IP: ip})
+				ctx.WriteStatus(401)
+				ctx.Write([]byte(auth.ErrInvalidCredentials.Error()))
+				return
+			}
+		}
+
 		data := &auth.RUTLoginData{}
 		if err := ctx.Decode(data); err != nil {
 			ctx.WriteStatus(400)
 			return
 		}
 
-		normalized, err := ValidateRUT(data.Rut)
+		normalized, err := ValidateRUT(data.Code)
 		if err != nil {
 			a.notify.Notify(auth.SecurityEvent{Type: auth.EventInvalidRUT, IP: ip})
+			if a.rateLimit != nil {
+				a.rateLimit.Fail(ip)
+			}
+			// The SAME generic body every other rejection below uses — err
+			// here is ValidateRUT's own message ("rut invalid"), which would
+			// tell an outsider this field validates a checksummed ID. The
+			// specific reason is for the security event above (server-side
+			// only), never the response.
 			ctx.WriteStatus(401)
-			ctx.Write([]byte(err.Error()))
+			ctx.Write([]byte(auth.ErrInvalidCredentials.Error()))
 			return
 		}
 
 		identity, err := a.store.IdentityByProvider(auth.ProviderTrustedIP, normalized)
 		if err != nil {
 			a.notify.Notify(auth.SecurityEvent{Type: auth.EventUnknownRUT, IP: ip})
+			if a.rateLimit != nil {
+				a.rateLimit.Fail(ip)
+			}
 			ctx.WriteStatus(401)
 			ctx.Write([]byte(auth.ErrInvalidCredentials.Error()))
 			return
@@ -65,21 +101,35 @@ func (a *Authenticator) Mount(r router.Router) {
 		u, err := a.store.UserByID(identity.UserId)
 		if err != nil {
 			a.notify.Notify(auth.SecurityEvent{Type: auth.EventUnknownRUT, IP: ip})
+			if a.rateLimit != nil {
+				a.rateLimit.Fail(ip)
+			}
 			ctx.WriteStatus(401)
+			ctx.Write([]byte(auth.ErrInvalidCredentials.Error()))
 			return
 		}
 		if u.Status != "active" {
 			a.notify.Notify(auth.SecurityEvent{Type: auth.EventNonActiveAccess, UserID: u.Id})
+			if a.rateLimit != nil {
+				a.rateLimit.Fail(ip)
+			}
 			ctx.WriteStatus(401)
+			ctx.Write([]byte(auth.ErrInvalidCredentials.Error()))
 			return
 		}
 		if !a.trusted.IsTrustedIP(u.Id, ip) {
 			a.notify.Notify(auth.SecurityEvent{Type: auth.EventIPMismatch, UserID: u.Id, IP: ip})
+			if a.rateLimit != nil {
+				a.rateLimit.Fail(ip)
+			}
 			ctx.WriteStatus(401)
 			ctx.Write([]byte(auth.ErrInvalidCredentials.Error()))
 			return
 		}
 
+		if a.rateLimit != nil {
+			a.rateLimit.Reset(ip)
+		}
 		if err := a.sessions.IssueSession(ctx, u.Id); err != nil {
 			ctx.WriteStatus(500)
 			return
