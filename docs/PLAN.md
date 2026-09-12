@@ -2,8 +2,9 @@
 PLAN: "feat: LAN RUT login contract, me+RBAC composition, sliding idle sessions, email-less users"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 12105204108956950385
+PR: https://github.com/webtyp/auth/pull/4
 ---
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.
