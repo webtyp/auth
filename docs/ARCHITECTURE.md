@@ -110,3 +110,32 @@ sequenceDiagram
 
 All modes report `SecurityEvent` on `TopicSecurity = "auth.security"` via the
 optional `events.Publisher` injected in `auth.Config`. `nil` drops events.
+New event types:
+- `EventInvalidRUT`: `trusted_ip` rejected a login attempt because the RUT failed checksum validation.
+- `EventUnknownRUT`: `trusted_ip` rejected a login attempt because no identity or user was found for a valid RUT.
+
+## In-Library `opMe` Composition & ProfileDTO
+
+`opMe` composes identity with authorization in-library when `Config.Permissions` is provided:
+```go
+authMod, _ := authority.New(db, auth.Config{
+    IDs: ids,
+    Permissions: &auth.Permissions{
+        Resolver:  rbacSvc, // satisfies ActionResolver structurally
+        ProjectID: "main",
+        Resources: []model.Resource{"service_catalog", "staff"},
+    },
+})
+```
+`ProfileDTO` provides `Grant(resource, actions)` to produce wire permissions ("resource:actions") and `Allows(resource)` to evaluate access on the client.
+
+## Sliding Idle Sessions
+
+`Config.IdleTTL` configures sliding session expiry. When `IdleTTL > 0`, every authenticated `GetSession` extends `ExpiresAt` to `now + IdleTTL` if the new expiry exceeds the current one. `IdleTTL = 0` (default) preserves fixed `TokenTTL` expiry.
+
+## LAN Identity Administration Operations
+
+`authority` exports three MCP operations for LAN RUT identity administration:
+- `OpRegisterLAN` (`register_lan`): links a normalized RUT to a user ID.
+- `OpUnregisterLAN` (`unregister_lan`): removes a user's LAN identity and associated allowed IPs.
+- `OpGetLAN` (`get_lan`): retrieves a user's registered RUT identity.

@@ -52,5 +52,22 @@ localAuth := local.New(scenarios, authMod, authMod, local.WithAfterLogin("/"))
 authMod.Enable(localAuth)
 ```
 
+### LAN RUT Login Example
+
+```go
+tipAuth := trustedip.New(authMod, authMod, authMod, notifier, true)
+authMod.Enable(tipAuth)
+
+authMod, _ = authority.New(db, auth.Config{
+    IDs:      ids,
+    IdleTTL:  1800, // 30 min sliding idle session
+    Permissions: &auth.Permissions{
+        Resolver:  rbacSvc,
+        ProjectID: "main",
+        Resources: []model.Resource{"service_catalog"},
+    },
+})
+```
+
 Production builds use `oauth2.New` with a real `google.GoogleProvider` and never
 register `local`.

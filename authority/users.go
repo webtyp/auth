@@ -6,12 +6,39 @@ import (
 
 	"webtyp.com/model"
 	"webtyp.com/orm"
+	"webtyp.com/storage"
 	"webtyp.com/auth"
 )
 
 func createUser(db *orm.DB, ids model.IDGenerator, email, name, phone string) (auth.User, error) {
 	id := ids.NewID()
 	now := time.Now() / 1e9
+
+	if email == "" {
+		fields := []string{"id", "name", "phone", "status", "created_at"}
+		values := []any{id, name, phone, "active", now}
+		q := storage.Query{
+			Action:  storage.ActionCreate,
+			Table:   "user",
+			Columns: fields,
+			Values:  values,
+		}
+		conn := db.RawConn()
+		plan, err := conn.Compile(q, &auth.User{})
+		if err != nil {
+			return auth.User{}, err
+		}
+		if err := conn.Exec(plan.Query, plan.Args...); err != nil {
+			return auth.User{}, err
+		}
+		return auth.User{
+			Id:        id,
+			Name:      name,
+			Phone:     phone,
+			Status:    "active",
+			CreatedAt: now,
+		}, nil
+	}
 
 	newUser := auth.User{
 		Id:        id,
