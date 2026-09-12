@@ -54,20 +54,39 @@ authMod.Enable(localAuth)
 
 ### LAN RUT Login Example
 
-```go
-tipAuth := trustedip.New(authMod, authMod, authMod, notifier, true)
-authMod.Enable(tipAuth)
+A LAN app identifies staff by RUT and checks the request's IP. Configure the
+module first, then enable the mode — `Enable` registers on the module you built:
 
-authMod, _ = authority.New(db, auth.Config{
-    IDs:      ids,
-    IdleTTL:  1800, // 30 min sliding idle session
+```go
+authMod, _ := authority.New(db, auth.Config{
+    IDs:     ids,
+    IdleTTL: 1800, // 30 min without activity ends the session (sliding)
     Permissions: &auth.Permissions{
-        Resolver:  rbacSvc,
+        Resolver:  rbacSvc, // satisfies auth.ActionResolver structurally
         ProjectID: "main",
         Resources: []model.Resource{"service_catalog"},
     },
 })
+
+// trustProxy is explicit, not an Option: behind a reverse proxy every request
+// otherwise looks like it came from the proxy's own IP.
+authMod.Enable(trustedip.New(authMod, trustedIPStore, authMod, authMod, false))
 ```
+
+The client builds its single-field login form from `auth.RUTLoginDataModel` and
+posts it to `auth.PathLoginRUT`. `trustedIPStore` is the consumer's
+`auth.TrustedIPStore` — answer it per user, not per network, or anyone inside
+the LAN can log in as anyone else.
+
+Administering which RUT belongs to which user goes through the `register_lan`,
+`unregister_lan` and `get_lan` operations, gated on `auth.ResourceLANIdentity`.
+Grant that resource only to LAN administrators: registering a RUT mints a login
+credential, which is a different privilege from editing user records.
+
+> **Not yet supported: users without an email.** `CreateUser("", …)` writes an
+> empty string, and a second one fails with `ErrEmailTaken` because the column
+> is `Unique`. See `docs/PLAN.md` stage 4 — it is blocked on the
+> `NULLABLE_COLUMNS` wave, not on this module.
 
 Production builds use `oauth2.New` with a real `google.GoogleProvider` and never
 register `local`.

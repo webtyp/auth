@@ -6,39 +6,12 @@ import (
 
 	"webtyp.com/model"
 	"webtyp.com/orm"
-	"webtyp.com/storage"
 	"webtyp.com/auth"
 )
 
 func createUser(db *orm.DB, ids model.IDGenerator, email, name, phone string) (auth.User, error) {
 	id := ids.NewID()
 	now := time.Now() / 1e9
-
-	if email == "" {
-		fields := []string{"id", "name", "phone", "status", "created_at"}
-		values := []any{id, name, phone, "active", now}
-		q := storage.Query{
-			Action:  storage.ActionCreate,
-			Table:   "user",
-			Columns: fields,
-			Values:  values,
-		}
-		conn := db.RawConn()
-		plan, err := conn.Compile(q, &auth.User{})
-		if err != nil {
-			return auth.User{}, err
-		}
-		if err := conn.Exec(plan.Query, plan.Args...); err != nil {
-			return auth.User{}, err
-		}
-		return auth.User{
-			Id:        id,
-			Name:      name,
-			Phone:     phone,
-			Status:    "active",
-			CreatedAt: now,
-		}, nil
-	}
 
 	newUser := auth.User{
 		Id:        id,
@@ -86,6 +59,15 @@ func getUser(db *orm.DB, cache *userCache, id string) (auth.User, error) {
 }
 
 func getUserByEmail(db *orm.DB, cache *userCache, email string) (auth.User, error) {
+	// An empty email is not a lookup key. Users without one exist (LAN staff
+	// authenticate by RUT), and matching them here would hand an account to
+	// whoever asks with no email at all: oauth2's callback links the caller's
+	// provider identity to whatever UserByEmail returns, so a provider
+	// reporting a verified-but-empty address would take over that account.
+	if email == "" {
+		return auth.User{}, auth.ErrNotFound
+	}
+
 	qb := db.Query(&auth.User{}).Where(auth.User_.Email).Eq(email)
 	results, err := auth.ReadAllUser(qb)
 	if err != nil {

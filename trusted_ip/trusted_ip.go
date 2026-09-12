@@ -2,7 +2,6 @@ package trustedip
 
 import (
 	"webtyp.com/fmt"
-	"webtyp.com/model"
 	"webtyp.com/router"
 	"webtyp.com/auth"
 )
@@ -32,12 +31,7 @@ func New(store auth.IdentityStore, trusted auth.TrustedIPStore, sessions auth.Se
 	return a
 }
 
-func (a *Authenticator) Name() string { return "trusted_ip" }
-
-type loginRUTData struct{ RUT string }
-
-func (d *loginRUTData) IsNil() bool                      { return d == nil }
-func (d *loginRUTData) DecodeFields(r model.FieldReader) { d.RUT, _ = r.String("rut") }
+func (a *Authenticator) Name() string { return auth.ProviderTrustedIP }
 
 func (a *Authenticator) Mount(r router.Router) {
 	afterLogin := a.afterLogin
@@ -45,29 +39,32 @@ func (a *Authenticator) Mount(r router.Router) {
 		afterLogin = auth.PathAfterLogin
 	}
 
-	r.Post("/login/rut", func(ctx router.Context) {
+	r.Post(auth.PathLoginRUT, func(ctx router.Context) {
 		ip := auth.ClientIP(ctx, a.trustProxy)
-		data := &loginRUTData{}
+		data := &auth.RUTLoginData{}
 		if err := ctx.Decode(data); err != nil {
 			ctx.WriteStatus(400)
 			return
 		}
 
-		normalized, err := ValidateRUT(data.RUT)
+		normalized, err := ValidateRUT(data.Rut)
 		if err != nil {
+			a.notify.Notify(auth.SecurityEvent{Type: auth.EventInvalidRUT, IP: ip})
 			ctx.WriteStatus(401)
 			ctx.Write([]byte(err.Error()))
 			return
 		}
 
-		identity, err := a.store.IdentityByProvider("trusted_ip", normalized)
+		identity, err := a.store.IdentityByProvider(auth.ProviderTrustedIP, normalized)
 		if err != nil {
+			a.notify.Notify(auth.SecurityEvent{Type: auth.EventUnknownRUT, IP: ip})
 			ctx.WriteStatus(401)
 			ctx.Write([]byte(auth.ErrInvalidCredentials.Error()))
 			return
 		}
 		u, err := a.store.UserByID(identity.UserId)
 		if err != nil {
+			a.notify.Notify(auth.SecurityEvent{Type: auth.EventUnknownRUT, IP: ip})
 			ctx.WriteStatus(401)
 			return
 		}

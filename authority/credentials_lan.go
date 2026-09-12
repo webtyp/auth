@@ -17,7 +17,7 @@ func (m *Module) LoginLAN(rut string, ctx router.Context) (auth.User, error) {
 	if err != nil {
 		return auth.User{}, auth.ErrInvalidRUT
 	}
-	identity, err := m.IdentityByProvider("trusted_ip", normalized)
+	identity, err := m.IdentityByProvider(auth.ProviderTrustedIP, normalized)
 	if err != nil {
 		return auth.User{}, auth.ErrInvalidCredentials
 	}
@@ -41,7 +41,7 @@ func (m *Module) RegisterLAN(userID, rut string) error {
 	if err != nil {
 		return auth.ErrInvalidRUT
 	}
-	id, err := m.IdentityByProvider("trusted_ip", normalized)
+	id, err := m.IdentityByProvider(auth.ProviderTrustedIP, normalized)
 	if err == nil {
 		if id.UserId != userID {
 			return auth.ErrRUTTaken
@@ -50,12 +50,12 @@ func (m *Module) RegisterLAN(userID, rut string) error {
 	} else if err != auth.ErrNotFound {
 		return err
 	}
-	return m.UpsertIdentity(userID, "trusted_ip", normalized, "")
+	return m.UpsertIdentity(userID, auth.ProviderTrustedIP, normalized, "")
 }
 
 // UnregisterLAN removes userID's trusted_ip identity and all their allowed IPs.
 func (m *Module) UnregisterLAN(userID string) error {
-	_, err := m.IdentityFor(userID, "trusted_ip")
+	_, err := m.IdentityFor(userID, auth.ProviderTrustedIP)
 	if err == auth.ErrNotFound {
 		return auth.ErrNotFound
 	}
@@ -67,7 +67,7 @@ func (m *Module) UnregisterLAN(userID string) error {
 	for _, ip := range ips {
 		m.db.Delete(ip, orm.Eq(auth.LANIP_.Id, ip.Id))
 	}
-	qbId := m.db.Query(&auth.Identity{}).Where(auth.Identity_.UserId).Eq(userID).Where(auth.Identity_.Provider).Eq("trusted_ip")
+	qbId := m.db.Query(&auth.Identity{}).Where(auth.Identity_.UserId).Eq(userID).Where(auth.Identity_.Provider).Eq(auth.ProviderTrustedIP)
 	ids, _ := auth.ReadAllIdentity(qbId)
 	for _, id := range ids {
 		m.db.Delete(id, orm.Eq(auth.Identity_.Id, id.Id))

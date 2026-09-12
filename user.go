@@ -36,6 +36,8 @@ const (
 	EventAccessDenied                                // AccessCheck: RBAC denied with valid session
 	EventPermissionCorrupt                           // HasPermission: permissions.action is not a CRUD string
 	EventRateLimited                                 // POST /login: Config.RateLimit rejected the attempt before bcrypt
+	EventInvalidRUT                                  // trusted_ip: the typed value is not a checksum-valid RUT (probe or typo)
+	EventUnknownRUT                                  // trusted_ip: valid RUT, no identity registered for it
 )
 
 type SecurityEvent struct {
@@ -206,7 +208,7 @@ func ClientIP(ctx router.Context, trustProxy bool) string {
 			return fmt.Convert(xri).TrimSpace().String()
 		}
 	}
-	if addr := ctx.Value("RemoteAddr"); addr != "" {
+	if addr := ctx.Value(router.ContextKeyRemoteAddr); addr != "" {
 		parts := fmt.Split(addr, ":")
 		if len(parts) > 0 {
 			return parts[0]
@@ -214,6 +216,21 @@ func ClientIP(ctx router.Context, trustProxy bool) string {
 		return addr
 	}
 	return ""
+}
+
+// ActionResolver resolves which actions a subject holds on one resource.
+// rbac.Service satisfies it structurally (AllowedActions); auth never
+// imports rbac — the composition root injects it.
+type ActionResolver interface {
+	AllowedActions(projectID, subjectID string, resource model.Resource) model.Action
+}
+
+// Permissions configures opMe to populate ProfileDTO.Permissions.
+// nil (the default) ⇒ opMe returns no permissions — closed by default.
+type Permissions struct {
+	Resolver  ActionResolver
+	ProjectID string
+	Resources []model.Resource
 }
 
 type Config struct {
@@ -244,6 +261,16 @@ type Config struct {
 	// Return a non-nil error to reject the password. nil = only the built-in
 	// len>=8 check applies.
 	OnPasswordValidate func(password string) error
+
+	// Permissions, when set, makes opMe compose identity (this module) with
+	// authorization (the injected resolver) into ProfileDTO.Permissions.
+	Permissions *Permissions
+
+	// IdleTTL, when > 0, makes sessions expire after IdleTTL seconds WITHOUT
+	// activity, sliding: every authenticated GetSession pushes ExpiresAt to
+	// now+IdleTTL. It supersedes TokenTTL for both initial and renewed
+	// lifetime. 0 (default) ⇒ today's fixed-TokenTTL behavior, unchanged.
+	IdleTTL int
 }
 
 const (
@@ -251,10 +278,19 @@ const (
 	PathLogout     = "/logout"
 	PathAfterLogin = "/"
 
+	// PathLoginRUT is where trusted_ip.Authenticator mounts the LAN RUT
+	// login route. A client builds its login form from RUTLoginDataModel
+	// and posts here — no hardcoded literal anywhere else in the repo.
+	PathLoginRUT = "/login/rut"
+
 	// PathOAuthPrefix es la raiz bajo la que oauth2.Authenticator monta sus
 	// rutas. Es la unica definicion de esa cadena en el repositorio.
 	PathOAuthPrefix = "/oauth/"
 )
+
+// ProviderTrustedIP is the auth.Identity provider name under which the
+// normalized RUT of a LAN user is stored.
+const ProviderTrustedIP = "trusted_ip"
 
 // PathOAuthStart devuelve la ruta que inicia el intercambio OAuth2 con el
 // proveedor indicado. Un consumidor enlaza aqui su boton de "iniciar sesion".
@@ -278,7 +314,21 @@ const (
 	OpListUsers  = "list_users"  // admin: list users
 	OpUpsertUser = "upsert_user" // admin: create (Id=="") or update
 	OpDeleteUser = "delete_user" // admin: delete by record
+
+	OpRegisterLAN   = "register_lan"   // admin: link a RUT to a user (trusted_ip identity)
+	OpUnregisterLAN = "unregister_lan" // admin: remove the user's trusted_ip identity
+	OpGetLAN        = "get_lan"        // admin: read the user's normalized RUT
 )
+
+// ResourceLANIdentity gates the LAN identity ops. It is deliberately NOT the
+// "users" resource those ops sit next to: registering a RUT MINTS A LOGIN
+// CREDENTIAL, while user administration only edits records. Bundling them
+// would make "may create/update users" imply "may log in as anyone" wherever
+// TrustedIPStore answers per-network rather than per-user.
+//
+// An app that never administers LAN identities simply never grants it —
+// closed by default.
+const ResourceLANIdentity model.Resource = "lan_identity"
 
 // ProfileDTO is a safe subset of User data for public/API consumption.
 type ProfileDTO struct {
@@ -316,6 +366,29 @@ func (p ProfileDTO) EncodeFields(w model.FieldWriter) {
 }
 
 func (p ProfileDTO) IsNil() bool { return false }
+
+// Grant appends one "resource:actions" entry — the ONLY producer of the
+// wire format documented on Permissions.
+func (p *ProfileDTO) Grant(resource model.Resource, actions model.Action) {
+	if actions == 0 {
+		return
+	}
+	p.Permissions = append(p.Permissions, string(resource)+":"+actions.String())
+}
+
+// Allows reports whether the profile carries any action on resource — the
+// ONLY consumer of the format. Clients call this instead of parsing
+// Permissions themselves.
+func (p ProfileDTO) Allows(resource string) bool {
+	prefix := resource + ":"
+	for _, perm := range p.Permissions {
+		if fmt.HasPrefix(perm, prefix) {
+			parts := fmt.Split(perm, ":")
+			return len(parts) == 2 && parts[1] != ""
+		}
+	}
+	return false
+}
 
 func (p *ProfileDTO) DecodeFields(r model.FieldReader) {
 	p.Id, _ = r.String("id")

@@ -135,7 +135,37 @@ authMod, _ := authority.New(db, auth.Config{
 
 ## LAN Identity Administration Operations
 
-`authority` exports three MCP operations for LAN RUT identity administration:
-- `OpRegisterLAN` (`register_lan`): links a normalized RUT to a user ID.
-- `OpUnregisterLAN` (`unregister_lan`): removes a user's LAN identity and associated allowed IPs.
-- `OpGetLAN` (`get_lan`): retrieves a user's registered RUT identity.
+`authority` exports three operations for LAN RUT identity administration:
+
+| Op | Name | Gate |
+|---|---|---|
+| `OpRegisterLAN` | `register_lan` | `ResourceLANIdentity` + `Create\|Update` |
+| `OpUnregisterLAN` | `unregister_lan` | `ResourceLANIdentity` + `Delete` |
+| `OpGetLAN` | `get_lan` | `ResourceLANIdentity` + `Read` |
+
+`register_lan` links a normalized RUT to a user id, `unregister_lan` removes
+that identity and the user's allowed IPs, `get_lan` reads the registered RUT.
+
+They are gated on `auth.ResourceLANIdentity` (`"lan_identity"`) and deliberately
+**not** on `"users"`, which gates the user CRUD ops next to them. Registering a
+RUT mints a login credential: an actor who could link their own RUT to a
+privileged user's id would obtain that user's session as soon as their IP passes
+`TrustedIPStore`. Gating both on one resource would make "may create or update
+users" imply account takeover wherever `TrustedIPStore` answers per network
+rather than per user. An app that never administers LAN identities simply never
+grants the resource — closed by default.
+
+## Email-less users — not supported yet
+
+`UserModel.email` is `Unique`, so two users created with an empty email collide.
+Storing NULL instead is the standard answer and is currently impossible:
+`orm.Create` writes every schema column (`Field.OmitEmpty` guards only the wire
+codec), and `database/sql` refuses to scan a NULL into a `string`. Both are
+defects in pieces one layer down and are fixed there — see
+`NULLABLE_COLUMNS_MASTER_PLAN.md`. Until those tags ship, `CreateUser("", …)`
+writes `""` and the second call fails loudly with `ErrEmailTaken`.
+
+`UserByEmail("")` always returns `ErrNotFound`. An empty email is not a lookup
+key: `oauth2`'s callback links the caller's provider identity to whatever
+`UserByEmail` returns, so a provider reporting a verified-but-empty address
+would otherwise take over the first account with no email.

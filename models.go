@@ -9,7 +9,7 @@ var UserModel = model.Definition{
 	Name: "user",
 	Fields: model.Fields{
 		{Name: "id", Type: model.Text(), DB: &model.FieldDB{PK: true}},
-		{Name: "email", Type: input.Email(), DB: &model.FieldDB{Unique: true}},
+		{Name: "email", Type: input.Email(), OmitEmpty: true, DB: &model.FieldDB{Unique: true}},
 		{Name: "name", Type: input.Text()},
 		{Name: "phone", Type: input.Phone()},
 		{Name: "status", Type: model.Text()},
@@ -72,6 +72,13 @@ var LoginDataModel = model.Definition{
 	},
 }
 
+var RUTLoginDataModel = model.Definition{
+	Name: "rut_login_data",
+	Fields: model.Fields{
+		{Name: "rut", Type: input.Text(), NotNull: true},
+	},
+}
+
 var RegisterDataModel = model.Definition{
 	Name: "register_data",
 	Fields: model.Fields{
@@ -96,5 +103,28 @@ var PasswordDataModel = model.Definition{
 		{Name: "current", Type: input.Password(), NotNull: true},
 		{Name: "new", Type: input.Password(), NotNull: true},
 		{Name: "confirm", Type: input.Password(), NotNull: true},
+	},
+}
+
+var RegisterLANArgsModel = model.Definition{
+	Name: "register_lan_args",
+	Fields: model.Fields{
+		{Name: "user_id", Type: model.Text(), NotNull: true},
+		{Name: "rut", Type: input.Text(), NotNull: true},
+	},
+}
+
+var LANUserArgsModel = model.Definition{
+	Name: "lan_user_args",
+	Fields: model.Fields{
+		{Name: "user_id", Type: model.Text(), NotNull: true},
+	},
+}
+
+var LANIdentityModel = model.Definition{
+	Name: "lan_identity",
+	Fields: model.Fields{
+		{Name: "user_id", Type: model.Text()},
+		{Name: "rut", Type: model.Text()},
 	},
 }
