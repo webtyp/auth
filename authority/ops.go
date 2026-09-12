@@ -13,6 +13,10 @@ func (m *Module) MountOperations(reg router.OperationRegistry) {
 	reg.Operation(auth.OpListUsers, m.opListUsers).Requires("users", model.Read)
 	reg.Operation(auth.OpUpsertUser, m.opUpsertUser).Requires("users", model.Create|model.Update).Accepts(&auth.User{})
 	reg.Operation(auth.OpDeleteUser, m.opDeleteUser).Requires("users", model.Delete).Accepts(&auth.User{})
+
+	reg.Operation(auth.OpRegisterLAN, m.opRegisterLAN).Requires(auth.ResourceLANIdentity, model.Create|model.Update).Accepts(&auth.RegisterLANArgs{})
+	reg.Operation(auth.OpUnregisterLAN, m.opUnregisterLAN).Requires(auth.ResourceLANIdentity, model.Delete).Accepts(&auth.LANUserArgs{})
+	reg.Operation(auth.OpGetLAN, m.opGetLAN).Requires(auth.ResourceLANIdentity, model.Read).Accepts(&auth.LANUserArgs{})
 }
 
 func (m *Module) opMe(ctx router.Context) {
@@ -26,11 +30,12 @@ func (m *Module) opMe(ctx router.Context) {
 		ctx.WriteStatus(404)
 		return
 	}
-	// Roles/Permissions se quedan sin poblar aquí a propósito: authority no
-	// conoce RBAC (ver ARCHITECTURE.md). Un consumidor que necesite el
-	// perfil completo lo compone en su propia raíz de composición, uniendo
-	// esto con rbac.Service.
 	profile := auth.ProfileDTO{Id: u.Id, Name: u.Name, Email: u.Email, Avatar: u.Avatar}
+	if p := m.config.Permissions; p != nil && p.Resolver != nil {
+		for _, res := range p.Resources {
+			profile.Grant(res, p.Resolver.AllowedActions(p.ProjectID, userID, res))
+		}
+	}
 	if err := ctx.Encode(&profile); err != nil {
 		ctx.WriteStatus(500)
 	}

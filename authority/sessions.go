@@ -94,6 +94,9 @@ func (m *Module) RotateSession(oldID, ip, userAgent string) (auth.Session, error
 
 func (m *Module) CreateSession(userID, ip, userAgent string) (auth.Session, error) {
 	ttl := m.config.TokenTTL
+	if m.config.IdleTTL > 0 {
+		ttl = m.config.IdleTTL
+	}
 	if ttl == 0 {
 		ttl = 86400
 	}
@@ -126,6 +129,8 @@ func (m *Module) GetSession(id string) (auth.Session, error) {
 			m.cache.delete(id)
 			return auth.Session{}, auth.ErrSessionExpired
 		}
+		m.slideSession(&s)
+		m.cache.set(s.Id, s)
 		return s, nil
 	}
 
@@ -144,8 +149,30 @@ func (m *Module) GetSession(id string) (auth.Session, error) {
 		return auth.Session{}, auth.ErrSessionExpired
 	}
 
+	m.slideSession(&s)
 	m.cache.set(s.Id, s)
 	return s, nil
+}
+
+// slideSession extends s.ExpiresAt to now+IdleTTL when that is later than the
+// current expiry — extend-only, never shorten. No-op when IdleTTL is 0 (the
+// default), leaving today's fixed-TokenTTL behavior unchanged.
+func (m *Module) slideSession(s *auth.Session) {
+	if m.config.IdleTTL <= 0 {
+		return
+	}
+	newExpiry := time.Now()/1e9 + int64(m.config.IdleTTL)
+	if newExpiry <= s.ExpiresAt {
+		return
+	}
+	s.ExpiresAt = newExpiry
+	if err := m.db.Update(s, orm.Eq(auth.Session_.Id, s.Id)); err != nil && m.log != nil {
+		// The session stays valid — failing the request over a bookkeeping
+		// write would log the user out on a transient storage error. But the
+		// slide did not reach the row, so a later isolate will read the older
+		// expiry: say so instead of diverging in silence.
+		m.log("authority: session slide not persisted:", err)
+	}
 }
 
 func (m *Module) DeleteSession(id string) error {

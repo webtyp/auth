@@ -59,6 +59,15 @@ func getUser(db *orm.DB, cache *userCache, id string) (auth.User, error) {
 }
 
 func getUserByEmail(db *orm.DB, cache *userCache, email string) (auth.User, error) {
+	// An empty email is not a lookup key. Users without one exist (LAN staff
+	// authenticate by RUT), and matching them here would hand an account to
+	// whoever asks with no email at all: oauth2's callback links the caller's
+	// provider identity to whatever UserByEmail returns, so a provider
+	// reporting a verified-but-empty address would take over that account.
+	if email == "" {
+		return auth.User{}, auth.ErrNotFound
+	}
+
 	qb := db.Query(&auth.User{}).Where(auth.User_.Email).Eq(email)
 	results, err := auth.ReadAllUser(qb)
 	if err != nil {

@@ -513,8 +513,9 @@ func TestCoverage_GeneratedTypes(t *testing.T) {
 		&auth.SessionList{},
 	}
 	for _, l := range lists {
-		_ = l.Schema()
-		_ = l.Pointers()
+		// No Schema()/Pointers() here: a list is a sequence of rows and has no
+		// columns of its own, so model.FielderSlice exposes only traversal. The
+		// schema belongs to the element, reached through At/Append.
 		_ = l.Len()
 		_ = l.IsNil()
 		_ = l.Append()
