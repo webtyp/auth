@@ -58,7 +58,7 @@ require (
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.12.1 // indirect
 	webtyp.com/base64 v0.0.6 // indirect
-	webtyp.com/dom v0.13.14 // indirect
+	webtyp.com/dom v0.13.15 // indirect
 	webtyp.com/fetch v0.1.28 // indirect
 	webtyp.com/fmt v1.0.0 // indirect
 	webtyp.com/input v0.0.8 // indirect
