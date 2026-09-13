@@ -38,6 +38,9 @@ const (
 	EventRateLimited                                 // POST /login: Config.RateLimit rejected the attempt before bcrypt
 	EventInvalidRUT                                  // trusted_ip: the typed value is not a checksum-valid RUT (probe or typo)
 	EventUnknownRUT                                  // trusted_ip: valid RUT, no identity registered for it
+	EventSetupCompleted                              // trusted_ip: the first administrator was created through PathSetup
+	EventSetupRejected                               // trusted_ip: PathSetup was hit after an admin already existed
+	EventSetupUnavailable                            // trusted_ip: the registry could not be read, so PathSetup stayed shut
 )
 
 type SecurityEvent struct {
@@ -183,6 +186,15 @@ type SecurityNotifier interface {
 	Notify(e SecurityEvent)
 }
 
+// ProviderRegistry answers whether a provider has ANY identity registered yet
+// — the "is this a fresh install?" question a first-run setup asks. Separate
+// from IdentityStore, which only ever resolves ONE known identity: this asks
+// about the emptiness of the whole provider, which is a different question and
+// the only one PathSetup needs.
+type ProviderRegistry interface {
+	HasIdentity(provider string) (bool, error)
+}
+
 // SessionRepo is the storage port a SessionStrategy uses to persist stateful
 // sessions. authority.Module implements it with its own table + cache.
 type SessionRepo interface {
@@ -289,9 +301,21 @@ type Config struct {
 }
 
 const (
-	PathLogin      = "/login"
-	PathLogout     = "/logout"
-	PathAfterLogin = "/"
+	PathLogin  = "/login"
+	PathLogout = "/logout"
+
+	// PathAfterLogin is where every authenticator redirects once a session
+	// exists. It is the WASM application shell, not the site root: "/" is
+	// where the pre-login screen lives, so redirecting there would bounce a
+	// user who just authenticated straight back to the login form.
+	//
+	// The value MUST stay equal to sitec.ShellPath, which is the constant the
+	// site compiler uses to emit that document. This package cannot import
+	// sitec to say so — sitec is a build-time compiler over os/path/filepath
+	// and auth compiles to WASM — so the test that pins the two together
+	// lives in sitec, which imports auth freely. Changing one without the
+	// other fails that test.
+	PathAfterLogin = "/app/"
 
 	// PathLoginRUT is where trusted_ip.Authenticator mounts the LAN
 	// device-trust login route. A client builds its login form from
@@ -303,6 +327,16 @@ const (
 	// only the wire value is neutral. Do not "fix" it back — see
 	// docs/PLAN.md in veltylabs/mjosefa-cms for the leak this closed.
 	PathLoginRUT = "/session"
+
+	// PathSetup is the first-run route trusted_ip.Authenticator mounts when
+	// the consumer enables WithFirstAdminSetup: it answers "is this a fresh
+	// install?" (GET) and creates the very first administrator (POST), and
+	// both close permanently the moment one identity exists for the provider.
+	// It solves the chicken-and-egg of a device-trust system — only an admin
+	// can assign devices, but nobody can log in until an admin exists —
+	// without the consumer having to carry bootstrap credentials in its
+	// environment.
+	PathSetup = "/setup"
 
 	// PathOAuthPrefix es la raiz bajo la que oauth2.Authenticator monta sus
 	// rutas. Es la unica definicion de esa cadena en el repositorio.

@@ -24,6 +24,7 @@ var (
 	_ auth.SecurityNotifier = (*Module)(nil)
 	_ auth.SessionIssuer    = (*Module)(nil)
 	_ auth.SubjectStore     = (*Module)(nil)
+	_ auth.ProviderRegistry = (*Module)(nil)
 )
 
 func (m *Module) UserByID(id string) (auth.User, error) { return getUser(m.db, m.ucache, id) }

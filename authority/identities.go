@@ -52,6 +52,20 @@ func getIdentityByProvider(db *orm.DB, provider, providerID string) (auth.Identi
 	return *results[0], nil
 }
 
+// HasIdentity implements auth.ProviderRegistry: it answers whether provider
+// has ANY identity yet, which is how a first-run setup knows the install is
+// still empty. A read error is NOT reported as "empty": that would swing the
+// setup route open on a database hiccup, so the error surfaces and the caller
+// keeps the route closed.
+func (m *Module) HasIdentity(provider string) (bool, error) {
+	qb := m.db.Query(&auth.Identity{}).Where(auth.Identity_.Provider).Eq(provider)
+	results, err := auth.ReadAllIdentity(qb)
+	if err != nil {
+		return false, err
+	}
+	return len(results) > 0, nil
+}
+
 func getIdentityByUserAndProvider(db *orm.DB, userID, provider string) (auth.Identity, error) {
 	qb := db.Query(&auth.Identity{}).
 		Where(auth.Identity_.UserId).Eq(userID).
