@@ -105,5 +105,5 @@ webtyp.com/user v0.3.13 h1:yVmwB4iKTodM0WgrdOCo4Vpf/xEhlNSfq1A9BiZrXZA=
 webtyp.com/user v0.3.13/go.mod h1:WNs961oB0Bhc/S/rQy5mqO48kMrpad/JpIl5LJF33VI=
 webtyp.com/view v0.5.10 h1:/N+egvI64uwVD5fIbV0BB/v32H48RnYs//s3yDXlqrk=
 webtyp.com/view v0.5.10/go.mod h1:1KPEugG3TOLn86XGgJGsQN334cPGylBARm+qJ2/spnc=
-webtyp.com/widget v0.6.29 h1:hvNgKXiIx6obUdXcn/DgPYC3ZL0xEE+bxRUpPM3LRYs=
-webtyp.com/widget v0.6.29/go.mod h1:vcf+uuV5gXNji31NhQ4xW3fDji70Ui4XikjW1VV32eQ=
+webtyp.com/widget v0.6.30 h1:CstDzI005vsTHJpdYBaqmuB/7Oq5emubljFLlI+n0xo=
+webtyp.com/widget v0.6.30/go.mod h1:vcf+uuV5gXNji31NhQ4xW3fDji70Ui4XikjW1VV32eQ=

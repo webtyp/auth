@@ -65,5 +65,5 @@ require (
 	webtyp.com/sqlt v0.0.10 // indirect
 	webtyp.com/storage v0.0.9 // indirect
 	webtyp.com/time v0.5.6 // indirect
-	webtyp.com/widget v0.6.29 // indirect
+	webtyp.com/widget v0.6.30 // indirect
 )
