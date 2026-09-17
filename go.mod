@@ -20,4 +20,4 @@ require (
 	webtyp.com/view v0.6.2
 )
 
-require webtyp.com/storage v0.0.10 // indirect
+require webtyp.com/storage v0.1.0 // indirect
