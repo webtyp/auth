@@ -7,7 +7,7 @@ import (
 
 var _ router.APIModule = (*Module)(nil)
 
-func (m *Module) ModelName() string { return "user" }
+func (m *Module) ModelName() string { return auth.ModelName }
 
 // MountAPI mounts the one session-termination endpoint centrally — logout ends
 // a session the same way no matter which mode started it (strategy.Revoke) —

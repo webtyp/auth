@@ -15,10 +15,19 @@ type fakeCaller struct {
 	lastArgs model.Encodable
 }
 
+// Qualified: op names on the wire carry their module — see auth.ModelName
+// and mcp.HarvestOps. This fake mimics the server side of that seam, so it
+// must key off the same qualified names auth.NewView's Ops actually calls.
+var (
+	qualifiedListUsers  = auth.ModelName + "." + auth.OpListUsers
+	qualifiedUpsertUser = auth.ModelName + "." + auth.OpUpsertUser
+	qualifiedDeleteUser = auth.ModelName + "." + auth.OpDeleteUser
+)
+
 func (c *fakeCaller) Call(op string, args model.Encodable, out model.Decodable, cb func(error)) {
 	c.lastOp = op
 	c.lastArgs = args
-	if op == auth.OpListUsers {
+	if op == qualifiedListUsers {
 		if l, ok := out.(*auth.UserList); ok {
 			u1 := l.Append().(*auth.User)
 			u1.Id = "u1"
@@ -33,7 +42,7 @@ func (c *fakeCaller) Call(op string, args model.Encodable, out model.Decodable, 
 		if cb != nil {
 			cb(nil)
 		}
-	} else if op == auth.OpUpsertUser || op == auth.OpDeleteUser {
+	} else if op == qualifiedUpsertUser || op == qualifiedDeleteUser {
 		if cb != nil {
 			cb(nil)
 		}
@@ -55,7 +64,11 @@ func TestNewView(t *testing.T) {
 	}
 
 	// 2. Reload to load items
-	v.Reload()
+	var reloadErr error
+	v.Reload(func(err error) { reloadErr = err })
+	if reloadErr != nil {
+		t.Fatalf("Reload: %v", reloadErr)
+	}
 
 	// 3. Verify items projection
 	items := v.Items()
@@ -107,9 +120,13 @@ func TestNewView(t *testing.T) {
 	if !ok {
 		t.Fatal("expected view to implement view.Saver")
 	}
-	s.Save(u)
-	if fc.lastOp != auth.OpUpsertUser {
-		t.Errorf("expected %s op on save, got %s", auth.OpUpsertUser, fc.lastOp)
+	var saveErr error
+	s.Save([]model.Model{u}, func(err error) { saveErr = err })
+	if saveErr != nil {
+		t.Fatalf("Save: %v", saveErr)
+	}
+	if fc.lastOp != qualifiedUpsertUser {
+		t.Errorf("expected %s op on save, got %s", qualifiedUpsertUser, fc.lastOp)
 	}
 	recs := savedRecords(fc.lastArgs)
 	savedUser, ok := recs[0].(*auth.User)
@@ -122,9 +139,13 @@ func TestNewView(t *testing.T) {
 	if !ok {
 		t.Fatal("expected view to implement view.Deleter")
 	}
-	d.Delete("u2")
-	if fc.lastOp != auth.OpDeleteUser {
-		t.Errorf("expected %s op on delete, got %s", auth.OpDeleteUser, fc.lastOp)
+	var deleteErr error
+	d.Delete([]string{"u2"}, func(err error) { deleteErr = err })
+	if deleteErr != nil {
+		t.Fatalf("Delete: %v", deleteErr)
+	}
+	if fc.lastOp != qualifiedDeleteUser {
+		t.Errorf("expected %s op on delete, got %s", qualifiedDeleteUser, fc.lastOp)
 	}
 	ids := deletedIDs(fc.lastArgs)
 	if len(ids) != 1 || ids[0] != "u2" {

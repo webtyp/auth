@@ -363,6 +363,13 @@ func PathOAuthCallback(provider string) string {
 // TopicSecurity is the events topic every SecurityEvent is published on.
 const TopicSecurity = "auth.security"
 
+// ModelName is this module's identity: authority.Module.ModelName() returns
+// it, and mcp.HarvestOps qualifies every op below as "user.<name>" on the
+// wire. NewView (below) passes this same constant as view.Ops.Module, so the
+// client composes the identical qualified name — neither side hand-writes
+// "user.list_users" as a literal.
+const ModelName = "user"
+
 // Op names — shared vocabulary between the wasm view and the server module.
 const (
 	OpMe         = "me"          // authenticated caller's profile
