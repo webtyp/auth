@@ -17,7 +17,7 @@ require (
 	webtyp.com/router v0.1.42
 	webtyp.com/time v0.5.6
 	webtyp.com/user v0.3.13
-	webtyp.com/view v0.6.2
+	webtyp.com/view v0.6.9
 )
 
 require webtyp.com/storage v0.1.0 // indirect
