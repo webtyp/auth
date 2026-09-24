@@ -2,6 +2,8 @@
 PLAN: "feat(auth): DEV_AUTOLOGIN — el servidor reproduce el cuerpo del formulario de login y abre una sesión real; no se compila con el tag prod"
 EXECUTOR: jules
 REVIEWER: none
+STATUS: running
+SESSION: 3727295367392804295
 ---
 
 > Este plan se despacha con el flujo CodeJob. Ver skill: agents-workflow.
