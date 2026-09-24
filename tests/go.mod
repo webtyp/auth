@@ -32,15 +32,15 @@ require (
 	webtyp.com/form v0.4.13
 	webtyp.com/json v0.5.26
 	webtyp.com/jwt v0.1.20
-	webtyp.com/model v0.1.9
+	webtyp.com/model v0.2.0
 	webtyp.com/orm v0.12.4
-	webtyp.com/router v0.1.40
+	webtyp.com/router v0.1.42
 	webtyp.com/server v0.2.57
 	webtyp.com/sitec v0.2.24
 	webtyp.com/sqlite v0.3.7
 	webtyp.com/unixid v0.2.28
 	webtyp.com/user v0.3.13
-	webtyp.com/view v0.6.2
+	webtyp.com/view v0.6.10
 )
 
 require (
@@ -63,11 +63,14 @@ require (
 	modernc.org/libc v1.75.6 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.12.1 // indirect
+	webtyp.com/await v0.1.2 // indirect
 	webtyp.com/base64 v0.0.6 // indirect
 	webtyp.com/color v0.1.2 // indirect
 	webtyp.com/context v0.0.23 // indirect
 	webtyp.com/css v0.4.22 // indirect
+	webtyp.com/dbus v0.1.1 // indirect
 	webtyp.com/dom v0.13.16 // indirect
+	webtyp.com/env v0.0.12 // indirect
 	webtyp.com/fetch v0.1.28 // indirect
 	webtyp.com/fmt v1.0.0 // indirect
 	webtyp.com/font v0.0.5 // indirect
@@ -75,11 +78,13 @@ require (
 	webtyp.com/image v0.1.3 // indirect
 	webtyp.com/input v0.0.9 // indirect
 	webtyp.com/js v0.0.10 // indirect
+	webtyp.com/keyring v0.2.4 // indirect
 	webtyp.com/modfind v0.0.9 // indirect
 	webtyp.com/sqlt v0.0.10 // indirect
-	webtyp.com/storage v0.0.9 // indirect
+	webtyp.com/storage v0.1.0 // indirect
 	webtyp.com/svg v0.3.14 // indirect
 	webtyp.com/time v0.5.6 // indirect
 	webtyp.com/tinygo v1.0.1 // indirect
+	webtyp.com/webauthn v0.1.3 // indirect
 	webtyp.com/widget v0.6.30 // indirect
 )

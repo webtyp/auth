@@ -90,3 +90,17 @@ credential, which is a different privilege from editing user records.
 
 Production builds use `oauth2.New` with a real `google.GoogleProvider` and never
 register `local`.
+
+## Development auto-login
+
+In development environments, setting `DEV_AUTOLOGIN` automatically opens a real session on unauthenticated requests so you don't have to re-login every time the server restarts or times out.
+
+The value must be the **exact JSON body** that the login form POSTs:
+- For `trusted_ip`: `DEV_AUTOLOGIN={"code":"12345678-5"}`
+- For `email_password`: `DEV_AUTOLOGIN={"email":"admin@example.com","password":"secretpassword"}`
+
+The auto-login goes through the exact same validation path as a normal POST request (including IP allowlists, active account status, and rate limits). If logging in from that machine would fail, auto-login fails too.
+
+Once rejected, auto-login latches off in that process to prevent rate limit starvation; to retry, restart the server. To view the actual login form, clear the variable and restart the server.
+
+When compiled with `-tags prod`, `DEV_AUTOLOGIN` is ignored entirely.
