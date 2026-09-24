@@ -1,13 +1,15 @@
 package authority
 
 import (
+	"sync/atomic"
+
+	"webtyp.com/auth"
+	"webtyp.com/auth/session/cookie"
 	"webtyp.com/events"
 	"webtyp.com/fmt"
 	"webtyp.com/model"
 	"webtyp.com/orm"
 	"webtyp.com/time"
-	"webtyp.com/auth"
-	"webtyp.com/auth/session/cookie"
 )
 
 // Module is the user/auth/rbac handle. All backend operations are methods on
@@ -23,6 +25,9 @@ type Module struct {
 
 	strategy       auth.SessionStrategy
 	authenticators []auth.Authenticator
+
+	devLogin       []byte      // DEV_AUTOLOGIN body; nil = production behaviour
+	devLoginFailed atomic.Bool // set after the first full rejection: never retried in this process
 }
 
 // New conecta la estrategia de sesion por defecto (una cookie opaca sobre la
@@ -53,6 +58,7 @@ func New(db *orm.DB, cfg auth.Config) (*Module, error) {
 		events: cfg.Events,
 	}
 	m.strategy = cookie.New(m, cfg.CookieName, cfg.TokenTTL, cfg.TrustProxy)
+	m.devLogin = devAutologinBody()
 
 	return m, nil
 }

@@ -113,6 +113,7 @@ optional `events.Publisher` injected in `auth.Config`. `nil` drops events.
 New event types:
 - `EventInvalidRUT`: `trusted_ip` rejected a login attempt because the RUT failed checksum validation.
 - `EventUnknownRUT`: `trusted_ip` rejected a login attempt because no identity or user was found for a valid RUT.
+- `EventDevAutologin`: `authority` opened a session using `DEV_AUTOLOGIN` replay (development builds only).
 
 ## In-Library `opMe` Composition & ProfileDTO
 

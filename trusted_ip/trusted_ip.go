@@ -1,10 +1,32 @@
 package trustedip
 
 import (
-	"webtyp.com/fmt"
-	"webtyp.com/router"
 	"webtyp.com/auth"
+	"webtyp.com/fmt"
+	"webtyp.com/json"
+	"webtyp.com/router"
 )
+
+// loginFailure carries the exact HTTP answer the POST route must give for a
+// rejected attempt, so Login can hold every check while the route only
+// writes.
+type loginFailure struct {
+	status int
+	body   string
+}
+
+func (f loginFailure) Error() string { return f.body }
+
+func writeFailure(ctx router.Context, err error) {
+	if f, ok := err.(loginFailure); ok {
+		ctx.WriteStatus(f.status)
+		if f.body != "" {
+			ctx.Write([]byte(f.body))
+		}
+		return
+	}
+	ctx.WriteStatus(500)
+}
 
 type Authenticator struct {
 	store       auth.IdentityStore
@@ -69,6 +91,79 @@ func New(store auth.IdentityStore, trusted auth.TrustedIPStore, sessions auth.Se
 
 func (a *Authenticator) Name() string { return auth.ProviderTrustedIP }
 
+// Login runs EVERY check the POST route runs against body — the same bytes the
+// form sends — and returns the user id. It never writes a response and never
+// issues a session: the caller does.
+func (a *Authenticator) Login(ctx router.Context, body []byte) (string, error) {
+	ip := auth.ClientIP(ctx, a.trustProxy)
+
+	// Checked before decoding the body or touching the store: a blocked IP
+	// gets the exact same 401 + generic body as any other rejected login
+	// (see WithRateLimit's doc comment) — never a 429 or a distinct
+	// message, either of which would tell an outsider the block exists.
+	if a.rateLimit != nil {
+		if err := a.rateLimit.Check(ip); err != nil {
+			a.notify.Notify(auth.SecurityEvent{Type: auth.EventRateLimited, IP: ip})
+			return "", loginFailure{status: 401, body: auth.ErrInvalidCredentials.Error()}
+		}
+	}
+
+	data := &auth.RUTLoginData{}
+	if err := json.Decode(body, data); err != nil {
+		return "", loginFailure{status: 400}
+	}
+
+	normalized, err := ValidateRUT(data.Code)
+	if err != nil {
+		a.notify.Notify(auth.SecurityEvent{Type: auth.EventInvalidRUT, IP: ip})
+		if a.rateLimit != nil {
+			a.rateLimit.Fail(ip)
+		}
+		// The SAME generic body every other rejection below uses — err
+		// here is ValidateRUT's own message ("rut invalid"), which would
+		// tell an outsider this field validates a checksummed ID. The
+		// specific reason is for the security event above (server-side
+		// only), never the response.
+		return "", loginFailure{status: 401, body: auth.ErrInvalidCredentials.Error()}
+	}
+
+	identity, err := a.store.IdentityByProvider(auth.ProviderTrustedIP, normalized)
+	if err != nil {
+		a.notify.Notify(auth.SecurityEvent{Type: auth.EventUnknownRUT, IP: ip})
+		if a.rateLimit != nil {
+			a.rateLimit.Fail(ip)
+		}
+		return "", loginFailure{status: 401, body: auth.ErrInvalidCredentials.Error()}
+	}
+	u, err := a.store.UserByID(identity.UserId)
+	if err != nil {
+		a.notify.Notify(auth.SecurityEvent{Type: auth.EventUnknownRUT, IP: ip})
+		if a.rateLimit != nil {
+			a.rateLimit.Fail(ip)
+		}
+		return "", loginFailure{status: 401, body: auth.ErrInvalidCredentials.Error()}
+	}
+	if u.Status != "active" {
+		a.notify.Notify(auth.SecurityEvent{Type: auth.EventNonActiveAccess, UserID: u.Id})
+		if a.rateLimit != nil {
+			a.rateLimit.Fail(ip)
+		}
+		return "", loginFailure{status: 401, body: auth.ErrInvalidCredentials.Error()}
+	}
+	if !a.trusted.IsTrustedIP(u.Id, ip) {
+		a.notify.Notify(auth.SecurityEvent{Type: auth.EventIPMismatch, UserID: u.Id, IP: ip})
+		if a.rateLimit != nil {
+			a.rateLimit.Fail(ip)
+		}
+		return "", loginFailure{status: 401, body: auth.ErrInvalidCredentials.Error()}
+	}
+
+	if a.rateLimit != nil {
+		a.rateLimit.Reset(ip)
+	}
+	return u.Id, nil
+}
+
 func (a *Authenticator) Mount(r router.Router) {
 	afterLogin := a.afterLogin
 	if afterLogin == "" {
@@ -80,86 +175,12 @@ func (a *Authenticator) Mount(r router.Router) {
 	}
 
 	r.Post(auth.PathLoginRUT, func(ctx router.Context) {
-		ip := auth.ClientIP(ctx, a.trustProxy)
-
-		// Checked before decoding the body or touching the store: a blocked IP
-		// gets the exact same 401 + generic body as any other rejected login
-		// (see WithRateLimit's doc comment) — never a 429 or a distinct
-		// message, either of which would tell an outsider the block exists.
-		if a.rateLimit != nil {
-			if err := a.rateLimit.Check(ip); err != nil {
-				a.notify.Notify(auth.SecurityEvent{Type: auth.EventRateLimited, IP: ip})
-				ctx.WriteStatus(401)
-				ctx.Write([]byte(auth.ErrInvalidCredentials.Error()))
-				return
-			}
-		}
-
-		data := &auth.RUTLoginData{}
-		if err := ctx.Decode(data); err != nil {
-			ctx.WriteStatus(400)
-			return
-		}
-
-		normalized, err := ValidateRUT(data.Code)
+		userID, err := a.Login(ctx, ctx.Body())
 		if err != nil {
-			a.notify.Notify(auth.SecurityEvent{Type: auth.EventInvalidRUT, IP: ip})
-			if a.rateLimit != nil {
-				a.rateLimit.Fail(ip)
-			}
-			// The SAME generic body every other rejection below uses — err
-			// here is ValidateRUT's own message ("rut invalid"), which would
-			// tell an outsider this field validates a checksummed ID. The
-			// specific reason is for the security event above (server-side
-			// only), never the response.
-			ctx.WriteStatus(401)
-			ctx.Write([]byte(auth.ErrInvalidCredentials.Error()))
+			writeFailure(ctx, err)
 			return
 		}
-
-		identity, err := a.store.IdentityByProvider(auth.ProviderTrustedIP, normalized)
-		if err != nil {
-			a.notify.Notify(auth.SecurityEvent{Type: auth.EventUnknownRUT, IP: ip})
-			if a.rateLimit != nil {
-				a.rateLimit.Fail(ip)
-			}
-			ctx.WriteStatus(401)
-			ctx.Write([]byte(auth.ErrInvalidCredentials.Error()))
-			return
-		}
-		u, err := a.store.UserByID(identity.UserId)
-		if err != nil {
-			a.notify.Notify(auth.SecurityEvent{Type: auth.EventUnknownRUT, IP: ip})
-			if a.rateLimit != nil {
-				a.rateLimit.Fail(ip)
-			}
-			ctx.WriteStatus(401)
-			ctx.Write([]byte(auth.ErrInvalidCredentials.Error()))
-			return
-		}
-		if u.Status != "active" {
-			a.notify.Notify(auth.SecurityEvent{Type: auth.EventNonActiveAccess, UserID: u.Id})
-			if a.rateLimit != nil {
-				a.rateLimit.Fail(ip)
-			}
-			ctx.WriteStatus(401)
-			ctx.Write([]byte(auth.ErrInvalidCredentials.Error()))
-			return
-		}
-		if !a.trusted.IsTrustedIP(u.Id, ip) {
-			a.notify.Notify(auth.SecurityEvent{Type: auth.EventIPMismatch, UserID: u.Id, IP: ip})
-			if a.rateLimit != nil {
-				a.rateLimit.Fail(ip)
-			}
-			ctx.WriteStatus(401)
-			ctx.Write([]byte(auth.ErrInvalidCredentials.Error()))
-			return
-		}
-
-		if a.rateLimit != nil {
-			a.rateLimit.Reset(ip)
-		}
-		if err := a.sessions.IssueSession(ctx, u.Id); err != nil {
+		if err := a.sessions.IssueSession(ctx, userID); err != nil {
 			ctx.WriteStatus(500)
 			return
 		}
@@ -167,6 +188,8 @@ func (a *Authenticator) Mount(r router.Router) {
 		ctx.WriteStatus(302)
 	}).Public()
 }
+
+var _ auth.FormLogin = (*Authenticator)(nil)
 
 // mountSetup serves the first-run routes described on WithFirstAdminSetup.
 // Both ask the registry on EVERY request rather than caching the answer at

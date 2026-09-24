@@ -41,7 +41,24 @@ const (
 	EventSetupCompleted                              // trusted_ip: the first administrator was created through PathSetup
 	EventSetupRejected                               // trusted_ip: PathSetup was hit after an admin already existed
 	EventSetupUnavailable                            // trusted_ip: the registry could not be read, so PathSetup stayed shut
+	EventDevAutologin                                // authority: DEV_AUTOLOGIN opened a session (development builds only)
 )
+
+// EnvDevAutologin names the development auto-login variable. Its value is the
+// exact JSON body the login form POSTs (e.g. {"code":"12345678-9"}). When it
+// is set, authority replays it through the enabled authenticators' Login and
+// issues a real session. Absent or empty = production behaviour. Builds with
+// the "prod" tag ignore it entirely.
+const EnvDevAutologin = "DEV_AUTOLOGIN"
+
+// FormLogin is implemented by an Authenticator whose login is a form POST.
+// Login runs EVERY check the POST route runs (rate limit, credential, account
+// status, trusted IP) against body — the same bytes the form sends — and
+// returns the user id. It never writes a response and never issues a session:
+// the caller does.
+type FormLogin interface {
+	Login(ctx router.Context, body []byte) (userID string, err error)
+}
 
 type SecurityEvent struct {
 	Type      SecurityEventType
