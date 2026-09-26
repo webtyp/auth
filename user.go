@@ -3,6 +3,7 @@ package auth
 import (
 	"webtyp.com/events"
 	"webtyp.com/fmt"
+	"webtyp.com/input"
 	"webtyp.com/model"
 	"webtyp.com/router"
 	"webtyp.com/user"
@@ -224,8 +225,17 @@ type SessionRepo interface {
 // X-Forwarded-For / X-Real-IP first (only safe behind a reverse proxy you control —
 // otherwise a client can spoof its own IP). Shared by every mode/strategy that
 // needs an IP for a SecurityEvent or an audit column: it is mechanism-agnostic,
-// so it lives at the root, not inside any one mode.
+// so it lives at the root, not inside any one mode. The result is canonical
+// (input.CanonicalIP): compare it only against IPs stored in that same form.
 func ClientIP(ctx router.Context, trustProxy bool) string {
+	return input.CanonicalIP(rawClientIP(ctx, trustProxy))
+}
+
+// rawClientIP is ClientIP before canonicalisation. Every trusted-IP comparison
+// needs the IP stored and the IP observed in one spelling (one "localhost" is
+// ::1 from one client and 127.0.0.1 from another), so no path out of ClientIP
+// may skip input.CanonicalIP — hence one wrapper, not a call per return.
+func rawClientIP(ctx router.Context, trustProxy bool) string {
 	if trustProxy {
 		xff := ctx.GetHeader("X-Forwarded-For")
 		if xff != "" {
