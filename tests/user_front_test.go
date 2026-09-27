@@ -3,10 +3,11 @@
 package tests
 
 import (
+	"errors"
 	"testing"
 
-	"webtyp.com/model"
 	"webtyp.com/auth"
+	"webtyp.com/model"
 	"webtyp.com/view"
 )
 
@@ -15,10 +16,14 @@ type fakeCallerWasm struct {
 	lastArgs model.Encodable
 }
 
+// qualifiedOp is the wire name view.NewCallerLister calls: "<ModelName>.<op>".
+func qualifiedOp(op string) string { return auth.ModelName + "." + op }
+
 func (c *fakeCallerWasm) Call(op string, args model.Encodable, out model.Decodable, cb func(error)) {
 	c.lastOp = op
 	c.lastArgs = args
-	if op == auth.OpListUsers {
+	switch op {
+	case qualifiedOp(auth.OpListUsers):
 		if l, ok := out.(*auth.UserList); ok {
 			u1 := l.Append().(*auth.User)
 			u1.Id = "u1"
@@ -30,17 +35,24 @@ func (c *fakeCallerWasm) Call(op string, args model.Encodable, out model.Decodab
 			u2.Name = "User Two"
 			u2.Email = "u2@test.com"
 		}
-		if cb != nil {
-			cb(nil)
-		}
-	} else if op == auth.OpUpsertUser || op == auth.OpDeleteUser {
-		if cb != nil {
-			cb(nil)
-		}
+		cb(nil)
+	case qualifiedOp(auth.OpUpsertUser), qualifiedOp(auth.OpDeleteUser):
+		cb(nil)
+	default:
+		cb(errors.New("fakeCallerWasm: unexpected op " + op))
 	}
 }
 
 func (c *fakeCallerWasm) Dispatch(s string, e model.Encodable) {}
+
+func mustSucceed(t *testing.T, op string) func(error) {
+	t.Helper()
+	return func(err error) {
+		if err != nil {
+			t.Errorf("%s: %v", op, err)
+		}
+	}
+}
 
 func TestNewView(t *testing.T) {
 	fc := &fakeCallerWasm{}
@@ -55,7 +67,7 @@ func TestNewView(t *testing.T) {
 	}
 
 	// 2. Reload to load items
-	v.Reload()
+	v.Reload(mustSucceed(t, "Reload"))
 
 	// 3. Verify items projection
 	items := v.Items()
@@ -107,9 +119,9 @@ func TestNewView(t *testing.T) {
 	if !ok {
 		t.Fatal("expected view to implement view.Saver")
 	}
-	s.Save(u)
-	if fc.lastOp != auth.OpUpsertUser {
-		t.Errorf("expected %s op on save, got %s", auth.OpUpsertUser, fc.lastOp)
+	s.Save([]model.Model{u}, mustSucceed(t, "Save"))
+	if fc.lastOp != qualifiedOp(auth.OpUpsertUser) {
+		t.Errorf("expected %s op on save, got %s", qualifiedOp(auth.OpUpsertUser), fc.lastOp)
 	}
 	recs := savedRecords(fc.lastArgs)
 	savedUser, ok := recs[0].(*auth.User)
@@ -122,9 +134,9 @@ func TestNewView(t *testing.T) {
 	if !ok {
 		t.Fatal("expected view to implement view.Deleter")
 	}
-	d.Delete("u2")
-	if fc.lastOp != auth.OpDeleteUser {
-		t.Errorf("expected %s op on delete, got %s", auth.OpDeleteUser, fc.lastOp)
+	d.Delete([]string{"u2"}, mustSucceed(t, "Delete"))
+	if fc.lastOp != qualifiedOp(auth.OpDeleteUser) {
+		t.Errorf("expected %s op on delete, got %s", qualifiedOp(auth.OpDeleteUser), fc.lastOp)
 	}
 	ids := deletedIDs(fc.lastArgs)
 	if len(ids) != 1 || ids[0] != "u2" {
