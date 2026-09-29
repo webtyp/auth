@@ -83,7 +83,7 @@ require (
 	webtyp.com/sqlt v0.0.10 // indirect
 	webtyp.com/storage v0.1.0 // indirect
 	webtyp.com/svg v0.3.14 // indirect
-	webtyp.com/time v0.5.6 // indirect
+	webtyp.com/time v0.5.7 // indirect
 	webtyp.com/tinygo v1.0.1 // indirect
 	webtyp.com/webauthn v0.1.3 // indirect
 	webtyp.com/widget v0.6.32 // indirect
