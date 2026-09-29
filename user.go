@@ -45,6 +45,47 @@ const (
 	EventDevAutologin                                // authority: DEV_AUTOLOGIN opened a session (development builds only)
 )
 
+// String returns the event's stable name (lower snake_case), so a logger
+// prints "unauthorized_access" instead of 6. Names are identifiers for log
+// search and alerting: never translated, never changed once published.
+func (t SecurityEventType) String() string {
+	switch t {
+	case EventJWTTampered:
+		return "jwt_tampered"
+	case EventOAuthReplay:
+		return "oauth_replay"
+	case EventOAuthExpiredState:
+		return "oauth_expired_state"
+	case EventOAuthCrossProvider:
+		return "oauth_cross_provider"
+	case EventIPMismatch:
+		return "ip_mismatch"
+	case EventNonActiveAccess:
+		return "non_active_access"
+	case EventUnauthorizedAccess:
+		return "unauthorized_access"
+	case EventAccessDenied:
+		return "access_denied"
+	case EventPermissionCorrupt:
+		return "permission_corrupt"
+	case EventRateLimited:
+		return "rate_limited"
+	case EventInvalidRUT:
+		return "invalid_rut"
+	case EventUnknownRUT:
+		return "unknown_rut"
+	case EventSetupCompleted:
+		return "setup_completed"
+	case EventSetupRejected:
+		return "setup_rejected"
+	case EventSetupUnavailable:
+		return "setup_unavailable"
+	case EventDevAutologin:
+		return "dev_autologin"
+	}
+	return "unknown"
+}
+
 // EnvDevAutologin names the development auto-login variable. Its value is the
 // exact JSON body the login form POSTs (e.g. {"code":"12345678-9"}). When it
 // is set, authority replays it through the enabled authenticators' Login and
