@@ -75,7 +75,7 @@ require (
 	webtyp.com/fmt v1.0.0 // indirect
 	webtyp.com/font v0.0.5 // indirect
 	webtyp.com/html v0.0.24 // indirect
-	webtyp.com/image v0.1.3 // indirect
+	webtyp.com/image v0.1.11 // indirect
 	webtyp.com/input v0.0.10 // indirect
 	webtyp.com/js v0.0.11 // indirect
 	webtyp.com/keyring v0.2.4 // indirect
