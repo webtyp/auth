@@ -81,6 +81,10 @@ func (r *mockRoute) Public() router.Route {
 	return r
 }
 
+func (r *mockRoute) Describe(string) router.Route {
+	return r
+}
+
 type mockOpRegistry struct {
 	ops map[string]*mockRoute
 }

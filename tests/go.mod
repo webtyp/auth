@@ -19,13 +19,13 @@
 //	cd tests && go test -coverpkg=webtyp.com/auth/... ./...
 module webtyp.com/auth/tests
 
-go 1.25.2
+go 1.26.8
 
 replace webtyp.com/auth => ..
 
 require (
 	modernc.org/sqlite v1.58.0
-	webtyp.com/auth v0.0.59
+	webtyp.com/auth v0.0.60
 	webtyp.com/crypto v0.0.27
 	webtyp.com/ddl v0.0.17
 	webtyp.com/events v0.0.5
@@ -34,8 +34,8 @@ require (
 	webtyp.com/jwt v0.1.20
 	webtyp.com/model v0.2.0
 	webtyp.com/orm v0.12.4
-	webtyp.com/router v0.2.0
-	webtyp.com/server v0.2.62
+	webtyp.com/router v0.3.1
+	webtyp.com/server v0.2.68
 	webtyp.com/sitec v0.2.32
 	webtyp.com/sqlite v0.3.7
 	webtyp.com/unixid v0.2.28
@@ -80,6 +80,7 @@ require (
 	webtyp.com/js v0.0.11 // indirect
 	webtyp.com/keyring v0.2.4 // indirect
 	webtyp.com/modfind v0.0.9 // indirect
+	webtyp.com/pwa v0.1.1 // indirect
 	webtyp.com/sqlt v0.0.10 // indirect
 	webtyp.com/storage v0.1.0 // indirect
 	webtyp.com/svg v0.3.14 // indirect
