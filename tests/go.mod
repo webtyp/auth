@@ -68,7 +68,7 @@ require (
 	webtyp.com/base64 v0.0.6 // indirect
 	webtyp.com/color v0.1.2 // indirect
 	webtyp.com/context v0.0.23 // indirect
-	webtyp.com/css v0.4.26 // indirect
+	webtyp.com/css v0.4.27 // indirect
 	webtyp.com/dbus v0.1.1 // indirect
 	webtyp.com/device v0.1.0 // indirect
 	webtyp.com/dom v0.13.18 // indirect
