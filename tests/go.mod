@@ -29,7 +29,7 @@ require (
 	webtyp.com/crypto v0.0.27
 	webtyp.com/ddl v0.0.17
 	webtyp.com/events v0.0.5
-	webtyp.com/form v0.4.19
+	webtyp.com/form v0.4.22
 	webtyp.com/json v0.5.27
 	webtyp.com/jwt v0.1.20
 	webtyp.com/model v0.2.0
@@ -90,5 +90,5 @@ require (
 	webtyp.com/time v0.5.7 // indirect
 	webtyp.com/tinygo v1.0.1 // indirect
 	webtyp.com/webauthn v0.1.3 // indirect
-	webtyp.com/widget v0.6.32 // indirect
+	webtyp.com/widget v0.6.34 // indirect
 )
