@@ -32,7 +32,7 @@ require (
 	webtyp.com/form v0.4.22
 	webtyp.com/json v0.5.27
 	webtyp.com/jwt v0.1.20
-	webtyp.com/model v0.2.0
+	webtyp.com/model v0.2.2
 	webtyp.com/orm v0.12.4
 	webtyp.com/router v0.3.2
 	webtyp.com/server v0.2.71
