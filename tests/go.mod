@@ -71,7 +71,7 @@ require (
 	webtyp.com/css v0.4.27 // indirect
 	webtyp.com/dbus v0.1.1 // indirect
 	webtyp.com/device v0.1.0 // indirect
-	webtyp.com/dom v0.13.18 // indirect
+	webtyp.com/dom v0.13.20 // indirect
 	webtyp.com/env v0.0.12 // indirect
 	webtyp.com/fetch v0.1.28 // indirect
 	webtyp.com/files v0.0.4 // indirect
