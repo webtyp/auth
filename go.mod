@@ -8,7 +8,7 @@ require (
 	webtyp.com/ddl v0.0.17
 	webtyp.com/env v0.0.12
 	webtyp.com/events v0.0.5
-	webtyp.com/fetch v0.1.28
+	webtyp.com/fetch v0.1.29
 	webtyp.com/fmt v1.0.0
 	webtyp.com/input v0.0.10
 	webtyp.com/json v0.5.29
@@ -18,14 +18,16 @@ require (
 	webtyp.com/router v0.3.2
 	webtyp.com/time v0.5.7
 	webtyp.com/user v0.3.13
-	webtyp.com/view v0.6.10
+	webtyp.com/view v0.6.22
 )
 
 require (
 	webtyp.com/await v0.1.2 // indirect
 	webtyp.com/dbus v0.1.1 // indirect
 	webtyp.com/escape v0.1.0 // indirect
+	webtyp.com/filepath v0.1.0 // indirect
 	webtyp.com/keyring v0.2.4 // indirect
+	webtyp.com/lang v0.1.0 // indirect
 	webtyp.com/storage v0.1.0 // indirect
 	webtyp.com/webauthn v0.1.3 // indirect
 )
