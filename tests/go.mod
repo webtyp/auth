@@ -40,7 +40,7 @@ require (
 	webtyp.com/sqlite v0.3.7
 	webtyp.com/unixid v0.2.28
 	webtyp.com/user v0.3.13
-	webtyp.com/view v0.6.10
+	webtyp.com/view v0.6.22
 )
 
 require (
@@ -84,6 +84,7 @@ require (
 	webtyp.com/input v0.0.10 // indirect
 	webtyp.com/js v0.1.0 // indirect
 	webtyp.com/keyring v0.2.4 // indirect
+	webtyp.com/lang v0.1.0 // indirect
 	webtyp.com/modfind v0.0.10 // indirect
 	webtyp.com/pwa v0.1.1 // indirect
 	webtyp.com/sqlt v0.0.10 // indirect
