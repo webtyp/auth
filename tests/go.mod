@@ -81,7 +81,7 @@ require (
 	webtyp.com/font v0.0.5 // indirect
 	webtyp.com/html v0.0.24 // indirect
 	webtyp.com/image v0.1.16 // indirect
-	webtyp.com/input v0.0.17 // indirect
+	webtyp.com/input v0.0.18 // indirect
 	webtyp.com/js v0.1.0 // indirect
 	webtyp.com/keyring v0.2.4 // indirect
 	webtyp.com/lang v0.1.3 // indirect
