@@ -40,7 +40,7 @@ require (
 	webtyp.com/sqlite v0.3.7
 	webtyp.com/unixid v0.2.28
 	webtyp.com/user v0.3.13
-	webtyp.com/view v0.6.22
+	webtyp.com/view v0.6.27
 )
 
 require (
