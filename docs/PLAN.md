@@ -2,6 +2,8 @@
 PLAN: "feat(auth): IsNotFound, IsInvalidRUT, IsRUTTaken — detect sentinels without == between interfaces"
 EXECUTOR: jules
 REVIEWER: none
+STATUS: running
+SESSION: 12580533182478746489
 ---
 
 # Plan — `auth`: centinelas sin `==` entre interfaces
