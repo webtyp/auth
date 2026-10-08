@@ -2,8 +2,9 @@
 PLAN: "feat(auth): IsNotFound, IsInvalidRUT, IsRUTTaken — detect sentinels without == between interfaces"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 12580533182478746489
+PR: https://github.com/webtyp/auth/pull/6
 ---
 
 # Plan — `auth`: centinelas sin `==` entre interfaces
