@@ -28,7 +28,7 @@ require (
 	webtyp.com/auth v0.0.67
 	webtyp.com/crypto v0.0.27
 	webtyp.com/ddl v0.0.17
-	webtyp.com/events v0.0.5
+	webtyp.com/events v0.0.6
 	webtyp.com/form v0.4.30
 	webtyp.com/json v0.5.29
 	webtyp.com/jwt v0.1.20
@@ -39,7 +39,7 @@ require (
 	webtyp.com/sitec v0.2.50
 	webtyp.com/sqlite v0.3.7
 	webtyp.com/unixid v0.2.28
-	webtyp.com/user v0.3.13
+	webtyp.com/user v0.3.14
 	webtyp.com/view v0.6.27
 )
 
@@ -79,7 +79,7 @@ require (
 	webtyp.com/files v0.0.4 // indirect
 	webtyp.com/fmt v1.0.0 // indirect
 	webtyp.com/font v0.0.5 // indirect
-	webtyp.com/html v0.0.24 // indirect
+	webtyp.com/html v0.0.27 // indirect
 	webtyp.com/image v0.1.16 // indirect
 	webtyp.com/input v0.0.18 // indirect
 	webtyp.com/js v0.1.0 // indirect
@@ -87,7 +87,7 @@ require (
 	webtyp.com/lang v0.1.3 // indirect
 	webtyp.com/modfind v0.0.11 // indirect
 	webtyp.com/pwa v0.1.1 // indirect
-	webtyp.com/sqlt v0.0.10 // indirect
+	webtyp.com/sqlt v0.0.11 // indirect
 	webtyp.com/storage v0.1.3 // indirect
 	webtyp.com/svg v0.3.14 // indirect
 	webtyp.com/time v0.5.7 // indirect
