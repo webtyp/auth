@@ -9,20 +9,47 @@ import (
 	"webtyp.com/user"
 )
 
-var (
-	ErrInvalidCredentials = fmt.Err("access", "denied")             // EN: Access Denied                    / ES: Acceso Denegado
-	ErrSuspended          = fmt.Err("user", "suspended")            // EN: User Suspended                   / ES: Usuario Suspendido
-	ErrEmailTaken         = fmt.Err("email", "registered")          // EN: Email Registered                 / ES: Correo electrónico Registrado
-	ErrWeakPassword       = fmt.Err("password", "weak")             // EN: Password Weak                    / ES: Contraseña Débil
-	ErrSessionExpired     = fmt.Err("token", "expired")             // EN: Token Expired                    / ES: Token Expirado
-	ErrNotFound           = fmt.Err("user", "not", "found")         // EN: User Not Found                   / ES: Usuario No Encontrado
-	ErrProviderNotFound   = fmt.Err("provider", "not", "found")     // EN: Provider Not Found               / ES: Proveedor No Encontrado
-	ErrInvalidOAuthState  = fmt.Err("state", "invalid")             // EN: State Invalid                    / ES: Estado Inválido
-	ErrCannotUnlink       = fmt.Err("identity", "cannot", "unlink") // EN: Identity Cannot Unlink           / ES: Identidad No puede Desvincular
-	ErrInvalidRUT         = fmt.Err("rut", "invalid")               // EN: Rut Invalid                      / ES: Rut Inválido
-	ErrRUTTaken           = fmt.Err("rut", "registered")            // EN: Rut Registered                   / ES: Rut Registrado
-	ErrIPTaken            = fmt.Err("ip", "registered")             // EN: Ip Registered                    / ES: Ip Registrado
+// domainError is the concrete type of this package's sentinel errors. IsX
+// recognises them with a type assertion: TinyGo compiles that to a type-code
+// comparison, while == between two error values goes through
+// runtime.interfaceEqual and pulls internal/reflectlite into the wasm binary.
+type domainError string
+
+func (e domainError) Error() string { return string(e) }
+
+const (
+	ErrInvalidCredentials domainError = "access denied"             // EN: Access Denied                    / ES: Acceso Denegado
+	ErrSuspended          domainError = "user suspended"            // EN: User Suspended                   / ES: Usuario Suspendido
+	ErrEmailTaken         domainError = "email registered"          // EN: Email Registered                 / ES: Correo electrónico Registrado
+	ErrWeakPassword       domainError = "password weak"             // EN: Password Weak                    / ES: Contraseña Débil
+	ErrSessionExpired     domainError = "token expired"             // EN: Token Expired                    / ES: Token Expirado
+	ErrNotFound           domainError = "user not found"            // EN: User Not Found                   / ES: Usuario No Encontrado
+	ErrProviderNotFound   domainError = "provider not found"        // EN: Provider Not Found               / ES: Proveedor No Encontrado
+	ErrInvalidOAuthState  domainError = "state invalid"             // EN: State Invalid                    / ES: Estado Inválido
+	ErrCannotUnlink       domainError = "identity cannot unlink"    // EN: Identity Cannot Unlink           / ES: Identidad No puede Desvincular
+	ErrInvalidRUT         domainError = "rut invalid"               // EN: Rut Invalid                      / ES: Rut Inválido
+	ErrRUTTaken           domainError = "rut registered"            // EN: Rut Registered                   / ES: Rut Registrado
+	ErrIPTaken            domainError = "ip registered"             // EN: Ip Registered                    / ES: Ip Registrado
 )
+
+// IsNotFound reports whether err is ErrNotFound.
+func IsNotFound(err error) bool {
+	e, ok := err.(domainError)
+	return ok && e == ErrNotFound
+}
+
+// IsInvalidRUT reports whether err is ErrInvalidRUT.
+func IsInvalidRUT(err error) bool {
+	e, ok := err.(domainError)
+	return ok && e == ErrInvalidRUT
+}
+
+// IsRUTTaken reports whether err is ErrRUTTaken.
+func IsRUTTaken(err error) bool {
+	e, ok := err.(domainError)
+	return ok && e == ErrRUTTaken
+}
+
 
 type SecurityEventType uint8
 

@@ -12,11 +12,10 @@ func (m *Module) opRegisterLAN(ctx router.Context) {
 		return
 	}
 	if err := m.RegisterLAN(args.UserId, args.Rut); err != nil {
-		switch err {
-		case auth.ErrInvalidRUT, auth.ErrRUTTaken:
+		if auth.IsInvalidRUT(err) || auth.IsRUTTaken(err) {
 			ctx.WriteStatus(409)
 			ctx.Write([]byte(err.Error()))
-		default:
+		} else {
 			ctx.WriteStatus(500)
 		}
 		return
@@ -39,7 +38,7 @@ func (m *Module) opUnregisterLAN(ctx router.Context) {
 		return
 	}
 	if err := m.UnregisterLAN(args.UserId); err != nil {
-		if err == auth.ErrNotFound {
+		if auth.IsNotFound(err) {
 			ctx.WriteStatus(404)
 			return
 		}
@@ -57,7 +56,7 @@ func (m *Module) opGetLAN(ctx router.Context) {
 	}
 	identity, err := m.IdentityFor(args.UserId, auth.ProviderTrustedIP)
 	if err != nil {
-		if err == auth.ErrNotFound {
+		if auth.IsNotFound(err) {
 			ctx.WriteStatus(404)
 			return
 		}

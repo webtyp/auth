@@ -398,7 +398,7 @@ func testLAN(t *testing.T) {
 	}
 
 	_, err = m.LoginLAN("123", ctx)
-	if err != auth.ErrInvalidRUT {
+	if !auth.IsInvalidRUT(err) {
 		t.Errorf("expected ErrInvalidRUT, got %v", err)
 	}
 

@@ -78,7 +78,7 @@ func TestUserByEmailNeverMatchesEmpty(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := m.UserByEmail(""); err != auth.ErrNotFound {
+	if _, err := m.UserByEmail(""); !auth.IsNotFound(err) {
 		t.Errorf("UserByEmail(\"\") = %v, want ErrNotFound", err)
 	}
 }
