@@ -199,7 +199,7 @@ func TestSessionRotation(t *testing.T) {
 
 		// Ensure old session is gone
 		_, err = m.GetSession(sess1.Id)
-		if err != auth.ErrNotFound {
+		if !auth.IsNotFound(err) {
 			t.Errorf("expected ErrNotFound for old session, got %v", err)
 		}
 	})
@@ -222,7 +222,7 @@ func TestSessionRotation(t *testing.T) {
 
 	t.Run("RotateSession not found", func(t *testing.T) {
 		_, err := m.RotateSession("nope", "10.0.0.1", "ua1")
-		if err != auth.ErrNotFound {
+		if !auth.IsNotFound(err) {
 			t.Errorf("expected ErrNotFound, got %v", err)
 		}
 	})

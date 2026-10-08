@@ -3,7 +3,6 @@ package auth
 import (
 	"sync"
 
-	"webtyp.com/fmt"
 	"webtyp.com/time"
 )
 
@@ -20,7 +19,7 @@ type RateLimiter interface {
 // ErrTooManyAttempts is deliberately generic: it must never reveal whether
 // the block is per-IP, per-account, or the credential's own format was
 // wrong — the same body every other login failure already returns.
-var ErrTooManyAttempts = fmt.Err("too", "many", "attempts")
+const ErrTooManyAttempts domainError = "too many attempts"
 
 type ipRecord struct {
 	fails        int

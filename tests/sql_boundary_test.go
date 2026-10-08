@@ -42,14 +42,14 @@ func TestSQLBoundary(t *testing.T) {
 
 	t.Run("RegisterLAN Injection", func(t *testing.T) {
 		err := m.RegisterLAN(u.Id, "12345678-5'; --")
-		if err != auth.ErrInvalidRUT {
+		if !auth.IsInvalidRUT(err) {
 			t.Errorf("expected ErrInvalidRUT, got %v", err)
 		}
 	})
 
 	t.Run("GetUser Injection", func(t *testing.T) {
 		_, err := m.GetUser("1 UNION SELECT * FROM user_identities")
-		if err != auth.ErrNotFound {
+		if !auth.IsNotFound(err) {
 			t.Errorf("expected ErrNotFound, got %v", err)
 		}
 	})

@@ -47,7 +47,7 @@ func (m *Module) RegisterLAN(userID, rut string) error {
 			return auth.ErrRUTTaken
 		}
 		return nil
-	} else if err != auth.ErrNotFound {
+	} else if !auth.IsNotFound(err) {
 		return err
 	}
 	return m.UpsertIdentity(userID, auth.ProviderTrustedIP, normalized, "")
@@ -56,7 +56,7 @@ func (m *Module) RegisterLAN(userID, rut string) error {
 // UnregisterLAN removes userID's trusted_ip identity and all their allowed IPs.
 func (m *Module) UnregisterLAN(userID string) error {
 	_, err := m.IdentityFor(userID, auth.ProviderTrustedIP)
-	if err == auth.ErrNotFound {
+	if auth.IsNotFound(err) {
 		return auth.ErrNotFound
 	}
 	if err != nil {

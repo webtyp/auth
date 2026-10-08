@@ -171,7 +171,7 @@ func TestAdminOps(t *testing.T) {
 
 				// Verify user got deleted from DB
 				_, err := m.GetUser(updated.Id)
-				if err != auth.ErrNotFound {
+				if !auth.IsNotFound(err) {
 					t.Errorf("expected ErrNotFound after deletion, got %v", err)
 				}
 			})
