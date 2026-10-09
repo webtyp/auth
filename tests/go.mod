@@ -36,7 +36,7 @@ require (
 	webtyp.com/orm v0.12.8
 	webtyp.com/router v0.4.0
 	webtyp.com/server v0.2.77
-	webtyp.com/sitec v0.2.50
+	webtyp.com/sitec v0.2.55
 	webtyp.com/sqlite v0.3.7
 	webtyp.com/unixid v0.3.0
 	webtyp.com/user v0.3.14
