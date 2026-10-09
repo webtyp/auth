@@ -38,7 +38,7 @@ require (
 	webtyp.com/server v0.2.77
 	webtyp.com/sitec v0.2.50
 	webtyp.com/sqlite v0.3.7
-	webtyp.com/unixid v0.2.28
+	webtyp.com/unixid v0.3.0
 	webtyp.com/user v0.3.14
 	webtyp.com/view v0.6.27
 )
