@@ -88,7 +88,7 @@ require (
 	webtyp.com/modfind v0.0.11 // indirect
 	webtyp.com/pwa v0.1.1 // indirect
 	webtyp.com/sqlt v0.0.11 // indirect
-	webtyp.com/storage v0.1.3 // indirect
+	webtyp.com/storage v0.1.4 // indirect
 	webtyp.com/svg v0.3.14 // indirect
 	webtyp.com/time v0.5.7 // indirect
 	webtyp.com/tinygo v1.0.1 // indirect
