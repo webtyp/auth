@@ -6,6 +6,7 @@ package local
 import (
 	"webtyp.com/auth"
 	"webtyp.com/fmt"
+	"webtyp.com/json"
 	"webtyp.com/model"
 	"webtyp.com/router"
 	"webtyp.com/user"
@@ -227,3 +228,75 @@ func escapeHTML(s string) string {
 }
 
 var _ auth.Authenticator = (*Authenticator)(nil)
+var _ auth.FormLogin = (*Authenticator)(nil)
+
+// Login implements auth.FormLogin for local scenarios. This enables DEV_AUTOLOGIN replay
+// (e.g. DEV_AUTOLOGIN={"id":"local-admin"} or DEV_AUTOLOGIN={"email":"admin@iam.local"}).
+func (a *Authenticator) Login(ctx router.Context, body []byte) (string, error) {
+	var payload selectPayload
+	if err := json.Decode(body, &payload); err == nil && payload.ID != "" {
+		return a.loginID(payload.ID)
+	}
+	raw := string(body)
+	if fmt.Contains(raw, "\"email\"") {
+		parts := fmt.Split(raw, "\"")
+		for i := 0; i < len(parts)-1; i++ {
+			if parts[i] == "email" && i+2 < len(parts) {
+				return a.loginID(parts[i+2])
+			}
+		}
+	}
+	id := parseScenarioBody(raw)
+	if id != "" {
+		return a.loginID(id)
+	}
+	return "", fmt.Errf("local: scenario id required in body")
+}
+
+func (a *Authenticator) loginID(id string) (string, error) {
+	sc := findScenario(a.scenarios, user.SubjectID(id))
+	if sc == nil {
+		for i := range a.scenarios {
+			if a.scenarios[i].Email == id {
+				sc = &a.scenarios[i]
+				break
+			}
+		}
+	}
+	if sc == nil {
+		return "", fmt.Errf("local: unknown scenario %s", id)
+	}
+	subj, err := a.store.GetOrCreateSubject(sc.ID, sc.Email, sc.Name, sc.Avatar)
+	if err != nil {
+		return "", err
+	}
+	return string(subj.ID), nil
+}
+
+func parseScenarioBody(body string) string {
+	if fmt.Contains(body, "\"id\"") || fmt.Contains(body, "\"scenario") {
+		parts := fmt.Split(body, "\"")
+		for i := 0; i < len(parts)-1; i++ {
+			key := parts[i]
+			if key == "id" || key == "scenario" || key == "scenario_id" {
+				if i+2 < len(parts) {
+					return fmt.Convert(parts[i+2]).TrimSpace().String()
+				}
+			}
+		}
+	}
+	for _, part := range fmt.Split(body, "&") {
+		kv := fmt.Split(part, "=")
+		if len(kv) == 2 {
+			k := fmt.Convert(kv[0]).TrimSpace().String()
+			if k == "id" || k == "scenario" || k == "scenario_id" {
+				return fmt.Convert(kv[1]).TrimSpace().String()
+			}
+		}
+	}
+	trimmed := fmt.Convert(body).TrimSpace().String()
+	if trimmed != "" && !fmt.Contains(trimmed, "=") && !fmt.Contains(trimmed, "{") {
+		return trimmed
+	}
+	return ""
+}
