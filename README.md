@@ -36,6 +36,23 @@ flowchart TD
 - `email_password`, `trusted_ip` — Credential authenticators.
 - `local` — Development selector authenticator; no network, no env vars.
 
+## Working without the server (remembered session)
+
+An offline-first app lets the person who signed in keep working on the same device, that same day,
+while the server is unreachable. No new sign-in ever happens offline, and the remembered profile
+grants nothing: the server re-authorises every request it receives.
+
+```go
+store := localStore{} // Get/Set/Del over dom.LocalStorageGet/Set/Del
+day := time.FormatDate(time.Now())
+if err == nil {            // "me" answered
+	auth.RememberSession(store, profile, day)
+} else if p, ok := auth.RememberedSession(store, day); ok { // no answer from the server
+	profile = p
+}
+// on sign-out: auth.ForgetSession(store)
+```
+
 ## Local Development
 
 ```go
