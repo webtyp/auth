@@ -77,7 +77,7 @@ Targets:
      `webtyp/app` already compiles the client with `-tags dev`.
 2. **Novice names.**
    - `auth.SessionPolicy{Absolute, Idle, Assurance}`;
-   - `auth.Identity{UserID, Assurance, IssuedAt}`;
+   - `auth.Principal{UserID, Assurance, IssuedAt}` ("principal" is the industry word for the authenticated subject: Java/Spring `Principal`; `Identity` is already the provider-link model);
    - `cookie.New(repo, cookie.Options{Name, Domain, Policy, TrustProxy})`;
    - `authority.Module.SetStepUpStrategy(s)` and `IssueStepUpSession(ctx, userID)`;
    - `passkey.New(...)`, `clientassertion.New(...)`.
@@ -136,8 +136,10 @@ type SessionPolicy struct {
 	Assurance model.Assurance // what a session issued under this policy proves
 }
 
-// Identity is who a request is, and how strongly that was proven.
-type Identity struct {
+// Principal is who a request is, and how strongly that was proven. (The name
+// Identity is taken: it is the provider-link model of the "identity" table,
+// which must NOT be renamed — its ModelName is a table name.)
+type Principal struct {
 	UserID    string
 	Assurance model.Assurance
 	IssuedAt  int64 // unix seconds the session was created; 0 for request credentials
@@ -151,7 +153,7 @@ Constant: `ErrMsgPolicyAbsolute = "auth: SessionPolicy.Absolute must be > 0"`.
 ```go
 type SessionStrategy interface {
 	Issue(ctx router.Context, userID string) error
-	Identify(ctx router.Context) (Identity, error) // zero Identity only with a non-nil err
+	Identify(ctx router.Context) (Principal, error) // zero Principal only with a non-nil err
 	Revoke(ctx router.Context) error
 }
 ```
@@ -218,7 +220,7 @@ func New(repo auth.SessionRepo, o Options) (*Strategy, error) // error when Poli
   `HttpOnly`, `Secure`, `SameSite=Strict`, `Path="/"`, `MaxAge = policy.Absolute`,
   `Domain = o.Domain` (only when set).
 - `Identify`: returns
-  `auth.Identity{UserID: sess.UserId, Assurance: model.Assurance(sess.Assurance), IssuedAt: sess.CreatedAt}`.
+  `auth.Principal{UserID: sess.UserId, Assurance: model.Assurance(sess.Assurance), IssuedAt: sess.CreatedAt}`.
 - `Revoke`: delete the row, and clear the cookie with the **same name, Path
   and Domain**. A cookie set with a Domain cannot be cleared without it, and
   today's `Revoke` omits it.
@@ -242,10 +244,10 @@ doc of `SessionStrategy`, `authority/module.go` `SetStrategy` doc,
    // RequestIdentifier is an Authenticator that identifies a request from a
    // credential it carries (a header), not from a session. handled == true
    // means the request presented this kind of credential: the result (which may
-   // be the zero Identity, if the credential was invalid) is final and no
+   // be the zero Principal, if the credential was invalid) is final and no
    // session cookie is consulted.
    type RequestIdentifier interface {
-   	IdentifyRequest(ctx router.Context) (id Identity, handled bool)
+   	IdentifyRequest(ctx router.Context) (p Principal, handled bool)
    }
    ```
 2. `authority.Module`:
@@ -256,7 +258,7 @@ doc of `SessionStrategy`, `authority/module.go` `SetStrategy` doc,
    - `func (m *Module) IssueStepUpSession(ctx router.Context, userID string) error`:
      returns `ErrNoStepUpStrategy` (new error constant
      `"auth: no step-up strategy configured"`) when `stepUp == nil`;
-   - `func (m *Module) CurrentIdentity(ctx router.Context) (auth.Identity, error)`:
+   - `func (m *Module) CurrentPrincipal(ctx router.Context) (auth.Principal, error)`:
      runs the same resolution as `Authenticate` (below) without touching
      `ctx`. Used by `passkey` to read `IssuedAt`.
 3. `authority/middleware.go` `Authenticate()` resolution order (see diagram):
@@ -265,7 +267,7 @@ doc of `SessionStrategy`, `authority/module.go` `SetStrategy` doc,
       anonymous;
    2. `m.stepUp` (if set) `Identify` OK → that identity;
    3. `m.strategy.Identify` OK → that identity;
-   4. dev autologin (only compiled with `-tags dev`) → `Identity{UserID, Assurance: SingleFactor}`;
+   4. dev autologin (only compiled with `-tags dev`) → `Principal{UserID, Assurance: SingleFactor}`;
    5. anonymous.
 
    Then `ctx.SetUserID(id.UserID)` and `ctx.SetAssurance(id.Assurance)`.
@@ -280,7 +282,7 @@ needs" pattern):
 
 ```go
 type Sessions interface {
-	CurrentIdentity(ctx router.Context) (auth.Identity, error)
+	CurrentPrincipal(ctx router.Context) (auth.Principal, error)
 	IssueStepUpSession(ctx router.Context, userID string) error
 	Notify(e auth.SecurityEvent)
 }
@@ -323,7 +325,7 @@ passkey"):
   `ctx.Assurance() == model.AssuranceMultiFactor`. Otherwise answer 401 with
   `router.HeaderWWWAuthenticate: router.ChallengeMFARequired`.
 - If the user has 0 credentials: require
-  `now - CurrentIdentity(ctx).IssuedAt <= freshLoginWindow` (constant 300 s).
+  `now - CurrentPrincipal(ctx).IssuedAt <= freshLoginWindow` (constant 300 s).
   Otherwise answer 401 with header value constant
   `ChallengeRecentLogin = Bearer error="insufficient_user_authentication", error_description="sign in again to enroll a passkey", max_age=300`
   (RFC 9470 `max_age`).
@@ -360,8 +362,8 @@ Model `ClientAssertionJti{Id string /* iss + ":" + jti */, ExpiresAt int64}`
 
 `IdentifyRequest(ctx)`:
 1. `token, ok := jwt.FromBearer(ctx.GetHeader("Authorization"))`. No bearer →
-   `(Identity{}, false)`: not this kind of request.
-2. From here on, `handled = true`. Every failure returns `(Identity{}, true)`
+   `(Principal{}, false)`: not this kind of request.
+2. From here on, `handled = true`. Every failure returns `(Principal{}, true)`
    and notifies `EventClientAssertionRejected` with one of these reasons
    (constants): `reasonMalformed`, `reasonUnknownClient`, `reasonSignature`,
    `reasonExpired`, `reasonAudience`, `reasonBinding`, `reasonReplay`.
@@ -374,7 +376,7 @@ Model `ClientAssertionJti{Id string /* iss + ":" + jti */, ExpiresAt int64}`
 8. Delete rows with `ExpiresAt < now` (housekeeping, ignore its error), then
    insert `ClientAssertionJti{Id: iss+":"+a.Jti, ExpiresAt: a.Exp}`. An insert
    error (duplicate primary key) → `reasonReplay`.
-9. `(Identity{UserID: iss, Assurance: model.AssuranceSingleFactor}, true)`.
+9. `(Principal{UserID: iss, Assurance: model.AssuranceSingleFactor}, true)`.
 
 No per-client lockout, on purpose: there is no guessable secret, and a lockout
 keyed on `client_id` would let anyone deny service to a legitimate client by
