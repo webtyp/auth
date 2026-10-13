@@ -4,7 +4,7 @@ go 1.26.8
 
 require (
 	webtyp.com/base64 v0.0.6
-	webtyp.com/crypto v0.0.27
+	webtyp.com/crypto v0.0.28
 	webtyp.com/ddl v0.0.17
 	webtyp.com/env v0.0.12
 	webtyp.com/events v0.0.5
