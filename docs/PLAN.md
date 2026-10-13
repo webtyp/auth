@@ -2,6 +2,8 @@
 PLAN: "feat(auth)!: sessions with idle+absolute policy and assurance, passkey step-up, private_key_jwt clients, DEV_AUTOLOGIN opt-in"
 EXECUTOR: jules
 REVIEWER: none
+STATUS: running
+SESSION: 15401725656930121078
 ---
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.
