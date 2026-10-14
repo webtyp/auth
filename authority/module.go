@@ -9,6 +9,7 @@ import (
 	"webtyp.com/fmt"
 	"webtyp.com/model"
 	"webtyp.com/orm"
+	"webtyp.com/router"
 	"webtyp.com/time"
 )
 
@@ -24,6 +25,7 @@ type Module struct {
 	events events.Publisher
 
 	strategy       auth.SessionStrategy
+	stepUp         auth.SessionStrategy // sessions proven by a second factor; nil = none
 	authenticators []auth.Authenticator
 
 	devLogin       []byte      // DEV_AUTOLOGIN body; nil = production behaviour
@@ -57,7 +59,19 @@ func New(db *orm.DB, cfg auth.Config) (*Module, error) {
 		ids:    cfg.IDs,
 		events: cfg.Events,
 	}
-	m.strategy = cookie.New(m, cfg.CookieName, cfg.TokenTTL, cfg.TrustProxy)
+	strategy, err := cookie.New(m, cookie.Options{
+		Name: cfg.CookieName,
+		Policy: auth.SessionPolicy{
+			Absolute:  cfg.TokenTTL,
+			Idle:      cfg.IdleTTL,
+			Assurance: model.AssuranceSingleFactor,
+		},
+		TrustProxy: cfg.TrustProxy,
+	})
+	if err != nil {
+		return nil, err
+	}
+	m.strategy = strategy
 	m.devLogin = devAutologinBody()
 
 	return m, nil
@@ -65,11 +79,35 @@ func New(db *orm.DB, cfg auth.Config) (*Module, error) {
 
 // SetStrategy overrides how sessions are carried. Call before mounting. A nil
 // argument is ignored — the default set by New is already production-ready;
-// this exists to opt into session/jwt or a custom strategy, never to unset it.
+// this exists to opt into a custom strategy, never to unset it.
 func (m *Module) SetStrategy(s auth.SessionStrategy) {
 	if s != nil {
 		m.strategy = s
 	}
+}
+
+// ErrNoStepUpStrategy is what IssueStepUpSession returns when no step-up
+// strategy was configured.
+const ErrNoStepUpStrategy domainErr = "auth: no step-up strategy configured"
+
+type domainErr string
+
+func (e domainErr) Error() string { return string(e) }
+
+// SetStepUpStrategy sets how sessions proven by a second factor are carried.
+// Call before mounting; a nil argument is ignored, like SetStrategy.
+func (m *Module) SetStepUpStrategy(s auth.SessionStrategy) {
+	if s != nil {
+		m.stepUp = s
+	}
+}
+
+// IssueStepUpSession starts a session proven by a second factor.
+func (m *Module) IssueStepUpSession(ctx router.Context, userID string) error {
+	if m.stepUp == nil {
+		return ErrNoStepUpStrategy
+	}
+	return m.stepUp.Issue(ctx, userID)
 }
 
 // Enable registers the authentication modes this app supports — 1 or N.

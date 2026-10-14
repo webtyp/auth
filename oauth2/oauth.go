@@ -69,8 +69,7 @@ const oauthCookieMaxAge = 300
 
 // bodyOAuthFailed es lo ÚNICO que el callback devuelve ante cualquier fallo.
 // Distinguir "state inválido" de "el proveedor rechazó el code" le dice al
-// atacante en qué paso está. Ver la misma doctrina en session/jwt/jwt.go
-// (errInvalidToken).
+// atacante en qué paso está. La misma doctrina: un solo fallo opaco hacia el cliente.
 const bodyOAuthFailed = "authentication failed"
 
 func (a *Authenticator) Mount(r router.Router) {

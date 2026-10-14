@@ -10,11 +10,14 @@ var _ router.APIModule = (*Module)(nil)
 func (m *Module) ModelName() string { return auth.ModelName }
 
 // MountAPI mounts the one session-termination endpoint centrally — logout ends
-// a session the same way no matter which mode started it (strategy.Revoke) —
+// a session the same way no matter which mode started it (strategy.Revoke on the step-up and the main strategy) —
 // then lets every enabled Authenticator mount its own login route. authority
 // never inspects what a mode mounts.
 func (m *Module) MountAPI(r router.Router) {
 	r.Post(auth.PathLogout, func(ctx router.Context) {
+		if m.stepUp != nil {
+			m.stepUp.Revoke(ctx)
+		}
 		m.strategy.Revoke(ctx)
 		ctx.SetHeader("Location", auth.PathLogin)
 		ctx.WriteStatus(302)

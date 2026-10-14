@@ -1,4 +1,4 @@
-//go:build !prod
+//go:build dev
 
 package authority
 
@@ -13,8 +13,8 @@ const (
 	msgDevAutologinRejected = "auth: DEV_AUTOLOGIN was rejected by every enabled authenticator — showing the normal login. The value must be the exact JSON the login form POSTs, and this machine's IP must be allowed for that user. Not retried until restart."
 )
 
-// devAutologinBody reads DEV_AUTOLOGIN. Development builds only — see
-// devlogin_prod.go for the production twin.
+// devAutologinBody reads DEV_AUTOLOGIN. Compiled only with -tags dev — see
+// devlogin_off.go for the twin every other build gets.
 func devAutologinBody() []byte {
 	v := env.Get(auth.EnvDevAutologin)
 	if v == "" {

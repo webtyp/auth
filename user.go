@@ -18,18 +18,18 @@ type domainError string
 func (e domainError) Error() string { return string(e) }
 
 const (
-	ErrInvalidCredentials domainError = "access denied"             // EN: Access Denied                    / ES: Acceso Denegado
-	ErrSuspended          domainError = "user suspended"            // EN: User Suspended                   / ES: Usuario Suspendido
-	ErrEmailTaken         domainError = "email registered"          // EN: Email Registered                 / ES: Correo electrónico Registrado
-	ErrWeakPassword       domainError = "password weak"             // EN: Password Weak                    / ES: Contraseña Débil
-	ErrSessionExpired     domainError = "token expired"             // EN: Token Expired                    / ES: Token Expirado
-	ErrNotFound           domainError = "user not found"            // EN: User Not Found                   / ES: Usuario No Encontrado
-	ErrProviderNotFound   domainError = "provider not found"        // EN: Provider Not Found               / ES: Proveedor No Encontrado
-	ErrInvalidOAuthState  domainError = "state invalid"             // EN: State Invalid                    / ES: Estado Inválido
-	ErrCannotUnlink       domainError = "identity cannot unlink"    // EN: Identity Cannot Unlink           / ES: Identidad No puede Desvincular
-	ErrInvalidRUT         domainError = "rut invalid"               // EN: Rut Invalid                      / ES: Rut Inválido
-	ErrRUTTaken           domainError = "rut registered"            // EN: Rut Registered                   / ES: Rut Registrado
-	ErrIPTaken            domainError = "ip registered"             // EN: Ip Registered                    / ES: Ip Registrado
+	ErrInvalidCredentials domainError = "access denied"          // EN: Access Denied                    / ES: Acceso Denegado
+	ErrSuspended          domainError = "user suspended"         // EN: User Suspended                   / ES: Usuario Suspendido
+	ErrEmailTaken         domainError = "email registered"       // EN: Email Registered                 / ES: Correo electrónico Registrado
+	ErrWeakPassword       domainError = "password weak"          // EN: Password Weak                    / ES: Contraseña Débil
+	ErrSessionExpired     domainError = "token expired"          // EN: Token Expired                    / ES: Token Expirado
+	ErrNotFound           domainError = "user not found"         // EN: User Not Found                   / ES: Usuario No Encontrado
+	ErrProviderNotFound   domainError = "provider not found"     // EN: Provider Not Found               / ES: Proveedor No Encontrado
+	ErrInvalidOAuthState  domainError = "state invalid"          // EN: State Invalid                    / ES: Estado Inválido
+	ErrCannotUnlink       domainError = "identity cannot unlink" // EN: Identity Cannot Unlink           / ES: Identidad No puede Desvincular
+	ErrInvalidRUT         domainError = "rut invalid"            // EN: Rut Invalid                      / ES: Rut Inválido
+	ErrRUTTaken           domainError = "rut registered"         // EN: Rut Registered                   / ES: Rut Registrado
+	ErrIPTaken            domainError = "ip registered"          // EN: Ip Registered                    / ES: Ip Registrado
 )
 
 // IsNotFound reports whether err is ErrNotFound.
@@ -50,26 +50,30 @@ func IsRUTTaken(err error) bool {
 	return ok && e == ErrRUTTaken
 }
 
-
 type SecurityEventType uint8
 
 const (
-	EventJWTTampered        SecurityEventType = iota // validateJWT: jwt.Forged (never jwt.Expired)
-	EventOAuthReplay                                 // consumeState: state already consumed (2nd use)
-	EventOAuthExpiredState                           // consumeState: state found but past ExpiresAt
-	EventOAuthCrossProvider                          // consumeState: provider mismatch (state preserved)
-	EventIPMismatch                                  // LoginLAN: IP not registered
-	EventNonActiveAccess                             // Login/LoginLAN: status != "active"
-	EventUnauthorizedAccess                          // validateSession: cookie present but session invalid
-	EventAccessDenied                                // AccessCheck: RBAC denied with valid session
-	EventPermissionCorrupt                           // HasPermission: permissions.action is not a CRUD string
-	EventRateLimited                                 // POST /login: Config.RateLimit rejected the attempt before bcrypt
-	EventInvalidRUT                                  // trusted_ip: the typed value is not a checksum-valid RUT (probe or typo)
-	EventUnknownRUT                                  // trusted_ip: valid RUT, no identity registered for it
-	EventSetupCompleted                              // trusted_ip: the first administrator was created through PathSetup
-	EventSetupRejected                               // trusted_ip: PathSetup was hit after an admin already existed
-	EventSetupUnavailable                            // trusted_ip: the registry could not be read, so PathSetup stayed shut
-	EventDevAutologin                                // authority: DEV_AUTOLOGIN opened a session (development builds only)
+	EventJWTTampered             SecurityEventType = iota // validateJWT: jwt.Forged (never jwt.Expired)
+	EventOAuthReplay                                      // consumeState: state already consumed (2nd use)
+	EventOAuthExpiredState                                // consumeState: state found but past ExpiresAt
+	EventOAuthCrossProvider                               // consumeState: provider mismatch (state preserved)
+	EventIPMismatch                                       // LoginLAN: IP not registered
+	EventNonActiveAccess                                  // Login/LoginLAN: status != "active"
+	EventUnauthorizedAccess                               // validateSession: cookie present but session invalid
+	EventAccessDenied                                     // AccessCheck: RBAC denied with valid session
+	EventPermissionCorrupt                                // HasPermission: permissions.action is not a CRUD string
+	EventRateLimited                                      // POST /login: Config.RateLimit rejected the attempt before bcrypt
+	EventInvalidRUT                                       // trusted_ip: the typed value is not a checksum-valid RUT (probe or typo)
+	EventUnknownRUT                                       // trusted_ip: valid RUT, no identity registered for it
+	EventSetupCompleted                                   // trusted_ip: the first administrator was created through PathSetup
+	EventSetupRejected                                    // trusted_ip: PathSetup was hit after an admin already existed
+	EventSetupUnavailable                                 // trusted_ip: the registry could not be read, so PathSetup stayed shut
+	EventDevAutologin                                     // authority: DEV_AUTOLOGIN opened a session (development builds only)
+	EventPasskeyRegistered                                // passkey: a credential was enrolled
+	EventPasskeyVerified                                  // passkey: an assertion verified and a step-up session was issued
+	EventPasskeyRejected                                  // passkey: enrollment or verification refused (Reason says why)
+	EventPasskeyDeleted                                   // passkey: a credential was removed
+	EventClientAssertionRejected                          // clientassertion: a private_key_jwt bearer was refused (Reason says why)
 )
 
 // String returns the event's stable name (lower snake_case), so a logger
@@ -109,6 +113,16 @@ func (t SecurityEventType) String() string {
 		return "setup_unavailable"
 	case EventDevAutologin:
 		return "dev_autologin"
+	case EventPasskeyRegistered:
+		return "passkey_registered"
+	case EventPasskeyVerified:
+		return "passkey_verified"
+	case EventPasskeyRejected:
+		return "passkey_rejected"
+	case EventPasskeyDeleted:
+		return "passkey_deleted"
+	case EventClientAssertionRejected:
+		return "client_assertion_rejected"
 	}
 	return "unknown"
 }
@@ -116,8 +130,8 @@ func (t SecurityEventType) String() string {
 // EnvDevAutologin names the development auto-login variable. Its value is the
 // exact JSON body the login form POSTs (e.g. {"code":"12345678-9"}). When it
 // is set, authority replays it through the enabled authenticators' Login and
-// issues a real session. Absent or empty = production behaviour. Builds with
-// the "prod" tag ignore it entirely.
+// issues a real session. Absent or empty = production behaviour. Honored only
+// in builds with -tags dev; every other build ignores it entirely.
 const EnvDevAutologin = "DEV_AUTOLOGIN"
 
 // FormLogin is implemented by an Authenticator whose login is a form POST.
@@ -135,6 +149,7 @@ type SecurityEvent struct {
 	UserID    string // empty if user not yet identified
 	Provider  string // OAuth provider name, for OAuth events
 	Resource  string // RBAC resource, for EventAccessDenied
+	Reason    string // why a passkey or client assertion was refused
 	Timestamp int64  // time.Now().Unix()
 }
 
@@ -144,6 +159,7 @@ func (e *SecurityEvent) EncodeFields(w model.FieldWriter) {
 	w.String("user_id", e.UserID)
 	w.String("provider", e.Provider)
 	w.String("resource", e.Resource)
+	w.String("reason", e.Reason)
 	w.Int("timestamp", e.Timestamp)
 }
 
@@ -199,14 +215,44 @@ type Authenticator interface {
 	Mount(r router.Router)
 }
 
+// SessionPolicy is how long a session lives and how strongly it was proven.
+// Each session row stores its own policy, so different strategies can share
+// one session table.
+type SessionPolicy struct {
+	Absolute  int             // seconds from creation; the hard cap. Required (> 0).
+	Idle      int             // seconds without activity; 0 = no idle limit
+	Assurance model.Assurance // what a session issued under this policy proves
+}
+
+// Principal is who a request is, and how strongly that was proven. (The name
+// Identity is taken: it is the provider-link model of the "identity" table,
+// which must NOT be renamed — its ModelName is a table name.)
+type Principal struct {
+	UserID    string
+	Assurance model.Assurance
+	IssuedAt  int64 // unix seconds the session was created; 0 for request credentials
+}
+
+// ErrMsgPolicyAbsolute is what a SessionPolicy without a hard cap is refused with.
+const ErrMsgPolicyAbsolute = "auth: SessionPolicy.Absolute must be > 0"
+
 // SessionStrategy is how identity survives across requests after a successful
-// login. authority holds exactly one (default: session/cookie); the consumer may
-// swap it via Module.SetStrategy before mounting. Implementations: session/cookie,
-// session/jwt.
+// login. authority holds one main strategy (default: session/cookie) and,
+// optionally, a step-up one; the consumer may swap them via Module.SetStrategy
+// and Module.SetStepUpStrategy before mounting. Implementation: session/cookie.
 type SessionStrategy interface {
-	Issue(ctx router.Context, userID string) error          // starts a session, writes the credential onto ctx's response
-	Identify(ctx router.Context) (userID string, err error) // reads the incoming credential; "" only alongside a non-nil err
-	Revoke(ctx router.Context) error                        // ends the session named by ctx's incoming credential
+	Issue(ctx router.Context, userID string) error  // starts a session, writes the credential onto ctx's response
+	Identify(ctx router.Context) (Principal, error) // reads the incoming credential; zero Principal only alongside a non-nil err
+	Revoke(ctx router.Context) error                // ends the session named by ctx's incoming credential
+}
+
+// RequestIdentifier is an Authenticator that identifies a request from a
+// credential it carries (a header), not from a session. handled == true
+// means the request presented this kind of credential: the result (which may
+// be the zero Principal, if the credential was invalid) is final and no
+// session cookie is consulted.
+type RequestIdentifier interface {
+	IdentifyRequest(ctx router.Context) (p Principal, handled bool)
 }
 
 // --- Ports a mode receives at construction. It asks for ONLY the ones it needs —
@@ -284,8 +330,8 @@ type ProviderRegistry interface {
 // SessionRepo is the storage port a SessionStrategy uses to persist stateful
 // sessions. authority.Module implements it with its own table + cache.
 type SessionRepo interface {
-	CreateSession(userID, ip, userAgent string) (Session, error)
-	GetSession(id string) (Session, error)
+	CreateSession(userID, ip, userAgent string, p SessionPolicy) (Session, error)
+	GetSession(id string) (Session, error) // applies the row's own policy; slides idle
 	DeleteSession(id string) error
 }
 
@@ -357,8 +403,9 @@ type Permissions struct {
 
 type Config struct {
 	// CookieName/TokenTTL configure authority's OWN default session strategy
-	// (session/cookie) and the lifetime of every session row it creates,
-	// regardless of which strategy ends up carrying the credential.
+	// (session/cookie). TokenTTL is the ABSOLUTE lifetime of its sessions: an
+	// active session still ends after it. The default cookie is host-only and
+	// named "__Host-"+CookieName.
 	CookieName string // default: "session"
 	TokenTTL   int    // default: 86400 (seconds)
 
@@ -388,10 +435,10 @@ type Config struct {
 	// authorization (the injected resolver) into ProfileDTO.Permissions.
 	Permissions *Permissions
 
-	// IdleTTL, when > 0, makes sessions expire after IdleTTL seconds WITHOUT
-	// activity, sliding: every authenticated GetSession pushes ExpiresAt to
-	// now+IdleTTL. It supersedes TokenTTL for both initial and renewed
-	// lifetime. 0 (default) ⇒ today's fixed-TokenTTL behavior, unchanged.
+	// IdleTTL, when > 0, ends a session of the default strategy after IdleTTL
+	// seconds WITHOUT activity, sliding, but never beyond TokenTTL. 0 (default)
+	// = no idle limit. Together with TokenTTL they build the default policy
+	// SessionPolicy{Absolute: TokenTTL, Idle: IdleTTL, Assurance: SingleFactor}.
 	IdleTTL int
 }
 

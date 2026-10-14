@@ -32,9 +32,49 @@ flowchart TD
   migrations, and middleware. Configures a secure opaque cookie session strategy by default using 256-bit CSPRNG entropy (`webtyp/crypto/rand`) for session IDs and OAuth states.
 - `oauth2` + `oauth2/provider/google`, `oauth2/provider/microsoft` — OAuth flow
   and providers.
-- `session/cookie`, `session/jwt` — Session transports.
+- `session/cookie` — Session transport: an opaque cookie over the session table, with a per-session `SessionPolicy` (absolute cap, idle limit, assurance).
+- `passkey` — WebAuthn authenticator: enrollment and a step-up session (`AssuranceMultiFactor`) after a verified passkey.
+- `clientassertion` — Machine clients: `private_key_jwt` (RFC 7523) bearer assertions become principals.
 - `email_password`, `trusted_ip` — Credential authenticators.
 - `local` — Development selector authenticator; no network, no env vars.
+
+## Sessions
+
+`TokenTTL` is the **absolute** lifetime of the default strategy's sessions: an
+active session still ends after it. `IdleTTL` is the idle limit within it.
+The default cookie is **host-only** and named `__Host-<CookieName>`, so no
+sibling subdomain can set or shadow it. **Upgrade note:** existing sessions are
+dropped once on deploy (the cookie name changed and rows carry a new policy).
+
+## Bank-grade setup
+
+An SSO identity shared by every subdomain (single factor), plus a host-only
+step-up session proven by a passkey, plus machine clients:
+
+```go
+authMod, _ := authority.New(db, auth.Config{IDs: ids}) // host-only default cookie
+
+sso, _ := cookie.New(authMod, cookie.Options{
+    Name: "sso", Domain: ".velty.cl",
+    Policy: auth.SessionPolicy{Absolute: 43200, Idle: 1800, Assurance: model.AssuranceSingleFactor},
+})
+authMod.SetStrategy(sso)
+
+stepUp, _ := cookie.New(authMod, cookie.Options{ // host-only: __Host-admin
+    Name: "admin",
+    Policy: auth.SessionPolicy{Absolute: 8 * 3600, Idle: 900, Assurance: model.AssuranceMultiFactor},
+})
+authMod.SetStepUpStrategy(stepUp)
+
+pk, _ := passkey.New(db, ids, authMod, server.RelyingParty{ID: "iam.velty.cl", Origin: "https://iam.velty.cl"})
+ca, _ := clientassertion.New(db, clientKeys, "https://iam.velty.cl", authMod.Notify)
+authMod.Enable(pk, ca)
+```
+
+Routes marked `.RequiresMFA()` answer a single-factor caller with 401 and the
+RFC 9470 challenge; the client then runs `passkey` verify to get the step-up
+session. Run `passkey.Migrate` and `clientassertion.Migrate` next to
+`authority.Migrate`. Logout revokes both sessions.
 
 ## Working without the server (remembered session)
 
@@ -77,7 +117,7 @@ module first, then enable the mode — `Enable` registers on the module you buil
 ```go
 authMod, _ := authority.New(db, auth.Config{
     IDs:     ids,
-    IdleTTL: 1800, // 30 min without activity ends the session (sliding)
+    IdleTTL: 1800, // 30 min without activity ends the session (sliding); TokenTTL (default 24 h) is the absolute cap
     Permissions: &auth.Permissions{
         Resolver:  rbacSvc, // satisfies auth.ActionResolver structurally
         ProjectID: "main",
@@ -120,4 +160,4 @@ The auto-login goes through the exact same validation path as a normal POST requ
 
 Once rejected, auto-login latches off in that process to prevent rate limit starvation; to retry, restart the server. To view the actual login form, clear the variable and restart the server.
 
-When compiled with `-tags prod`, `DEV_AUTOLOGIN` is ignored entirely.
+`DEV_AUTOLOGIN` is opt-in at build time: the dev server must be built with `-tags dev` (the `webtyp` dev environment does this). Any other build ignores the variable entirely.

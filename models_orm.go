@@ -100,13 +100,16 @@ type Session struct {
 	Ip string
 	UserAgent string
 	CreatedAt int64
+	AbsoluteAt int64
+	IdleSeconds int64
+	Assurance int64
 }
 
 func (m *Session) ModelName() string { return "session" }
 
 func (m *Session) Schema() []model.Field { return SessionModel.Fields }
 
-func (m *Session) Pointers() []any { return []any{&m.Id, &m.UserId, &m.ExpiresAt, &m.Ip, &m.UserAgent, &m.CreatedAt} }
+func (m *Session) Pointers() []any { return []any{&m.Id, &m.UserId, &m.ExpiresAt, &m.Ip, &m.UserAgent, &m.CreatedAt, &m.AbsoluteAt, &m.IdleSeconds, &m.Assurance} }
 
 func (m *Session) IsNil() bool { return m == nil }
 
@@ -117,6 +120,9 @@ func (m *Session) EncodeFields(w model.FieldWriter) {
 	w.String("ip", m.Ip)
 	w.String("user_agent", m.UserAgent)
 	w.Int("created_at", m.CreatedAt)
+	w.Int("absolute_at", m.AbsoluteAt)
+	w.Int("idle_seconds", m.IdleSeconds)
+	w.Int("assurance", m.Assurance)
 }
 
 func (m *Session) DecodeFields(r model.FieldReader) {
@@ -126,6 +132,9 @@ func (m *Session) DecodeFields(r model.FieldReader) {
 	if v, ok := r.String("ip"); ok { m.Ip = v }
 	if v, ok := r.String("user_agent"); ok { m.UserAgent = v }
 	if v, ok := r.Int("created_at"); ok { m.CreatedAt = v }
+	if v, ok := r.Int("absolute_at"); ok { m.AbsoluteAt = v }
+	if v, ok := r.Int("idle_seconds"); ok { m.IdleSeconds = v }
+	if v, ok := r.Int("assurance"); ok { m.Assurance = v }
 }
 
 type SessionList []*Session
@@ -148,6 +157,9 @@ var Session_ = struct {
 	Ip string
 	UserAgent string
 	CreatedAt string
+	AbsoluteAt string
+	IdleSeconds string
+	Assurance string
 }{
 	Id: "id",
 	UserId: "user_id",
@@ -155,6 +167,9 @@ var Session_ = struct {
 	Ip: "ip",
 	UserAgent: "user_agent",
 	CreatedAt: "created_at",
+	AbsoluteAt: "absolute_at",
+	IdleSeconds: "idle_seconds",
+	Assurance: "assurance",
 }
 
 func ReadOneSession(qb *orm.QB, model *Session) (*Session, error) {

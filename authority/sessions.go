@@ -4,6 +4,8 @@ import (
 	"sync"
 
 	"webtyp.com/crypto/rand"
+	"webtyp.com/fmt"
+	"webtyp.com/model"
 	"webtyp.com/time"
 
 	"webtyp.com/orm"
@@ -75,8 +77,12 @@ func (c *sessionCache) delete(id string) {
 	}
 }
 
+// slideWriteThreshold is the smallest idle extension worth a write: a burst of
+// requests moves the expiry once a minute, not once per request.
+const slideWriteThreshold = 60
+
 // RotateSession atomically deletes the old session and creates a new one
-// with the same userID, updated IP/UserAgent, and a fresh TTL.
+// with the same userID and policy, updated IP/UserAgent, and a fresh lifetime.
 // Prevents session fixation attacks when called post-login.
 func (m *Module) RotateSession(oldID, ip, userAgent string) (auth.Session, error) {
 	oldSess, err := m.GetSession(oldID)
@@ -89,16 +95,16 @@ func (m *Module) RotateSession(oldID, ip, userAgent string) (auth.Session, error
 		return auth.Session{}, err
 	}
 
-	return m.CreateSession(oldSess.UserId, ip, userAgent)
+	return m.CreateSession(oldSess.UserId, ip, userAgent, auth.SessionPolicy{
+		Absolute:  int(oldSess.AbsoluteAt - oldSess.CreatedAt),
+		Idle:      int(oldSess.IdleSeconds),
+		Assurance: model.Assurance(oldSess.Assurance),
+	})
 }
 
-func (m *Module) CreateSession(userID, ip, userAgent string) (auth.Session, error) {
-	ttl := m.config.TokenTTL
-	if m.config.IdleTTL > 0 {
-		ttl = m.config.IdleTTL
-	}
-	if ttl == 0 {
-		ttl = 86400
+func (m *Module) CreateSession(userID, ip, userAgent string, p auth.SessionPolicy) (auth.Session, error) {
+	if p.Absolute <= 0 {
+		return auth.Session{}, fmt.Err(auth.ErrMsgPolicyAbsolute)
 	}
 
 	id, err := rand.SecretN(sessionIDBytes)
@@ -107,13 +113,21 @@ func (m *Module) CreateSession(userID, ip, userAgent string) (auth.Session, erro
 	}
 
 	now := time.Now() / 1e9
+	absoluteAt := now + int64(p.Absolute)
+	expiresAt := absoluteAt
+	if p.Idle > 0 {
+		expiresAt = min(now+int64(p.Idle), absoluteAt)
+	}
 	sess := auth.Session{
-		Id:        id,
-		UserId:    userID,
-		ExpiresAt: now + int64(ttl),
-		Ip:        ip,
-		UserAgent: userAgent,
-		CreatedAt: now,
+		Id:          id,
+		UserId:      userID,
+		ExpiresAt:   expiresAt,
+		Ip:          ip,
+		UserAgent:   userAgent,
+		CreatedAt:   now,
+		AbsoluteAt:  absoluteAt,
+		IdleSeconds: int64(p.Idle),
+		Assurance:   int64(p.Assurance),
 	}
 
 	if err := m.db.Create(&sess); err != nil {
@@ -123,46 +137,42 @@ func (m *Module) CreateSession(userID, ip, userAgent string) (auth.Session, erro
 	return sess, nil
 }
 
+// GetSession applies the row's own policy: a session past its sliding expiry
+// OR its absolute cap is deleted and reported as expired; otherwise the idle
+// window slides forward, never beyond the cap.
 func (m *Module) GetSession(id string) (auth.Session, error) {
-	if s, ok := m.cache.get(id); ok {
-		if s.ExpiresAt < time.Now()/1e9 {
-			m.cache.delete(id)
-			return auth.Session{}, auth.ErrSessionExpired
+	s, ok := m.cache.get(id)
+	if !ok {
+		qb := m.db.Query(&auth.Session{}).Where(auth.Session_.Id).Eq(id)
+		results, err := auth.ReadAllSession(qb)
+		if err != nil {
+			return auth.Session{}, err
 		}
-		m.slideSession(&s)
-		m.cache.set(s.Id, s)
-		return s, nil
+		if len(results) == 0 {
+			return auth.Session{}, auth.ErrNotFound
+		}
+		s = *results[0]
 	}
 
-	qb := m.db.Query(&auth.Session{}).Where(auth.Session_.Id).Eq(id)
-	results, err := auth.ReadAllSession(qb)
-
-	if err != nil {
-		return auth.Session{}, err
-	}
-	if len(results) == 0 {
-		return auth.Session{}, auth.ErrNotFound
-	}
-	s := *results[0]
-
-	if s.ExpiresAt < time.Now()/1e9 {
+	now := time.Now() / 1e9
+	if now >= s.ExpiresAt || now >= s.AbsoluteAt {
+		m.DeleteSession(id)
 		return auth.Session{}, auth.ErrSessionExpired
 	}
 
-	m.slideSession(&s)
+	m.slideSession(&s, now)
 	m.cache.set(s.Id, s)
 	return s, nil
 }
 
-// slideSession extends s.ExpiresAt to now+IdleTTL when that is later than the
-// current expiry — extend-only, never shorten. No-op when IdleTTL is 0 (the
-// default), leaving today's fixed-TokenTTL behavior unchanged.
-func (m *Module) slideSession(s *auth.Session) {
-	if m.config.IdleTTL <= 0 {
+// slideSession moves s.ExpiresAt to min(now+IdleSeconds, AbsoluteAt) when the
+// row has an idle window and the move is at least slideWriteThreshold seconds.
+func (m *Module) slideSession(s *auth.Session, now int64) {
+	if s.IdleSeconds <= 0 {
 		return
 	}
-	newExpiry := time.Now()/1e9 + int64(m.config.IdleTTL)
-	if newExpiry <= s.ExpiresAt {
+	newExpiry := min(now+s.IdleSeconds, s.AbsoluteAt)
+	if newExpiry-s.ExpiresAt < slideWriteThreshold {
 		return
 	}
 	s.ExpiresAt = newExpiry

@@ -42,7 +42,9 @@ Rules:
   time; `New` assumes the schema already exists and performs no database queries.
 - `oauth2`: OAuth authorization-code flow (begin/callback, state handling).
 - `oauth2/provider/*`: concrete Google and Microsoft protocol adapters.
-- `session/*`: concrete session transports (`cookie`, `jwt`).
+- `session/cookie`: the session transport (opaque cookie, per-row `SessionPolicy`).
+- `passkey`: WebAuthn authenticator; a verified assertion issues the step-up session.
+- `clientassertion`: `private_key_jwt` machine clients (`RequestIdentifier`).
 - `email_password`: email+password credential authenticator.
 - `trusted_ip`: RUT + IP allowlist authenticator.
 - `local`: deterministic development login scenarios; it never contacts Google,
@@ -52,7 +54,7 @@ Rules:
 flowchart TD
     A[Application composition] --> B[auth.Service<br/>authority.Module]
     B --> C[Authenticator]
-    C --> D[Session strategy<br/>cookie or jwt]
+    C --> D[Session strategy<br/>cookie]
     B --> E[Subject and identity store]
     A --> F[rbac.Service<br/>separate sibling]
 ```
@@ -113,7 +115,7 @@ optional `events.Publisher` injected in `auth.Config`. `nil` drops events.
 New event types:
 - `EventInvalidRUT`: `trusted_ip` rejected a login attempt because the RUT failed checksum validation.
 - `EventUnknownRUT`: `trusted_ip` rejected a login attempt because no identity or user was found for a valid RUT.
-- `EventDevAutologin`: `authority` opened a session using `DEV_AUTOLOGIN` replay (development builds only).
+- `EventDevAutologin`: `authority` opened a session using `DEV_AUTOLOGIN` replay (builds with `-tags dev` only).
 
 ## In-Library `opMe` Composition & ProfileDTO
 
@@ -130,9 +132,11 @@ authMod, _ := authority.New(db, auth.Config{
 ```
 `ProfileDTO` provides `Grant(resource, actions)` to produce wire permissions ("resource:actions") and `Allows(resource)` to evaluate access on the client.
 
-## Sliding Idle Sessions
+## Session policy
 
-`Config.IdleTTL` configures sliding session expiry. When `IdleTTL > 0`, every authenticated `GetSession` extends `ExpiresAt` to `now + IdleTTL` if the new expiry exceeds the current one. `IdleTTL = 0` (default) preserves fixed `TokenTTL` expiry.
+Each session row carries its own `SessionPolicy`: `AbsoluteAt` (hard cap), `IdleSeconds` and `Assurance`. `GetSession` ends a row when `now >= ExpiresAt` or `now >= AbsoluteAt`; otherwise it slides `ExpiresAt` to `min(now+IdleSeconds, AbsoluteAt)`, persisting only when the move is at least 60 s. `Config.TokenTTL` is the absolute cap of the default strategy and `Config.IdleTTL` its idle limit (0 = none).
+
+`Authenticate()` resolves, in order: a `RequestIdentifier` that handled the request, the step-up session (MultiFactor), the main session (SingleFactor), dev autologin (`-tags dev`), anonymous. It sets `ctx.SetUserID` and `ctx.SetAssurance`.
 
 ## LAN Identity Administration Operations
 

@@ -27,6 +27,9 @@ var SessionModel = model.Definition{
 		{Name: "ip", Type: model.Text()},
 		{Name: "user_agent", Type: model.Text()},
 		{Name: "created_at", Type: model.Int()},
+		{Name: "absolute_at", Type: model.Int()},
+		{Name: "idle_seconds", Type: model.Int()},
+		{Name: "assurance", Type: model.Int()},
 	},
 }
 
