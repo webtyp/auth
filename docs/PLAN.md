@@ -2,7 +2,8 @@
 PLAN: "test(auth): update the suite to the session-policy / assurance / passkey / client-assertion API"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: dispatch
+STATUS: running
+SESSION: 10131758498708849312
 ---
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.
