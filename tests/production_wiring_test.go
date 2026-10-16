@@ -118,7 +118,7 @@ func testMountAPI(t *testing.T) {
 	if ctxJson.Status != 302 {
 		t.Errorf("POST /login (JSON) status: %d", ctxJson.Status)
 	}
-	c, ok := ctxJson.Cookie("test_session")
+	c, ok := ctxJson.Cookie("__Host-test_session")
 	if !ok || c.Value == "" {
 		t.Errorf("POST /login (JSON) cookie missing or empty")
 	}
@@ -143,7 +143,7 @@ func testMountAPI(t *testing.T) {
 	sessID := c.Value
 
 	ctxLogout := &mock.Context{InMethod: "POST", InPath: auth.PathLogout}
-	ctxLogout.SetCookie(router.Cookie{Name: "test_session", Value: sessID})
+	ctxLogout.SetCookie(router.Cookie{Name: "__Host-test_session", Value: sessID})
 	r.Invoke("POST", auth.PathLogout, ctxLogout)
 	if ctxLogout.Status != 302 {
 		t.Errorf("POST /logout status: %d", ctxLogout.Status)
@@ -151,7 +151,7 @@ func testMountAPI(t *testing.T) {
 	if ctxLogout.GetHeader("Location") != auth.PathLogin {
 		t.Errorf("POST /logout redirect: %s", ctxLogout.GetHeader("Location"))
 	}
-	logoutCookie, ok := ctxLogout.Cookie("test_session")
+	logoutCookie, ok := ctxLogout.Cookie("__Host-test_session")
 	if !ok || logoutCookie.Value != "" {
 		t.Errorf("POST /logout cookie not cleared: %+v", logoutCookie)
 	}

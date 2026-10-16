@@ -26,21 +26,22 @@ replace webtyp.com/auth => ..
 require (
 	modernc.org/sqlite v1.58.0
 	webtyp.com/auth v0.0.74
+	webtyp.com/base64 v0.0.6
 	webtyp.com/crypto v0.0.28
 	webtyp.com/ddl v0.0.17
 	webtyp.com/events v0.0.6
 	webtyp.com/form v0.4.34
-	webtyp.com/json v0.5.29
-	webtyp.com/jwt v0.1.24
+	webtyp.com/json v0.5.30
 	webtyp.com/model v0.2.3
 	webtyp.com/orm v0.12.8
-	webtyp.com/router v0.4.2
-	webtyp.com/server v0.2.77
+	webtyp.com/router v0.4.3
+	webtyp.com/server v0.2.86
 	webtyp.com/sitec v0.2.55
 	webtyp.com/sqlite v0.3.7
 	webtyp.com/unixid v0.3.0
 	webtyp.com/user v0.3.14
 	webtyp.com/view v0.6.27
+	webtyp.com/webauthn v0.1.6
 )
 
 require (
@@ -54,18 +55,17 @@ require (
 	github.com/smallstep/truststore v0.13.0 // indirect
 	github.com/tdewolff/minify/v2 v2.24.8 // indirect
 	github.com/tdewolff/parse/v2 v2.8.5 // indirect
-	golang.org/x/crypto v0.55.0 // indirect
+	golang.org/x/crypto v0.58.0 // indirect
 	golang.org/x/image v0.45.0 // indirect
-	golang.org/x/net v0.57.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/text v0.41.0 // indirect
-	howett.net/plist v1.0.0 // indirect
+	golang.org/x/net v0.61.0 // indirect
+	golang.org/x/sys v0.49.0 // indirect
+	golang.org/x/text v0.43.0 // indirect
+	howett.net/plist v1.0.1 // indirect
 	modernc.org/libc v1.75.6 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.12.1 // indirect
 	webtyp.com/artifacts v0.1.1 // indirect
 	webtyp.com/await v0.1.2 // indirect
-	webtyp.com/base64 v0.0.6 // indirect
 	webtyp.com/color v0.1.2 // indirect
 	webtyp.com/context v0.0.23 // indirect
 	webtyp.com/css v0.4.30 // indirect
@@ -86,12 +86,11 @@ require (
 	webtyp.com/keyring v0.2.4 // indirect
 	webtyp.com/lang v0.1.6 // indirect
 	webtyp.com/modfind v0.0.11 // indirect
-	webtyp.com/pwa v0.2.0 // indirect
+	webtyp.com/pwa v0.2.1 // indirect
 	webtyp.com/sqlt v0.0.11 // indirect
 	webtyp.com/storage v0.1.4 // indirect
 	webtyp.com/svg v0.3.14 // indirect
 	webtyp.com/time v0.5.7 // indirect
 	webtyp.com/tinygo v1.0.1 // indirect
-	webtyp.com/webauthn v0.1.3 // indirect
 	webtyp.com/widget v0.6.40 // indirect
 )

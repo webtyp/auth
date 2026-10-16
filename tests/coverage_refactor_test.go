@@ -8,14 +8,12 @@ import (
 
 	"webtyp.com/json"
 	"webtyp.com/model"
-	"webtyp.com/router"
 	"webtyp.com/router/mock"
 	"webtyp.com/auth"
 	"webtyp.com/auth/authority"
 	emailpassword "webtyp.com/auth/email_password"
 	"webtyp.com/auth/oauth2"
 	"webtyp.com/auth/session/cookie"
-	jwt "webtyp.com/auth/session/jwt"
 	trustedip "webtyp.com/auth/trusted_ip"
 )
 
@@ -23,19 +21,20 @@ func TestCoverage_SessionCookie(t *testing.T) {
 	db := newTestDB(t)
 	m, _ := authority.New(db, auth.Config{IDs: testIDs})
 
-	strategy := cookie.New(m, "custom_cookie", 3600, false)
+	strategy, _ := cookie.New(m, cookie.Options{Name: "custom_cookie", Policy: testPolicy})
 
 	t.Run("Round-trip session cookie success", func(t *testing.T) {
 		userCRUD := getHandler(m, "users")
 		res, _ := userCRUD.Create(auth.User{Email: "cookie@test.com", Name: "Cookie User"})
 		u := res.(auth.User)
 
-		ctx := &mock.Context{}
+		ctx := &mock.Context{InMethod: "GET", InPath: "/"}
+		ctx.SetHeader("User-Agent", "ua")
 		if err := strategy.Issue(ctx, u.Id); err != nil {
 			t.Fatal(err)
 		}
 
-		c, ok := ctx.Cookie("custom_cookie")
+		c, ok := ctx.Cookie("__Host-custom_cookie")
 		if !ok || c.Value == "" {
 			t.Fatal("cookie not set")
 		}
@@ -43,7 +42,8 @@ func TestCoverage_SessionCookie(t *testing.T) {
 		ctx2 := &mock.Context{}
 		ctx2.SetCookie(c)
 
-		uid, err := strategy.Identify(ctx2)
+		principal, err := strategy.Identify(ctx2)
+		uid := principal.UserID
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -68,7 +68,8 @@ func TestCoverage_SessionCookie(t *testing.T) {
 	})
 
 	t.Run("Non-existent cookie returns ErrSessionExpired", func(t *testing.T) {
-		ctx := &mock.Context{}
+		ctx := &mock.Context{InMethod: "GET", InPath: "/"}
+		ctx.SetHeader("User-Agent", "ua")
 		_, err := strategy.Identify(ctx)
 		if err != auth.ErrSessionExpired {
 			t.Errorf("expected ErrSessionExpired, got %v", err)
@@ -76,77 +77,6 @@ func TestCoverage_SessionCookie(t *testing.T) {
 	})
 }
 
-func TestCoverage_SessionJWT(t *testing.T) {
-	db := newTestDB(t)
-	m, _ := authority.New(db, auth.Config{IDs: testIDs})
-
-	userCRUD := getHandler(m, "users")
-	res, _ := userCRUD.Create(auth.User{Email: "jwt_cov@test.com", Name: "JWT Cov User"})
-	u := res.(auth.User)
-
-	secret := []byte("my-test-secret-must-be-long-32-")
-	strategy, err := jwt.New(secret, 3600, m, m)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	strategy.WithCookieName("my_jwt_cookie")
-
-	t.Run("GenerateAPIToken round-trip", func(t *testing.T) {
-		token, err := strategy.GenerateAPIToken(u.Id, 0)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		// Verify with Bearer Strategy
-		bearerStrategy, _ := jwt.New(secret, 3600, m, m)
-		bearerStrategy.AsBearer()
-
-		ctx := &mock.Context{}
-		ctx.SetHeader("Authorization", "Bearer "+token)
-
-		uid, err := bearerStrategy.Identify(ctx)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if uid != u.Id {
-			t.Errorf("expected %s, got %s", u.Id, uid)
-		}
-
-		// Issue and Revoke in Bearer Mode
-		ctxIssue := &mock.Context{}
-		if err := bearerStrategy.Issue(ctxIssue, u.Id); err != nil {
-			t.Fatal(err)
-		}
-		if err := bearerStrategy.Revoke(ctxIssue); err != nil {
-			t.Fatal(err)
-		}
-	})
-
-	t.Run("Identify with forged token", func(t *testing.T) {
-		pub := &mockPublisher{}
-		mNotifying, _ := authority.New(db, auth.Config{IDs: testIDs, Events: pub})
-		notifyingStrategy, _ := jwt.New(secret, 3600, mNotifying, mNotifying)
-
-		ctx := &mock.Context{}
-		ctx.SetCookie(router.Cookie{Name: "session", Value: "completely.forged.token"})
-
-		_, err := notifyingStrategy.Identify(ctx)
-		if err == nil {
-			t.Error("expected error for forged token")
-		}
-
-		found := false
-		for _, ev := range pub.SecurityEvents() {
-			if ev.Type == auth.EventJWTTampered {
-				found = true
-			}
-		}
-		if !found {
-			t.Error("expected EventJWTTampered security event")
-		}
-	})
-}
 
 func TestCoverage_EmailPassword(t *testing.T) {
 	db := newTestDB(t)

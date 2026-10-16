@@ -63,7 +63,7 @@ func TestLANRUTLogin(t *testing.T) {
 		if ctx.Status != 302 {
 			t.Fatalf("status = %d, want 302", ctx.Status)
 		}
-		c, ok := ctx.Cookie("lan_session")
+		c, ok := ctx.Cookie("__Host-lan_session")
 		if !ok || c.Value == "" {
 			t.Errorf("no session cookie issued: %+v", c)
 		}

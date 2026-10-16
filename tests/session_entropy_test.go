@@ -72,7 +72,7 @@ func TestSessionIDIsNotDerivedFromTime(t *testing.T) {
 	const count = 200
 	sessions := make([]string, count)
 	for i := 0; i < count; i++ {
-		sess, err := mod.CreateSession(u.Id, "127.0.0.1", "test-agent")
+		sess, err := mod.CreateSession(u.Id, "127.0.0.1", "test-agent", testPolicy)
 		if err != nil {
 			t.Fatalf("failed to create session %d: %v", i, err)
 		}
@@ -108,11 +108,11 @@ func TestSessionIDIsNotGuessableFromNeighbour(t *testing.T) {
 		t.Fatalf("failed to create user: %v", err)
 	}
 
-	sess1, err := mod.CreateSession(u.Id, "127.0.0.1", "test-agent")
+	sess1, err := mod.CreateSession(u.Id, "127.0.0.1", "test-agent", testPolicy)
 	if err != nil {
 		t.Fatalf("failed to create session 1: %v", err)
 	}
-	sess2, err := mod.CreateSession(u.Id, "127.0.0.1", "test-agent")
+	sess2, err := mod.CreateSession(u.Id, "127.0.0.1", "test-agent", testPolicy)
 	if err != nil {
 		t.Fatalf("failed to create session 2: %v", err)
 	}

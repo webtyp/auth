@@ -94,3 +94,11 @@ func (reg *mockOpRegistry) Operation(name string, h router.HandlerFunc) router.R
 	reg.ops[name] = r
 	return r
 }
+
+func (r *mockRoute) RequiresMFA() router.Route {
+	return r
+}
+
+var testPolicy = auth.SessionPolicy{Absolute: 3600, Assurance: model.AssuranceSingleFactor,
+
+}

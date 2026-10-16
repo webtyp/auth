@@ -39,7 +39,7 @@ func TestSessionCacheIsBounded(t *testing.T) {
 
 	sessions := make([]auth.Session, total)
 	for i := 0; i < total; i++ {
-		sess, err := m.CreateSession(u.Id, "127.0.0.1", "agent")
+		sess, err := m.CreateSession(u.Id, "127.0.0.1", "agent", testPolicy)
 		if err != nil {
 			t.Fatalf("failed to create session %d: %v", i, err)
 		}

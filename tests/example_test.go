@@ -13,7 +13,6 @@ import (
 	"webtyp.com/auth"
 	"webtyp.com/auth/authority"
 	emailpassword "webtyp.com/auth/email_password"
-	"webtyp.com/auth/session/jwt"
 	trustedip "webtyp.com/auth/trusted_ip"
 )
 
@@ -44,14 +43,6 @@ func Example_mustCompile() {
 	if err != nil {
 		panic(err)
 	}
-
-	// 4. Opt into a stateless JWT strategy (replacing default cookie session)
-	secret := []byte("your-secret-key-must-be-32-bytes")
-	strategy, err := jwt.New(secret, 86400, m, m)
-	if err != nil {
-		panic(err)
-	}
-	m.SetStrategy(strategy)
 
 	// 5. Construct and configure authentication modes.
 	// We inject Module 'm' which implements the narrow ports.

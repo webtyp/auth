@@ -1,4 +1,4 @@
-//go:build !wasm && !prod
+//go:build !wasm && dev
 
 package tests
 
@@ -69,7 +69,7 @@ func TestDevAutologin_Cases(t *testing.T) {
 			t.Errorf("capturedUserID = %q, want %q", capturedUserID, u.Id)
 		}
 
-		c, ok := reqCtx.Cookie("dev_session")
+		c, ok := reqCtx.Cookie("__Host-dev_session")
 		if !ok || c.Value == "" {
 			t.Errorf("expected session cookie to be set on context response")
 		}
@@ -91,7 +91,7 @@ func TestDevAutologin_Cases(t *testing.T) {
 		reqCtx1.SetValue("RemoteAddr", lanTrustedIP+":54321")
 		m1.Authenticate()(func(ctx router.Context) {})(reqCtx1)
 
-		c, ok := reqCtx1.Cookie("dev_session")
+		c, ok := reqCtx1.Cookie("__Host-dev_session")
 		if !ok || c.Value == "" {
 			t.Fatalf("no cookie issued in instance 1")
 		}
@@ -111,7 +111,7 @@ func TestDevAutologin_Cases(t *testing.T) {
 		})
 
 		reqCtx2 := &mock.Context{}
-		reqCtx2.SetCookie(router.Cookie{Name: "dev_session", Value: c.Value})
+		reqCtx2.SetCookie(router.Cookie{Name: "__Host-dev_session", Value: c.Value})
 		reqCtx2.SetValue("RemoteAddr", lanTrustedIP+":54321")
 		handler2(reqCtx2)
 

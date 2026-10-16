@@ -106,7 +106,7 @@ func TestLocalSelector(t *testing.T) {
 		t.Errorf("email %q want alice@example.com", u.Email)
 	}
 	// verify session issued: cookie exists and Authenticate works, no network
-	ck, ok := ctxA.Cookie("session")
+	ck, ok := ctxA.Cookie("__Host-session")
 	if !ok {
 		t.Fatalf("session cookie not set")
 	}

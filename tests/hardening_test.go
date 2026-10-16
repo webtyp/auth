@@ -15,7 +15,6 @@ import (
 	"webtyp.com/auth"
 	"webtyp.com/auth/authority"
 	emailpassword "webtyp.com/auth/email_password"
-	"webtyp.com/auth/session/jwt"
 )
 
 func TestCookieSecurity(t *testing.T) {
@@ -38,7 +37,7 @@ func TestCookieSecurity(t *testing.T) {
 			t.Fatalf("login failed: status %d, body %s", ctx.Status, string(ctx.ResponseBody()))
 		}
 
-		c, ok := ctx.Cookie(cookieName)
+		c, ok := ctx.Cookie("__Host-" + cookieName)
 		if !ok {
 			t.Fatal("no cookie set")
 		}
@@ -63,8 +62,8 @@ func TestCookieSecurity(t *testing.T) {
 
 		c := login(m, "session", email, pass)
 
-		if c.Name != "session" {
-			t.Errorf("expected cookie name 'session', got %s", c.Name)
+		if c.Name != "__Host-session" {
+			t.Errorf("expected cookie name '__Host-session', got %s", c.Name)
 		}
 		if !c.HttpOnly {
 			t.Errorf("expected HttpOnly=true")
@@ -83,38 +82,6 @@ func TestCookieSecurity(t *testing.T) {
 		}
 	})
 
-	t.Run("JWT Mode Cookie", func(t *testing.T) {
-		db := newTestDB(t)
-		m, err := authority.New(db, auth.Config{IDs: testIDs, TokenTTL: 7200, CookieName: "session"})
-		if err != nil {
-			t.Fatalf("authority.New failed: %v", err)
-		}
-		strategy, err := jwt.New([]byte("sec"), 7200, m, m)
-		if err != nil {
-			t.Fatal(err)
-		}
-		m.SetStrategy(strategy)
-		m.Enable(emailpassword.New(m, m, m))
-		email, pass := "cookie2@example.com", "password123"
-		admin, err := m.CreateUser(email, "Admin", "")
-		if err != nil {
-			t.Fatal(err)
-		}
-		if err := m.SetPassword(admin.Id, pass); err != nil {
-			t.Fatal(err)
-		}
-
-		c := login(m, "session", email, pass)
-
-		if !c.HttpOnly || !c.Secure || c.SameSite != router.SameSiteStrict {
-			t.Errorf("JWT cookie missing security flags")
-		}
-
-		parts := strings.Split(c.Value, ".")
-		if len(parts) != 3 {
-			t.Errorf("expected JWT value (3 parts), got %d parts", len(parts))
-		}
-	})
 
 	t.Run("Custom Cookie Name", func(t *testing.T) {
 		db := newTestDB(t)
@@ -134,8 +101,8 @@ func TestCookieSecurity(t *testing.T) {
 
 		c := login(m, "custom_auth", email, pass)
 
-		if c.Name != "custom_auth" {
-			t.Errorf("expected cookie name 'custom_auth', got %s", c.Name)
+		if c.Name != "__Host-custom_auth" {
+			t.Errorf("expected cookie name '__Host-custom_auth', got %s", c.Name)
 		}
 	})
 }
@@ -180,7 +147,7 @@ func TestSessionRotation(t *testing.T) {
 	u := res.(auth.User)
 
 	t.Run("RotateSession valid", func(t *testing.T) {
-		sess1, _ := m.CreateSession(u.Id, "10.0.0.1", "ua1")
+		sess1, _ := m.CreateSession(u.Id, "10.0.0.1", "ua1", testPolicy)
 
 		sess2, err := m.RotateSession(sess1.Id, "10.0.0.2", "ua2")
 		if err != nil {
@@ -205,7 +172,7 @@ func TestSessionRotation(t *testing.T) {
 	})
 
 	t.Run("RotateSession expired", func(t *testing.T) {
-		sess3, _ := m.CreateSession(u.Id, "10.0.0.1", "ua1")
+		sess3, _ := m.CreateSession(u.Id, "10.0.0.1", "ua1", testPolicy)
 		// Manually expire
 		db.RawConn().Exec("UPDATE session SET expires_at = 0 WHERE id = ?", sess3.Id)
 		m, err = authority.New(db, auth.Config{IDs: testIDs, TokenTTL: 3600}) // Clear cache
@@ -228,11 +195,11 @@ func TestSessionRotation(t *testing.T) {
 	})
 
 	t.Run("Middleware Continuity", func(t *testing.T) {
-		sessOld, _ := m.CreateSession(u.Id, "10.0.0.1", "ua1")
+		sessOld, _ := m.CreateSession(u.Id, "10.0.0.1", "ua1", testPolicy)
 		sessNew, _ := m.RotateSession(sessOld.Id, "10.0.0.1", "ua1")
 
 		ctxOld := &mock.Context{}
-		ctxOld.SetCookie(router.Cookie{Name: "session", Value: sessOld.Id})
+		ctxOld.SetCookie(router.Cookie{Name: "__Host-session", Value: sessOld.Id})
 		var authID string
 		m.Authenticate()(func(c router.Context) {
 			authID = c.UserID()
@@ -242,7 +209,7 @@ func TestSessionRotation(t *testing.T) {
 		}
 
 		ctxNew := &mock.Context{}
-		ctxNew.SetCookie(router.Cookie{Name: "session", Value: sessNew.Id})
+		ctxNew.SetCookie(router.Cookie{Name: "__Host-session", Value: sessNew.Id})
 		m.Authenticate()(func(c router.Context) {
 			authID = c.UserID()
 		})(ctxNew)
