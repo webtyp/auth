@@ -2,8 +2,10 @@
 PLAN: "test(auth): update the suite to the session-policy / assurance / passkey / client-assertion API"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 10131758498708849312
+PR: https://github.com/webtyp/auth/pull/7
+REVIEWED_COMMIT: bf0d1332d5f20cef98760441c7acfd6d652439a8
 ---
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.
