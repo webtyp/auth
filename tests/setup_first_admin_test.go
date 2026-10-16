@@ -115,7 +115,7 @@ func TestFirstAdminSetup(t *testing.T) {
 		if h.gotCode != setupRUT {
 			t.Errorf("create got code %q, want the normalized credential %q", h.gotCode, setupRUT)
 		}
-		if c, ok := ctx.Cookie("setup_session"); !ok || c.Value == "" {
+		if c, ok := ctx.Cookie("__Host-setup_session"); !ok || c.Value == "" {
 			t.Errorf("setup must issue a session so the installer lands inside: %+v", c)
 		}
 		assertSecurityEvent(t, h.pub, from, auth.EventSetupCompleted)

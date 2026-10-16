@@ -4,7 +4,8 @@ package tests
 
 import (
 	"testing"
-	"time"
+
+	"webtyp.com/orm"
 
 	"webtyp.com/auth"
 	"webtyp.com/auth/authority"
@@ -15,7 +16,7 @@ import (
 // idle TTL, so every authenticated read must push the expiry forward.
 func TestSlidingSessionExtendsOnActivity(t *testing.T) {
 	db := newTestDB(t)
-	m, err := authority.New(db, auth.Config{IDs: testIDs, IdleTTL: 2})
+	m, err := authority.New(db, auth.Config{IDs: testIDs, IdleTTL: 200})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -24,18 +25,20 @@ func TestSlidingSessionExtendsOnActivity(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	sess, err := m.CreateSession(u.Id, "192.168.1.5", "test-agent")
+	sess, err := m.CreateSession(u.Id, "192.168.1.5", "test-agent", auth.SessionPolicy{Absolute: 3600, Idle: 200})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// IdleTTL supersedes TokenTTL for the initial lifetime too, otherwise the
 	// first window would silently be the 24h default.
-	if sess.ExpiresAt-sess.CreatedAt != 2 {
-		t.Fatalf("initial lifetime = %ds, want 2s from IdleTTL", sess.ExpiresAt-sess.CreatedAt)
+	if sess.ExpiresAt-sess.CreatedAt != 200 {
+		t.Fatalf("initial lifetime = %ds, want 200s from IdleTTL", sess.ExpiresAt-sess.CreatedAt)
 	}
 
-	time.Sleep(1100 * time.Millisecond)
+	sess.ExpiresAt -= 61
+	db.Update(&sess, orm.Eq(auth.Session_.Id, sess.Id))
+	m, _ = authority.New(db, auth.Config{IDs: testIDs, IdleTTL: 200})
 
 	got, err := m.GetSession(sess.Id)
 	if err != nil {
@@ -70,12 +73,14 @@ func TestFixedSessionNeverSlides(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	sess, err := m.CreateSession(u.Id, "192.168.1.5", "test-agent")
+	sess, err := m.CreateSession(u.Id, "192.168.1.5", "test-agent", auth.SessionPolicy{Absolute: 3600, Idle: 0, Assurance: 1})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	time.Sleep(1100 * time.Millisecond)
+	sess.ExpiresAt -= 61
+	db.Update(&sess, orm.Eq(auth.Session_.Id, sess.Id))
+	m, _ = authority.New(db, auth.Config{IDs: testIDs})
 
 	got, err := m.GetSession(sess.Id)
 	if err != nil {

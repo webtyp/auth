@@ -8,16 +8,13 @@ import (
 
 	"webtyp.com/crypto/bcrypt"
 	"webtyp.com/ddl"
-	tinyjwt "webtyp.com/jwt"
 	"webtyp.com/orm"
-	"webtyp.com/router"
 	"webtyp.com/router/mock"
 	"webtyp.com/sqlite"
 	"webtyp.com/auth"
 	"webtyp.com/auth/authority"
 	emailpassword "webtyp.com/auth/email_password"
 	"webtyp.com/auth/oauth2"
-	jwt "webtyp.com/auth/session/jwt"
 	trustedip "webtyp.com/auth/trusted_ip"
 )
 
@@ -44,64 +41,8 @@ func RunUserTests(t *testing.T) {
 	t.Run("TestSessions", testSessions)
 	t.Run("TestOAuth", testOAuth)
 	t.Run("TestLAN", testLAN)
-	t.Run("TestJWTCookieMode", testJWTCookieMode)
 }
 
-func testJWTCookieMode(t *testing.T) {
-	db := newTestDB(t)
-	secret := []byte("test-secret-32-bytes-minimum-len")
-	m, err := authority.New(db, auth.Config{IDs: testIDs})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	strategy, err := jwt.New(secret, 86400, m, m)
-	if err != nil {
-		t.Fatal(err)
-	}
-	m.SetStrategy(strategy)
-	m.Enable(emailpassword.New(m, m, m))
-
-	userCRUD := getHandler(m, "users")
-	res, err := userCRUD.Create(auth.User{Email: "jwt@test.com", Name: "JWT User"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	u := res.(auth.User)
-	_ = m.SetPassword(u.Id, "password123")
-	logged, err := m.Login("jwt@test.com", "password123")
-	if err != nil {
-		t.Fatal("login failed:", err)
-	}
-
-	// Generar JWT como lo haría el módulo al emitir la cookie.
-	token, err := tinyjwt.Sign(secret, tinyjwt.NewClaims(logged.Id, 86400))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Request con JWT en cookie → debe autenticar
-	ctx := &mock.Context{}
-	ctx.SetCookie(router.Cookie{Name: "session", Value: token})
-	var authID string
-	m.Authenticate()(func(c router.Context) {
-		authID = c.UserID()
-	})(ctx)
-	if authID != logged.Id {
-		t.Errorf("JWT middleware: expected user %s, got %q", logged.Id, authID)
-	}
-
-	// Token inválido → anónimo
-	ctx2 := &mock.Context{}
-	ctx2.SetCookie(router.Cookie{Name: "session", Value: "invalid.jwt.token"})
-	authID = ""
-	m.Authenticate()(func(c router.Context) {
-		authID = c.UserID()
-	})(ctx2)
-	if authID != "" {
-		t.Errorf("want empty userID for invalid JWT, got %q", authID)
-	}
-}
 
 func testInit(t *testing.T) {
 	db := newTestDB(t)
@@ -230,7 +171,7 @@ func testSessions(t *testing.T) {
 	}
 	u := res.(auth.User)
 
-	sess, err := m.CreateSession(u.Id, "127.0.0.1", "TestAgent")
+	sess, err := m.CreateSession(u.Id, "127.0.0.1", "TestAgent", testPolicy)
 	if err != nil {
 		t.Fatalf("CreateSession failed: %v", err)
 	}

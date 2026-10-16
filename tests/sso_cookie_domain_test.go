@@ -7,35 +7,31 @@ import (
 
 	"webtyp.com/auth"
 	"webtyp.com/auth/authority"
-	jwtstrategy "webtyp.com/auth/session/jwt"
+	"webtyp.com/auth/session/cookie"
 	"webtyp.com/router"
 	"webtyp.com/router/mock"
 )
 
-// TestWithDomain_Issue proves WithDomain(".velty.cl") produces a
-// router.Cookie with that Domain on Issue, and that a Strategy that never
-// calls it keeps Domain empty — behavior unchanged for every existing
-// caller of jwt.Strategy that predates this method.
 func TestWithDomain_Issue(t *testing.T) {
-	secret := []byte("test-secret-32-bytes-long-000000")
 	db := newTestDB(t)
 	m, err := authority.New(db, auth.Config{IDs: testIDs})
 	if err != nil {
 		t.Fatal(err)
 	}
-	userCRUD := getHandler(m, "users")
-	res, err := userCRUD.Create(auth.User{Email: "sso@test.com", Name: "SSO"})
+	u, err := m.CreateUser("sso@test.com", "SSO", "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	u := res.(auth.User)
 
-	t.Run("with WithDomain", func(t *testing.T) {
-		strategy, err := jwtstrategy.New(secret, 0, m, m)
+	t.Run("with Domain", func(t *testing.T) {
+		strategy, err := cookie.New(m, cookie.Options{
+			Name:   "session",
+			Domain: ".velty.cl",
+			Policy: testPolicy,
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
-		strategy.WithDomain(".velty.cl")
 
 		ctx := &mock.Context{}
 		if err := strategy.Issue(ctx, u.Id); err != nil {
@@ -43,15 +39,18 @@ func TestWithDomain_Issue(t *testing.T) {
 		}
 		c, ok := ctx.Cookie("session")
 		if !ok {
-			t.Fatal("Issue did not set the session cookie")
+			t.Fatal("Issue did not set the unprefixed session cookie")
 		}
 		if c.Domain != ".velty.cl" {
 			t.Errorf("Domain: got %q, want %q", c.Domain, ".velty.cl")
 		}
 	})
 
-	t.Run("without WithDomain", func(t *testing.T) {
-		strategy, err := jwtstrategy.New(secret, 0, m, m)
+	t.Run("without Domain", func(t *testing.T) {
+		strategy, err := cookie.New(m, cookie.Options{
+			Name:   "session",
+			Policy: testPolicy,
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -60,32 +59,31 @@ func TestWithDomain_Issue(t *testing.T) {
 		if err := strategy.Issue(ctx, u.Id); err != nil {
 			t.Fatal(err)
 		}
-		c, ok := ctx.Cookie("session")
+		c, ok := ctx.Cookie("__Host-session")
 		if !ok {
-			t.Fatal("Issue did not set the session cookie")
+			t.Fatal("Issue did not set the __Host-session cookie")
 		}
 		if c.Domain != "" {
-			t.Errorf("Domain: got %q, want empty (unchanged default)", c.Domain)
+			t.Errorf("Domain: got %q, want empty", c.Domain)
 		}
 	})
 }
 
-// TestWithDomain_Revoke proves the deletion cookie Revoke sets also carries
-// the configured Domain — a delete cookie with the wrong Domain deletes
-// nothing.
 func TestWithDomain_Revoke(t *testing.T) {
-	secret := []byte("test-secret-32-bytes-long-000000")
 	db := newTestDB(t)
 	m, err := authority.New(db, auth.Config{IDs: testIDs})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	strategy, err := jwtstrategy.New(secret, 0, m, m)
+	strategy, err := cookie.New(m, cookie.Options{
+		Name:   "session",
+		Domain: ".velty.cl",
+		Policy: testPolicy,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	strategy.WithDomain(".velty.cl")
 
 	ctx := &mock.Context{}
 	if err := strategy.Revoke(ctx); err != nil {
@@ -103,28 +101,25 @@ func TestWithDomain_Revoke(t *testing.T) {
 	}
 }
 
-// TestWithDomain_SameSiteStays proves SameSite stays Strict — this method
-// must not be used as a workaround for a SameSite problem (see
-// veltylabs/iam/docs/ARCHITECTURE.md §7).
 func TestWithDomain_SameSiteStays(t *testing.T) {
-	secret := []byte("test-secret-32-bytes-long-000000")
 	db := newTestDB(t)
 	m, err := authority.New(db, auth.Config{IDs: testIDs})
 	if err != nil {
 		t.Fatal(err)
 	}
-	userCRUD := getHandler(m, "users")
-	res, err := userCRUD.Create(auth.User{Email: "samesite@test.com", Name: "SameSite"})
+	u, err := m.CreateUser("samesite@test.com", "SameSite", "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	u := res.(auth.User)
 
-	strategy, err := jwtstrategy.New(secret, 0, m, m)
+	strategy, err := cookie.New(m, cookie.Options{
+		Name:   "session",
+		Domain: ".velty.cl",
+		Policy: testPolicy,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	strategy.WithDomain(".velty.cl")
 
 	ctx := &mock.Context{}
 	if err := strategy.Issue(ctx, u.Id); err != nil {

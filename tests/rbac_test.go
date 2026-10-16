@@ -10,7 +10,6 @@ import (
 	"webtyp.com/router/mock"
 	"webtyp.com/auth"
 	"webtyp.com/auth/authority"
-	"webtyp.com/auth/session/jwt"
 )
 
 func TestTools_Me(t *testing.T) {
@@ -182,13 +181,6 @@ func TestAdminOps(t *testing.T) {
 func TestNew_Validation(t *testing.T) {
 	db := newTestDB(t)
 
-	t.Run("JWT strategy requires a secret", func(t *testing.T) {
-		m, _ := authority.New(db, auth.Config{IDs: testIDs})
-		_, err := jwt.New(nil, 0, m, m)
-		if err == nil {
-			t.Error("expected error when secret is empty")
-		}
-	})
 
 	t.Run("Cookie strategy (default) needs no secret", func(t *testing.T) {
 		_, err := authority.New(db, auth.Config{IDs: testIDs})
