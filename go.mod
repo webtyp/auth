@@ -22,21 +22,12 @@ require (
 )
 
 require (
-	github.com/smallstep/truststore v0.13.0 // indirect
-	golang.org/x/crypto v0.58.0 // indirect
-	golang.org/x/net v0.61.0 // indirect
-	golang.org/x/text v0.43.0 // indirect
-	howett.net/plist v1.0.1 // indirect
 	webtyp.com/await v0.1.2 // indirect
 	webtyp.com/dbus v0.1.1 // indirect
 	webtyp.com/escape v0.1.0 // indirect
 	webtyp.com/filepath v0.1.0 // indirect
-	webtyp.com/gobuild v0.0.28 // indirect
-	webtyp.com/gorun v0.0.27 // indirect
 	webtyp.com/keyring v0.2.4 // indirect
 	webtyp.com/lang v0.1.6 // indirect
-	webtyp.com/pwa v0.2.1 // indirect
-	webtyp.com/server v0.2.86 // indirect
 	webtyp.com/storage v0.1.3 // indirect
 	webtyp.com/webauthn v0.1.6 // indirect
 )
