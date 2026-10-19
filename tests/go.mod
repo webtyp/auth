@@ -93,5 +93,5 @@ require (
 	webtyp.com/svg v0.3.28 // indirect
 	webtyp.com/time v0.5.7 // indirect
 	webtyp.com/tinygo v1.0.1 // indirect
-	webtyp.com/widget v0.6.42 // indirect
+	webtyp.com/widget v0.6.43 // indirect
 )
