@@ -30,7 +30,7 @@ require (
 	webtyp.com/crypto v0.0.28
 	webtyp.com/ddl v0.0.17
 	webtyp.com/events v0.0.6
-	webtyp.com/form v0.4.34
+	webtyp.com/form v0.4.43
 	webtyp.com/json v0.5.30
 	webtyp.com/jwt v0.1.24
 	webtyp.com/model v0.2.3
