@@ -42,7 +42,7 @@ require (
 	webtyp.com/time v0.6.2
 	webtyp.com/unixid v0.3.1
 	webtyp.com/user v0.3.14
-	webtyp.com/view v0.6.27
+	webtyp.com/view v0.6.40
 	webtyp.com/webauthn v0.1.6
 )
 
