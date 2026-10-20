@@ -13,7 +13,7 @@ require (
 	webtyp.com/input v0.0.17
 	webtyp.com/json v0.5.30
 	webtyp.com/jwt v0.1.24
-	webtyp.com/model v0.2.3
+	webtyp.com/model v0.2.4
 	webtyp.com/orm v0.12.4
 	webtyp.com/router v0.4.3
 	webtyp.com/time v0.5.7
