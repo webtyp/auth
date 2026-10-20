@@ -86,7 +86,7 @@ func Migrate(conn ddl.Execer, ddlCompiler ddl.Compiler) error {
 	return ddl.New(conn, ddlCompiler).Sync(sorted...)
 }
 
-func now() int64 { return time.Now() / 1e9 }
+func now() time.Unix { return time.NowUnix() }
 
 // newChallenge stores a single-use challenge for userID and returns its bytes.
 func (m *Module) newChallenge(userID, purpose string) ([]byte, error) {

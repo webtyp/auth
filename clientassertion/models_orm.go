@@ -5,29 +5,30 @@ package clientassertion
 import (
 	"webtyp.com/model"
 	"webtyp.com/orm"
+	"webtyp.com/time"
 )
 
 type ClientAssertionJti struct {
 	Id string
-	ExpiresAt int64
+	ExpiresAt time.Unix
 }
 
 func (m *ClientAssertionJti) ModelName() string { return "client_assertion_jti" }
 
 func (m *ClientAssertionJti) Schema() []model.Field { return ClientAssertionJtiModel.Fields }
 
-func (m *ClientAssertionJti) Pointers() []any { return []any{&m.Id, &m.ExpiresAt} }
+func (m *ClientAssertionJti) Pointers() []any { return []any{&m.Id, (*int64)(&m.ExpiresAt)} }
 
 func (m *ClientAssertionJti) IsNil() bool { return m == nil }
 
 func (m *ClientAssertionJti) EncodeFields(w model.FieldWriter) {
 	w.String("id", m.Id)
-	w.Int("expires_at", m.ExpiresAt)
+	w.Int("expires_at", int64(m.ExpiresAt))
 }
 
 func (m *ClientAssertionJti) DecodeFields(r model.FieldReader) {
 	if v, ok := r.String("id"); ok { m.Id = v }
-	if v, ok := r.Int("expires_at"); ok { m.ExpiresAt = v }
+	if v, ok := r.Int("expires_at"); ok { m.ExpiresAt = time.Unix(v) }
 }
 
 type ClientAssertionJtiList []*ClientAssertionJti

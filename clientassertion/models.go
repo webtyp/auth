@@ -8,6 +8,6 @@ var ClientAssertionJtiModel = model.Definition{
 	Name: "client_assertion_jti",
 	Fields: model.Fields{
 		{Name: "id", Type: model.Text(), DB: &model.FieldDB{PK: true}}, // iss + ":" + jti
-		{Name: "expires_at", Type: model.Int()},
+		{Name: "expires_at", Type: model.UnixTime()},
 	},
 }

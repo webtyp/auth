@@ -48,7 +48,7 @@ func New(db *orm.DB, cfg auth.Config) (*Module, error) {
 		cfg.CookieName = "session"
 	}
 	if cfg.TokenTTL == 0 {
-		cfg.TokenTTL = 86400
+		cfg.TokenTTL = time.Day
 	}
 
 	m := &Module{
@@ -124,7 +124,7 @@ func (m *Module) notify(e auth.SecurityEvent) {
 	if m.events == nil {
 		return
 	}
-	e.Timestamp = time.Now() / 1e9
+	e.Timestamp = time.NowUnix()
 	m.events.Publish(events.Event{Topic: auth.TopicSecurity, Payload: &e})
 }
 

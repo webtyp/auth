@@ -84,7 +84,7 @@ func (m *Module) AssignLANIP(userID, ip, label string) error {
 	if len(results) > 0 {
 		return auth.ErrIPTaken
 	}
-	i := &auth.LANIP{Id: m.ids.NewID(), UserId: userID, Ip: ip, Label: label, CreatedAt: time.Now() / 1e9}
+	i := &auth.LANIP{Id: m.ids.NewID(), UserId: userID, Ip: ip, Label: label, CreatedAt: time.NowUnix()}
 	return m.db.Create(i)
 }
 

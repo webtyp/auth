@@ -7,14 +7,14 @@ import (
 	"strings"
 	"testing"
 
+	"webtyp.com/auth"
+	"webtyp.com/auth/authority"
+	emailpassword "webtyp.com/auth/email_password"
 	"webtyp.com/json"
 	"webtyp.com/orm"
 	"webtyp.com/router"
 	"webtyp.com/router/mock"
 	"webtyp.com/sqlite"
-	"webtyp.com/auth"
-	"webtyp.com/auth/authority"
-	emailpassword "webtyp.com/auth/email_password"
 )
 
 func TestCookieSecurity(t *testing.T) {
@@ -81,7 +81,6 @@ func TestCookieSecurity(t *testing.T) {
 			t.Errorf("expected MaxAge=3600, got %d", c.MaxAge)
 		}
 	})
-
 
 	t.Run("Custom Cookie Name", func(t *testing.T) {
 		db := newTestDB(t)

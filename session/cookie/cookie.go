@@ -59,7 +59,7 @@ func (s *Strategy) Issue(ctx router.Context, userID string) error {
 	}
 	ctx.SetCookie(router.Cookie{
 		Name: s.name, Value: sess.Id, HttpOnly: true, Secure: true,
-		SameSite: router.SameSiteStrict, MaxAge: s.policy.Absolute, Path: "/",
+		SameSite: router.SameSiteStrict, MaxAge: int(s.policy.Absolute), Path: "/", // HTTP Max-Age is seconds on the wire
 		Domain: s.domain,
 	})
 	return nil

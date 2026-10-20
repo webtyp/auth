@@ -6,15 +6,15 @@ import (
 	"strings"
 	"testing"
 
-	"webtyp.com/json"
-	"webtyp.com/model"
-	"webtyp.com/router/mock"
 	"webtyp.com/auth"
 	"webtyp.com/auth/authority"
 	emailpassword "webtyp.com/auth/email_password"
 	"webtyp.com/auth/oauth2"
 	"webtyp.com/auth/session/cookie"
 	trustedip "webtyp.com/auth/trusted_ip"
+	"webtyp.com/json"
+	"webtyp.com/model"
+	"webtyp.com/router/mock"
 )
 
 func TestCoverage_SessionCookie(t *testing.T) {
@@ -76,7 +76,6 @@ func TestCoverage_SessionCookie(t *testing.T) {
 		}
 	})
 }
-
 
 func TestCoverage_EmailPassword(t *testing.T) {
 	db := newTestDB(t)

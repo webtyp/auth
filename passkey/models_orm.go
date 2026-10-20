@@ -5,6 +5,7 @@ package passkey
 import (
 	"webtyp.com/model"
 	"webtyp.com/orm"
+	"webtyp.com/time"
 )
 
 type PasskeyCredential struct {
@@ -12,15 +13,15 @@ type PasskeyCredential struct {
 	UserId string
 	PublicKey string
 	SignCount int64
-	CreatedAt int64
-	LastUsedAt int64
+	CreatedAt time.Unix
+	LastUsedAt time.Unix
 }
 
 func (m *PasskeyCredential) ModelName() string { return "passkey_credential" }
 
 func (m *PasskeyCredential) Schema() []model.Field { return PasskeyCredentialModel.Fields }
 
-func (m *PasskeyCredential) Pointers() []any { return []any{&m.Id, &m.UserId, &m.PublicKey, &m.SignCount, &m.CreatedAt, &m.LastUsedAt} }
+func (m *PasskeyCredential) Pointers() []any { return []any{&m.Id, &m.UserId, &m.PublicKey, &m.SignCount, (*int64)(&m.CreatedAt), (*int64)(&m.LastUsedAt)} }
 
 func (m *PasskeyCredential) IsNil() bool { return m == nil }
 
@@ -29,8 +30,8 @@ func (m *PasskeyCredential) EncodeFields(w model.FieldWriter) {
 	w.String("user_id", m.UserId)
 	w.String("public_key", m.PublicKey)
 	w.Int("sign_count", m.SignCount)
-	w.Int("created_at", m.CreatedAt)
-	w.Int("last_used_at", m.LastUsedAt)
+	w.Int("created_at", int64(m.CreatedAt))
+	w.Int("last_used_at", int64(m.LastUsedAt))
 }
 
 func (m *PasskeyCredential) DecodeFields(r model.FieldReader) {
@@ -38,8 +39,8 @@ func (m *PasskeyCredential) DecodeFields(r model.FieldReader) {
 	if v, ok := r.String("user_id"); ok { m.UserId = v }
 	if v, ok := r.String("public_key"); ok { m.PublicKey = v }
 	if v, ok := r.Int("sign_count"); ok { m.SignCount = v }
-	if v, ok := r.Int("created_at"); ok { m.CreatedAt = v }
-	if v, ok := r.Int("last_used_at"); ok { m.LastUsedAt = v }
+	if v, ok := r.Int("created_at"); ok { m.CreatedAt = time.Unix(v) }
+	if v, ok := r.Int("last_used_at"); ok { m.LastUsedAt = time.Unix(v) }
 }
 
 type PasskeyCredentialList []*PasskeyCredential
@@ -92,14 +93,14 @@ type PasskeyChallenge struct {
 	Id string
 	UserId string
 	Purpose string
-	ExpiresAt int64
+	ExpiresAt time.Unix
 }
 
 func (m *PasskeyChallenge) ModelName() string { return "passkey_challenge" }
 
 func (m *PasskeyChallenge) Schema() []model.Field { return PasskeyChallengeModel.Fields }
 
-func (m *PasskeyChallenge) Pointers() []any { return []any{&m.Id, &m.UserId, &m.Purpose, &m.ExpiresAt} }
+func (m *PasskeyChallenge) Pointers() []any { return []any{&m.Id, &m.UserId, &m.Purpose, (*int64)(&m.ExpiresAt)} }
 
 func (m *PasskeyChallenge) IsNil() bool { return m == nil }
 
@@ -107,14 +108,14 @@ func (m *PasskeyChallenge) EncodeFields(w model.FieldWriter) {
 	w.String("id", m.Id)
 	w.String("user_id", m.UserId)
 	w.String("purpose", m.Purpose)
-	w.Int("expires_at", m.ExpiresAt)
+	w.Int("expires_at", int64(m.ExpiresAt))
 }
 
 func (m *PasskeyChallenge) DecodeFields(r model.FieldReader) {
 	if v, ok := r.String("id"); ok { m.Id = v }
 	if v, ok := r.String("user_id"); ok { m.UserId = v }
 	if v, ok := r.String("purpose"); ok { m.Purpose = v }
-	if v, ok := r.Int("expires_at"); ok { m.ExpiresAt = v }
+	if v, ok := r.Int("expires_at"); ok { m.ExpiresAt = time.Unix(v) }
 }
 
 type PasskeyChallengeList []*PasskeyChallenge

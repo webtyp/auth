@@ -3,6 +3,10 @@
 package tests
 
 import (
+	"webtyp.com/auth"
+	"webtyp.com/auth/authority"
+	emailpassword "webtyp.com/auth/email_password"
+	trustedip "webtyp.com/auth/trusted_ip"
 	"webtyp.com/ddl"
 	"webtyp.com/model"
 	"webtyp.com/orm"
@@ -10,10 +14,6 @@ import (
 	"webtyp.com/server/httpd"
 	"webtyp.com/sqlite"
 	"webtyp.com/unixid"
-	"webtyp.com/auth"
-	"webtyp.com/auth/authority"
-	emailpassword "webtyp.com/auth/email_password"
-	trustedip "webtyp.com/auth/trusted_ip"
 )
 
 func Example_mustCompile() {

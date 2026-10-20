@@ -17,7 +17,7 @@ func createIdentity(db *orm.DB, ids model.IDGenerator, userID, provider, provide
 	}
 
 	id := ids.NewID()
-	now := time.Now() / 1e9
+	now := time.NowUnix()
 
 	i := &auth.Identity{
 		Id:         id,

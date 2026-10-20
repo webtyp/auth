@@ -14,7 +14,7 @@ var UserModel = model.Definition{
 		{Name: "phone", Type: input.Phone()},
 		{Name: "status", Type: model.Text()},
 		{Name: "avatar", Type: model.Text()},
-		{Name: "created_at", Type: model.Int()},
+		{Name: "created_at", Type: model.UnixTime()},
 	},
 }
 
@@ -23,12 +23,12 @@ var SessionModel = model.Definition{
 	Fields: model.Fields{
 		{Name: "id", Type: model.Text(), DB: &model.FieldDB{PK: true}},
 		{Name: "user_id", Type: model.Text(), DB: &model.FieldDB{RefColumn: "id"}, Ref: &UserModel},
-		{Name: "expires_at", Type: model.Int()},
+		{Name: "expires_at", Type: model.UnixTime()},
 		{Name: "ip", Type: model.Text()},
 		{Name: "user_agent", Type: model.Text()},
-		{Name: "created_at", Type: model.Int()},
-		{Name: "absolute_at", Type: model.Int()},
-		{Name: "idle_seconds", Type: model.Int()},
+		{Name: "created_at", Type: model.UnixTime()},
+		{Name: "absolute_at", Type: model.UnixTime()},
+		{Name: "idle_seconds", Type: model.UnixTime()},
 		{Name: "assurance", Type: model.Int()},
 	},
 }
@@ -41,7 +41,7 @@ var IdentityModel = model.Definition{
 		{Name: "provider", Type: model.Text()},
 		{Name: "provider_id", Type: model.Text()},
 		{Name: "email", Type: model.Text()},
-		{Name: "created_at", Type: model.Int()},
+		{Name: "created_at", Type: model.UnixTime()},
 	},
 }
 
@@ -52,7 +52,7 @@ var LANIPModel = model.Definition{
 		{Name: "user_id", Type: model.Text(), DB: &model.FieldDB{RefColumn: "id"}, Ref: &UserModel},
 		{Name: "ip", Type: model.Text()},
 		{Name: "label", Type: model.Text()},
-		{Name: "created_at", Type: model.Int()},
+		{Name: "created_at", Type: model.UnixTime()},
 	},
 }
 
@@ -62,8 +62,8 @@ var OAuthStateModel = model.Definition{
 		{Name: "state", Type: model.Text(), DB: &model.FieldDB{PK: true}},
 		{Name: "nonce_hash", Type: model.Text()},
 		{Name: "provider", Type: model.Text()},
-		{Name: "expires_at", Type: model.Int()},
-		{Name: "created_at", Type: model.Int()},
+		{Name: "expires_at", Type: model.UnixTime()},
+		{Name: "created_at", Type: model.UnixTime()},
 	},
 }
 

@@ -6,15 +6,15 @@ import (
 	"strings"
 	"testing"
 
+	"webtyp.com/auth"
+	"webtyp.com/auth/authority"
+	emailpassword "webtyp.com/auth/email_password"
 	"webtyp.com/crypto/bcrypt"
 	"webtyp.com/form"
 	"webtyp.com/json"
 	"webtyp.com/model"
 	"webtyp.com/router"
 	"webtyp.com/router/mock"
-	"webtyp.com/auth"
-	"webtyp.com/auth/authority"
-	emailpassword "webtyp.com/auth/email_password"
 )
 
 func TestProductionWiring(t *testing.T) {

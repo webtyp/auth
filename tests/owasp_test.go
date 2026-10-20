@@ -5,11 +5,11 @@ package tests
 import (
 	"testing"
 
-	"webtyp.com/json"
-	"webtyp.com/router/mock"
 	"webtyp.com/auth"
 	"webtyp.com/auth/authority"
 	emailpassword "webtyp.com/auth/email_password"
+	"webtyp.com/json"
+	"webtyp.com/router/mock"
 )
 
 func TestOWASP(t *testing.T) {

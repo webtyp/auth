@@ -84,7 +84,7 @@ func Migrate(conn ddl.Execer, ddlCompiler ddl.Compiler) error {
 
 func (a *Authenticator) reject(iss, reason string) (auth.Principal, bool) {
 	if a.notify != nil {
-		a.notify(auth.SecurityEvent{Type: auth.EventClientAssertionRejected, UserID: iss, Reason: reason, Timestamp: time.Now() / 1e9})
+		a.notify(auth.SecurityEvent{Type: auth.EventClientAssertionRejected, UserID: iss, Reason: reason, Timestamp: time.NowUnix()})
 	}
 	return auth.Principal{}, true
 }
@@ -120,8 +120,8 @@ func (a *Authenticator) IdentifyRequest(ctx router.Context) (auth.Principal, boo
 	}
 
 	// Housekeeping: its failure only leaves old rows behind.
-	a.db.Delete(&ClientAssertionJti{}, orm.Lt(ClientAssertionJti_.ExpiresAt, time.Now()/1e9))
-	jti := ClientAssertionJti{Id: iss + jtiSeparator + claims.Jti, ExpiresAt: claims.Exp}
+	a.db.Delete(&ClientAssertionJti{}, orm.Lt(ClientAssertionJti_.ExpiresAt, time.NowUnix()))
+	jti := ClientAssertionJti{Id: iss + jtiSeparator + claims.Jti, ExpiresAt: time.Unix(claims.Exp)} // a JWT exp is Unix seconds on the wire
 	if err := a.db.Create(&jti); err != nil { // duplicate primary key: replay
 		return a.reject(iss, reasonReplay)
 	}

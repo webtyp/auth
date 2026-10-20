@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"sync"
 
+	"webtyp.com/auth"
 	"webtyp.com/events"
 	"webtyp.com/model"
 	"webtyp.com/router"
-	"webtyp.com/auth"
 )
 
 type testIDGenerator struct {
@@ -99,6 +99,4 @@ func (r *mockRoute) RequiresMFA() router.Route {
 	return r
 }
 
-var testPolicy = auth.SessionPolicy{Absolute: 3600, Assurance: model.AssuranceSingleFactor,
-
-}
+var testPolicy = auth.SessionPolicy{Absolute: 3600, Assurance: model.AssuranceSingleFactor}

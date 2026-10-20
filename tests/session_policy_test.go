@@ -4,6 +4,7 @@ package tests
 
 import (
 	"testing"
+	"webtyp.com/time"
 
 	"webtyp.com/auth"
 	"webtyp.com/auth/authority"
@@ -31,7 +32,7 @@ func TestSessionPolicy_Expiration(t *testing.T) {
 		}
 
 		// Age by 61 seconds
-		age := int64(61)
+		age := time.Unix(61)
 		sess.CreatedAt -= age
 		sess.ExpiresAt -= age
 		sess.AbsoluteAt -= age
@@ -53,7 +54,7 @@ func TestSessionPolicy_Expiration(t *testing.T) {
 		}
 
 		// Age by 3601 seconds
-		age := int64(3601)
+		age := time.Unix(3601)
 		sess.CreatedAt -= age
 		sess.ExpiresAt -= age
 		sess.AbsoluteAt -= age
@@ -75,7 +76,7 @@ func TestSessionPolicy_Expiration(t *testing.T) {
 		}
 
 		// Age by 65 seconds
-		age := int64(65)
+		age := time.Unix(65)
 		sess.CreatedAt -= age
 		sess.ExpiresAt -= age
 		sess.AbsoluteAt -= age
@@ -111,7 +112,7 @@ func TestSessionPolicy_Expiration(t *testing.T) {
 		}
 
 		// Age by 3000 seconds (AbsoluteAt is in 600 seconds, Idle is 900)
-		age := int64(3000)
+		age := time.Unix(3000)
 		// Idle is 900. If we age by 3000, and we want it to NOT expire from idle,
 		// it must be that (now - ExpiresAt) < 0? No, ExpiresAt > now.
 		// Let's just set ExpiresAt directly to time.Now().Unix() + 10 to simulate activity 10 seconds ago.
@@ -147,7 +148,7 @@ func TestSessionPolicy_Expiration(t *testing.T) {
 		}
 
 		// Age by 10 seconds
-		age := int64(10)
+		age := time.Unix(10)
 		sess.CreatedAt -= age
 		sess.ExpiresAt -= age
 		sess.AbsoluteAt -= age
@@ -234,7 +235,7 @@ func TestSessionPolicy_Rotate(t *testing.T) {
 	}
 
 	// Age the session slightly to ensure AbsoluteAt logic works during rotation
-	age := int64(10)
+	age := time.Unix(10)
 	sess.CreatedAt -= age
 	sess.AbsoluteAt -= age
 	sess.ExpiresAt -= age

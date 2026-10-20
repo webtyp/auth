@@ -12,7 +12,6 @@ import (
 	"webtyp.com/sqlite"
 )
 
-
 func TestDefaultStrategyIssuesAnUnguessableCookie(t *testing.T) {
 	conn, err := sqlite.Open(":memory:")
 	if err != nil {

@@ -11,7 +11,7 @@ import (
 
 func createUser(db *orm.DB, ids model.IDGenerator, email, name, phone string) (auth.User, error) {
 	id := ids.NewID()
-	now := time.Now() / 1e9
+	now := time.NowUnix()
 
 	newUser := auth.User{
 		Id:        id,

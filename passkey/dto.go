@@ -63,6 +63,6 @@ type credentialView struct{ c *PasskeyCredential }
 func (v *credentialView) IsNil() bool { return v == nil }
 func (v *credentialView) EncodeFields(w model.FieldWriter) {
 	w.String("id", v.c.Id)
-	w.Int("created_at", v.c.CreatedAt)
-	w.Int("last_used_at", v.c.LastUsedAt)
+	w.Int("created_at", int64(v.c.CreatedAt))
+	w.Int("last_used_at", int64(v.c.LastUsedAt))
 }

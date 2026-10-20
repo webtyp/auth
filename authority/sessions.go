@@ -79,7 +79,7 @@ func (c *sessionCache) delete(id string) {
 
 // slideWriteThreshold is the smallest idle extension worth a write: a burst of
 // requests moves the expiry once a minute, not once per request.
-const slideWriteThreshold = 60
+const slideWriteThreshold = time.Minute
 
 // RotateSession atomically deletes the old session and creates a new one
 // with the same userID and policy, updated IP/UserAgent, and a fresh lifetime.
@@ -96,8 +96,8 @@ func (m *Module) RotateSession(oldID, ip, userAgent string) (auth.Session, error
 	}
 
 	return m.CreateSession(oldSess.UserId, ip, userAgent, auth.SessionPolicy{
-		Absolute:  int(oldSess.AbsoluteAt - oldSess.CreatedAt),
-		Idle:      int(oldSess.IdleSeconds),
+		Absolute:  oldSess.AbsoluteAt - oldSess.CreatedAt,
+		Idle:      oldSess.IdleSeconds,
 		Assurance: model.Assurance(oldSess.Assurance),
 	})
 }
@@ -112,11 +112,11 @@ func (m *Module) CreateSession(userID, ip, userAgent string, p auth.SessionPolic
 		return auth.Session{}, err
 	}
 
-	now := time.Now() / 1e9
-	absoluteAt := now + int64(p.Absolute)
+	now := time.NowUnix()
+	absoluteAt := now + p.Absolute
 	expiresAt := absoluteAt
 	if p.Idle > 0 {
-		expiresAt = min(now+int64(p.Idle), absoluteAt)
+		expiresAt = min(now+p.Idle, absoluteAt)
 	}
 	sess := auth.Session{
 		Id:          id,
@@ -126,7 +126,7 @@ func (m *Module) CreateSession(userID, ip, userAgent string, p auth.SessionPolic
 		UserAgent:   userAgent,
 		CreatedAt:   now,
 		AbsoluteAt:  absoluteAt,
-		IdleSeconds: int64(p.Idle),
+		IdleSeconds: p.Idle,
 		Assurance:   int64(p.Assurance),
 	}
 
@@ -154,7 +154,7 @@ func (m *Module) GetSession(id string) (auth.Session, error) {
 		s = *results[0]
 	}
 
-	now := time.Now() / 1e9
+	now := time.NowUnix()
 	if now >= s.ExpiresAt || now >= s.AbsoluteAt {
 		m.DeleteSession(id)
 		return auth.Session{}, auth.ErrSessionExpired
@@ -167,7 +167,7 @@ func (m *Module) GetSession(id string) (auth.Session, error) {
 
 // slideSession moves s.ExpiresAt to min(now+IdleSeconds, AbsoluteAt) when the
 // row has an idle window and the move is at least slideWriteThreshold seconds.
-func (m *Module) slideSession(s *auth.Session, now int64) {
+func (m *Module) slideSession(s *auth.Session, now time.Unix) {
 	if s.IdleSeconds <= 0 {
 		return
 	}
@@ -196,7 +196,7 @@ func (m *Module) DeleteSession(id string) error {
 }
 
 func (m *Module) PurgeExpiredSessions() error {
-	now := time.Now() / 1e9
+	now := time.NowUnix()
 
 	m.cache.mu.Lock()
 	var active []sessionItem

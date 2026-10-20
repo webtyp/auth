@@ -5,16 +5,18 @@ package tests
 import (
 	"testing"
 
+	"webtyp.com/auth"
+	"webtyp.com/auth/authority"
 	"webtyp.com/json"
 	"webtyp.com/model"
 	"webtyp.com/router/mock"
-	"webtyp.com/auth"
-	"webtyp.com/auth/authority"
 )
 
 // fakeResolver stands in for rbac.Service, which auth must never import: the
 // composition root injects whatever satisfies auth.ActionResolver.
-type fakeResolver struct{ grants map[model.Resource]model.Action }
+type fakeResolver struct {
+	grants map[model.Resource]model.Action
+}
 
 func (f *fakeResolver) AllowedActions(projectID, subjectID string, r model.Resource) model.Action {
 	return f.grants[r]

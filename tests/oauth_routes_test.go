@@ -5,11 +5,11 @@ package tests
 import (
 	"testing"
 
-	"webtyp.com/router/mock"
 	"webtyp.com/auth"
 	"webtyp.com/auth/authority"
 	"webtyp.com/auth/oauth2"
 	"webtyp.com/auth/oauth2/provider/google"
+	"webtyp.com/router/mock"
 )
 
 func TestOAuthRoutesMatchExportedPaths(t *testing.T) {

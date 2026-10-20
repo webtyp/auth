@@ -5,11 +5,11 @@ package tests
 import (
 	"testing"
 
+	"webtyp.com/auth"
+	"webtyp.com/auth/authority"
 	"webtyp.com/json"
 	"webtyp.com/model"
 	"webtyp.com/router/mock"
-	"webtyp.com/auth"
-	"webtyp.com/auth/authority"
 )
 
 func TestTools_Me(t *testing.T) {
@@ -180,7 +180,6 @@ func TestAdminOps(t *testing.T) {
 
 func TestNew_Validation(t *testing.T) {
 	db := newTestDB(t)
-
 
 	t.Run("Cookie strategy (default) needs no secret", func(t *testing.T) {
 		_, err := authority.New(db, auth.Config{IDs: testIDs})

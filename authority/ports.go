@@ -57,7 +57,7 @@ func (m *Module) CreateState(provider string) (string, string, error) {
 		return "", "", err
 	}
 	nonceHash := base64.URLEncode(hmac.HMACSHA256([]byte(state), []byte(nonce)))
-	now := time.Now() / 1e9
+	now := time.NowUnix()
 	s := &auth.OAuthState{
 		State:     state,
 		NonceHash: nonceHash,
@@ -78,7 +78,7 @@ func (m *Module) ConsumeState(state, nonce, provider string) error {
 // PurgeExpiredOAuthStates is maintenance, not part of any port — call it
 // periodically from a cron-like task in the consuming app.
 func (m *Module) PurgeExpiredOAuthStates() error {
-	qb := m.db.Query(&auth.OAuthState{}).Where(auth.OAuthState_.ExpiresAt).Lt(time.Now() / 1e9)
+	qb := m.db.Query(&auth.OAuthState{}).Where(auth.OAuthState_.ExpiresAt).Lt(time.NowUnix())
 	states, _ := auth.ReadAllOAuthState(qb)
 	for _, s := range states {
 		m.db.Delete(s, orm.Eq(auth.OAuthState_.State, s.State))
@@ -114,7 +114,7 @@ func (m *Module) GetOrCreateSubject(id user.SubjectID, email, name, avatar strin
 			return user.Subject{ID: user.SubjectID(u.Id), Email: u.Email, Name: u.Name, Avatar: u.Avatar}, nil
 		}
 	}
-	now := time.Now() / 1e9
+	now := time.NowUnix()
 	newUser := auth.User{
 		Id:        string(id),
 		Email:     email,
@@ -170,7 +170,7 @@ func consumeState(db *orm.DB, m *Module, state, nonce, provider string) error {
 	}
 
 	// 5. Check expiry
-	if stateObj.ExpiresAt < time.Now()/1e9 {
+	if stateObj.ExpiresAt < time.NowUnix() {
 		m.notify(auth.SecurityEvent{Type: auth.EventOAuthExpiredState, Provider: provider})
 		return auth.ErrInvalidOAuthState
 	}

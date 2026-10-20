@@ -6,6 +6,7 @@ import (
 	"webtyp.com/input"
 	"webtyp.com/model"
 	"webtyp.com/router"
+	"webtyp.com/time"
 	"webtyp.com/user"
 )
 
@@ -150,7 +151,7 @@ type SecurityEvent struct {
 	Provider  string // OAuth provider name, for OAuth events
 	Resource  string // RBAC resource, for EventAccessDenied
 	Reason    string // why a passkey or client assertion was refused
-	Timestamp int64  // time.Now().Unix()
+	Timestamp time.Unix
 }
 
 func (e *SecurityEvent) EncodeFields(w model.FieldWriter) {
@@ -160,7 +161,7 @@ func (e *SecurityEvent) EncodeFields(w model.FieldWriter) {
 	w.String("provider", e.Provider)
 	w.String("resource", e.Resource)
 	w.String("reason", e.Reason)
-	w.Int("timestamp", e.Timestamp)
+	w.Int("timestamp", int64(e.Timestamp))
 }
 
 func (e *SecurityEvent) IsNil() bool { return e == nil }
@@ -219,8 +220,8 @@ type Authenticator interface {
 // Each session row stores its own policy, so different strategies can share
 // one session table.
 type SessionPolicy struct {
-	Absolute  int             // seconds from creation; the hard cap. Required (> 0).
-	Idle      int             // seconds without activity; 0 = no idle limit
+	Absolute  time.Unix       // duration from creation (e.g. 8*time.Hour); the hard cap. Required (> 0).
+	Idle      time.Unix       // duration without activity; 0 = no idle limit
 	Assurance model.Assurance // what a session issued under this policy proves
 }
 
@@ -230,7 +231,7 @@ type SessionPolicy struct {
 type Principal struct {
 	UserID    string
 	Assurance model.Assurance
-	IssuedAt  int64 // unix seconds the session was created; 0 for request credentials
+	IssuedAt  time.Unix // when the session was created; 0 for request credentials
 }
 
 // ErrMsgPolicyAbsolute is what a SessionPolicy without a hard cap is refused with.
@@ -406,8 +407,8 @@ type Config struct {
 	// (session/cookie). TokenTTL is the ABSOLUTE lifetime of its sessions: an
 	// active session still ends after it. The default cookie is host-only and
 	// named "__Host-"+CookieName.
-	CookieName string // default: "session"
-	TokenTTL   int    // default: 86400 (seconds)
+	CookieName string    // default: "session"
+	TokenTTL   time.Unix // duration; default: time.Day
 
 	// TrustProxy tells every IP-extracting collaborator (the default cookie
 	// strategy, Module.LoginLAN) whether to trust X-Forwarded-For/X-Real-IP.
@@ -436,10 +437,10 @@ type Config struct {
 	Permissions *Permissions
 
 	// IdleTTL, when > 0, ends a session of the default strategy after IdleTTL
-	// seconds WITHOUT activity, sliding, but never beyond TokenTTL. 0 (default)
+	// WITHOUT activity, sliding, but never beyond TokenTTL. 0 (default)
 	// = no idle limit. Together with TokenTTL they build the default policy
 	// SessionPolicy{Absolute: TokenTTL, Idle: IdleTTL, Assurance: SingleFactor}.
-	IdleTTL int
+	IdleTTL time.Unix // duration
 }
 
 const (

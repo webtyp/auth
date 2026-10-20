@@ -18,7 +18,7 @@ type countingFormLogin struct {
 	calls atomic.Int32
 }
 
-func (c *countingFormLogin) Name() string { return "counting" }
+func (c *countingFormLogin) Name() string          { return "counting" }
 func (c *countingFormLogin) Mount(r router.Router) {}
 func (c *countingFormLogin) Login(ctx router.Context, body []byte) (string, error) {
 	c.calls.Add(1)

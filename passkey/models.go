@@ -10,8 +10,8 @@ var PasskeyCredentialModel = model.Definition{
 		{Name: "user_id", Type: model.Text()},
 		{Name: "public_key", Type: model.Text()}, // base64url SPKI DER
 		{Name: "sign_count", Type: model.Int()},
-		{Name: "created_at", Type: model.Int()},
-		{Name: "last_used_at", Type: model.Int()},
+		{Name: "created_at", Type: model.UnixTime()},
+		{Name: "last_used_at", Type: model.UnixTime()},
 	},
 }
 
@@ -22,6 +22,6 @@ var PasskeyChallengeModel = model.Definition{
 		{Name: "id", Type: model.Text(), DB: &model.FieldDB{PK: true}}, // base64url challenge
 		{Name: "user_id", Type: model.Text()},
 		{Name: "purpose", Type: model.Text()},
-		{Name: "expires_at", Type: model.Int()},
+		{Name: "expires_at", Type: model.UnixTime()},
 	},
 }

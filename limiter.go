@@ -23,28 +23,28 @@ const ErrTooManyAttempts domainError = "too many attempts"
 
 type ipRecord struct {
 	fails        int
-	windowFrom   int64 // unix seconds, start of the current failure window
-	blockedUntil int64 // unix seconds; 0 = not blocked
+	windowFrom   time.Unix // start of the current failure window
+	blockedUntil time.Unix // 0 = not blocked
 }
 
-// IPLimiter blocks an IP for blockSeconds once it accumulates maxAttempts
-// failures within windowSeconds. Counters live only in this process —
+// IPLimiter blocks an IP for the block duration once it accumulates maxAttempts
+// failures within the window. Counters live only in this process —
 // a restart clears them (see the consumer's docs/PLAN.md for that tradeoff).
 type IPLimiter struct {
 	mu            sync.Mutex
 	records       map[string]*ipRecord
 	maxAttempts   int
-	windowSeconds int64
-	blockSeconds  int64
+	window        time.Unix
+	block         time.Unix
 }
 
-// NewIPLimiter builds an IPLimiter. maxAttempts must be > 0.
-func NewIPLimiter(maxAttempts int, windowSeconds, blockSeconds int64) *IPLimiter {
+// NewIPLimiter builds an IPLimiter. maxAttempts must be > 0; window and block are durations (e.g. 15*time.Minute).
+func NewIPLimiter(maxAttempts int, window, block time.Unix) *IPLimiter {
 	return &IPLimiter{
 		records:       make(map[string]*ipRecord),
 		maxAttempts:   maxAttempts,
-		windowSeconds: windowSeconds,
-		blockSeconds:  blockSeconds,
+		window:        window,
+		block:         block,
 	}
 }
 
@@ -56,7 +56,7 @@ func (l *IPLimiter) Check(ip string) error {
 	if !ok {
 		return nil
 	}
-	now := time.Now() / 1e9
+	now := time.NowUnix()
 	if rec.blockedUntil != 0 && now < rec.blockedUntil {
 		return ErrTooManyAttempts
 	}
@@ -68,15 +68,15 @@ func (l *IPLimiter) Check(ip string) error {
 func (l *IPLimiter) Fail(ip string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	now := time.Now() / 1e9
+	now := time.NowUnix()
 	rec, ok := l.records[ip]
-	if !ok || now-rec.windowFrom > l.windowSeconds {
+	if !ok || now-rec.windowFrom > l.window {
 		rec = &ipRecord{windowFrom: now}
 		l.records[ip] = rec
 	}
 	rec.fails++
 	if rec.fails >= l.maxAttempts {
-		rec.blockedUntil = now + l.blockSeconds
+		rec.blockedUntil = now + l.block
 	}
 }
 

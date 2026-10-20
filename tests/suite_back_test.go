@@ -6,16 +6,16 @@ import (
 	"strings"
 	"testing"
 
-	"webtyp.com/crypto/bcrypt"
-	"webtyp.com/ddl"
-	"webtyp.com/orm"
-	"webtyp.com/router/mock"
-	"webtyp.com/sqlite"
 	"webtyp.com/auth"
 	"webtyp.com/auth/authority"
 	emailpassword "webtyp.com/auth/email_password"
 	"webtyp.com/auth/oauth2"
 	trustedip "webtyp.com/auth/trusted_ip"
+	"webtyp.com/crypto/bcrypt"
+	"webtyp.com/ddl"
+	"webtyp.com/orm"
+	"webtyp.com/router/mock"
+	"webtyp.com/sqlite"
 )
 
 func newTestDB(t *testing.T) *orm.DB {
@@ -42,7 +42,6 @@ func RunUserTests(t *testing.T) {
 	t.Run("TestOAuth", testOAuth)
 	t.Run("TestLAN", testLAN)
 }
-
 
 func testInit(t *testing.T) {
 	db := newTestDB(t)

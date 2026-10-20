@@ -55,13 +55,13 @@ func (recArr) Close()                     {}
 
 type idArr []string
 
-func (a *idArr) String(v string)     { *a = append(*a, v) }
-func (*idArr) Int(int64)             {}
-func (*idArr) Float(float64)         {}
-func (*idArr) Bool(bool)             {}
-func (*idArr) Bytes([]byte)          {}
+func (a *idArr) String(v string)      { *a = append(*a, v) }
+func (*idArr) Int(int64)              {}
+func (*idArr) Float(float64)          {}
+func (*idArr) Bool(bool)              {}
+func (*idArr) Bytes([]byte)           {}
 func (*idArr) Object(model.Encodable) {}
-func (*idArr) Close()                {}
+func (*idArr) Close()                 {}
 
 type discardArr struct{}
 

@@ -5,6 +5,7 @@ package tests
 import (
 	"crypto/sha256"
 	"testing"
+	"webtyp.com/time"
 
 	"strings"
 	"webtyp.com/auth"
@@ -172,7 +173,7 @@ func TestPasskey_K1_K2(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		age := int64(301)
+		age := time.Unix(301)
 		sess.CreatedAt -= age
 		sess.AbsoluteAt -= age
 		sess.ExpiresAt -= age

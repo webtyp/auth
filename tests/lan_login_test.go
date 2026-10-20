@@ -5,11 +5,11 @@ package tests
 import (
 	"testing"
 
-	"webtyp.com/json"
-	"webtyp.com/router/mock"
 	"webtyp.com/auth"
 	"webtyp.com/auth/authority"
 	trustedip "webtyp.com/auth/trusted_ip"
+	"webtyp.com/json"
+	"webtyp.com/router/mock"
 )
 
 // fakeTrustedIP answers the allowlist question per (user, ip) without the

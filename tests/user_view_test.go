@@ -5,8 +5,8 @@ package tests
 import (
 	"testing"
 
-	"webtyp.com/model"
 	"webtyp.com/auth"
+	"webtyp.com/model"
 	"webtyp.com/view"
 )
 
