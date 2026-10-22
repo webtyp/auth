@@ -82,7 +82,7 @@ require (
 	webtyp.com/files v0.0.4 // indirect
 	webtyp.com/fmt v1.0.0 // indirect
 	webtyp.com/font v0.0.5 // indirect
-	webtyp.com/html v0.0.28 // indirect
+	webtyp.com/html v0.0.29 // indirect
 	webtyp.com/image v0.1.16 // indirect
 	webtyp.com/input v0.0.20 // indirect
 	webtyp.com/js v0.1.3 // indirect
