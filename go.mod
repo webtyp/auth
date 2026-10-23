@@ -29,6 +29,6 @@ require (
 	webtyp.com/escape v0.1.0 // indirect
 	webtyp.com/filepath v0.1.0 // indirect
 	webtyp.com/keyring v0.2.4 // indirect
-	webtyp.com/lang v0.1.7 // indirect
+	webtyp.com/lang v0.1.9 // indirect
 	webtyp.com/storage v0.1.7 // indirect
 )
