@@ -27,7 +27,7 @@ require (
 	modernc.org/sqlite v1.58.0
 	webtyp.com/auth v0.0.79
 	webtyp.com/base64 v0.0.6
-	webtyp.com/crypto v0.0.29
+	webtyp.com/crypto v0.0.30
 	webtyp.com/ddl v0.0.17
 	webtyp.com/events v0.1.0
 	webtyp.com/form v0.4.43
