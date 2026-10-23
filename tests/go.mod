@@ -87,7 +87,7 @@ require (
 	webtyp.com/input v0.0.20 // indirect
 	webtyp.com/js v0.1.3 // indirect
 	webtyp.com/keyring v0.2.4 // indirect
-	webtyp.com/lang v0.1.7 // indirect
+	webtyp.com/lang v0.1.9 // indirect
 	webtyp.com/modfind v0.0.11 // indirect
 	webtyp.com/pwa v0.2.1 // indirect
 	webtyp.com/sqlt v0.0.11 // indirect
