@@ -10,7 +10,7 @@ require (
 	webtyp.com/events v0.1.0
 	webtyp.com/fetch v0.1.29
 	webtyp.com/fmt v1.0.0
-	webtyp.com/input v0.0.17
+	webtyp.com/input v0.0.20
 	webtyp.com/json v0.5.30
 	webtyp.com/jwt v0.1.26
 	webtyp.com/model v0.2.6
@@ -18,7 +18,7 @@ require (
 	webtyp.com/router v0.4.6
 	webtyp.com/time v0.6.2
 	webtyp.com/user v0.3.13
-	webtyp.com/view v0.6.27
+	webtyp.com/view v0.6.44
 	webtyp.com/webauthn v0.1.6
 )
 
