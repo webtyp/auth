@@ -89,7 +89,7 @@ require (
 	webtyp.com/keyring v0.2.4 // indirect
 	webtyp.com/lang v0.1.9 // indirect
 	webtyp.com/modfind v0.0.11 // indirect
-	webtyp.com/pwa v0.2.1 // indirect
+	webtyp.com/pwa v0.2.13 // indirect
 	webtyp.com/sqlt v0.0.11 // indirect
 	webtyp.com/storage v0.1.8 // indirect
 	webtyp.com/svg v0.3.30 // indirect
