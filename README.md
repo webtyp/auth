@@ -35,6 +35,7 @@ flowchart TD
 - `session/cookie` — Session transport: an opaque cookie over the session table, with a per-session `SessionPolicy` (absolute cap, idle limit, assurance).
 - `passkey` — WebAuthn authenticator: enrollment and a step-up session (`AssuranceMultiFactor`) after a verified passkey.
 - `clientassertion` — Machine clients: `private_key_jwt` (RFC 7523) bearer assertions become principals.
+- `cfaccess` — Cloudflare Access: identifies each request by the signed `Cf-Access-Jwt-Assertion` (RS256, issuer, audience), mapping the verified e-mail to a user.
 - `email_password`, `trusted_ip` — Credential authenticators.
 - `local` — Development selector authenticator; no network, no env vars.
 
@@ -119,9 +120,8 @@ authMod, _ := authority.New(db, auth.Config{
     IDs:     ids,
     IdleTTL: 1800, // 30 min without activity ends the session (sliding); TokenTTL (default 24 h) is the absolute cap
     Permissions: &auth.Permissions{
-        Resolver:  rbacSvc, // satisfies auth.ActionResolver structurally
+        Grants:    rbacSvc, // satisfies auth.GrantLister structurally
         ProjectID: "main",
-        Resources: []model.Resource{"service_catalog"},
     },
 })
 

@@ -3,6 +3,7 @@
 package tests
 
 import (
+	"errors"
 	"testing"
 
 	"webtyp.com/auth"
@@ -12,14 +13,14 @@ import (
 	"webtyp.com/router/mock"
 )
 
-// fakeResolver stands in for rbac.Service, which auth must never import: the
-// composition root injects whatever satisfies auth.ActionResolver.
-type fakeResolver struct {
-	grants map[model.Resource]model.Action
+// fakeGrants stands in for rbac.Service, which auth must never import.
+type fakeGrants struct {
+	grants []model.Grant
+	err    error
 }
 
-func (f *fakeResolver) AllowedActions(projectID, subjectID string, r model.Resource) model.Action {
-	return f.grants[r]
+func (f *fakeGrants) SubjectGrants(projectID, subjectID string) ([]model.Grant, error) {
+	return f.grants, f.err
 }
 
 const (
@@ -27,18 +28,14 @@ const (
 	resStaff   = model.Resource("staff")
 )
 
-// TestMeComposesPermissions proves the composition every app combining
-// authority + rbac used to write in its own root now happens in-library.
 func TestMeComposesPermissions(t *testing.T) {
-	resolver := &fakeResolver{grants: map[model.Resource]model.Action{
-		resCatalog: model.Read | model.Update,
-		resStaff:   0, // resolves to nothing — must not reach the wire
+	resolver := &fakeGrants{grants: []model.Grant{
+		{Resource: resCatalog, Actions: model.Read | model.Update},
 	}}
 
 	profile := meProfile(t, &auth.Permissions{
-		Resolver:  resolver,
+		Grants:    resolver,
 		ProjectID: "main",
-		Resources: []model.Resource{resCatalog, resStaff},
 	})
 
 	if len(profile.Permissions) != 1 {
@@ -47,31 +44,72 @@ func TestMeComposesPermissions(t *testing.T) {
 	if profile.Permissions[0] != "service_catalog:ru" {
 		t.Errorf("permissions[0] = %q, want \"service_catalog:ru\"", profile.Permissions[0])
 	}
-	if !profile.Allows(string(resCatalog)) {
-		t.Error("Allows(service_catalog) = false, want true")
+	if !profile.Can(resCatalog, model.Read) {
+		t.Error("Can(service_catalog, Read) = false, want true")
 	}
-	if profile.Allows(string(resStaff)) {
-		t.Error("Allows(staff) = true, want false — an empty action set grants nothing")
+	if profile.Can(resCatalog, model.Delete) {
+		t.Error("Can(service_catalog, Delete) = true, want false")
+	}
+	if profile.Can(resStaff, model.Read) {
+		t.Error("Can(staff, Read) = true, want false")
 	}
 }
 
-// TestMeClosedByDefault is the other half of the contract: the capability is
-// inert at its zero value, so no app gains permissions by upgrading.
+func TestMeSendsWildcardAsStored(t *testing.T) {
+	resolver := &fakeGrants{grants: []model.Grant{
+		{Resource: model.Wildcard, Actions: model.AllActions},
+	}}
+
+	profile := meProfile(t, &auth.Permissions{
+		Grants:    resolver,
+		ProjectID: "main",
+	})
+
+	if len(profile.Permissions) != 1 {
+		t.Fatalf("permissions = %v, want exactly one entry", profile.Permissions)
+	}
+	if profile.Permissions[0] != "*:crud" {
+		t.Errorf("permissions[0] = %q, want \"*:crud\"", profile.Permissions[0])
+	}
+	if !profile.Can("anything", model.Delete) {
+		t.Error("Can(anything, Delete) = false, want true")
+	}
+}
+
+func TestMeGrantsErrorIs500(t *testing.T) {
+	db := newTestDB(t)
+	m, err := authority.New(db, auth.Config{IDs: testIDs, Permissions: &auth.Permissions{
+		Grants: &fakeGrants{err: errors.New("db down")}, ProjectID: "main",
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	u, err := m.CreateUser("me@test.com", "Me", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	reg := &mockOpRegistry{ops: make(map[string]*mockRoute)}
+	m.MountOperations(reg)
+	ctx := &mock.Context{}
+	ctx.SetUserID(u.Id)
+	reg.ops[auth.OpMe].handler(ctx)
+	if ctx.Status != 500 {
+		t.Fatalf("me with a failing GrantLister: status %d, want 500", ctx.Status)
+	}
+}
+
 func TestMeClosedByDefault(t *testing.T) {
 	if p := meProfile(t, nil); len(p.Permissions) != 0 {
 		t.Errorf("permissions = %v, want empty with Config.Permissions nil", p.Permissions)
 	}
 
-	// A configured resolver slot that was never filled must also stay closed.
-	p := meProfile(t, &auth.Permissions{ProjectID: "main", Resources: []model.Resource{resCatalog}})
+	p := meProfile(t, &auth.Permissions{ProjectID: "main", Grants: nil})
 	if len(p.Permissions) != 0 {
-		t.Errorf("permissions = %v, want empty with a nil Resolver", p.Permissions)
+		t.Errorf("permissions = %v, want empty with a nil Grants", p.Permissions)
 	}
 }
 
-// TestGrantAllowsRoundTrip pins the wire format to its only producer and its
-// only consumer, so neither can drift from the other.
-func TestGrantAllowsRoundTrip(t *testing.T) {
+func TestGrantCanRoundTrip(t *testing.T) {
 	cases := []struct {
 		actions model.Action
 		encoded string
@@ -95,9 +133,16 @@ func TestGrantAllowsRoundTrip(t *testing.T) {
 			t.Errorf("Grant(%v) = %v, want [%q]", tc.actions, p.Permissions, tc.encoded)
 		}
 
-		if got := p.Allows(string(resCatalog)); got != tc.allows {
-			t.Errorf("Allows after Grant(%v) = %v, want %v", tc.actions, got, tc.allows)
+		if got := p.Can(resCatalog, tc.actions); got != tc.allows {
+			t.Errorf("Can after Grant(%v) = %v, want %v", tc.actions, got, tc.allows)
 		}
+	}
+}
+
+func TestCanIgnoresIllegibleEntry(t *testing.T) {
+	p := auth.ProfileDTO{Permissions: []string{"service_catalog:xyz", "nocolon"}}
+	if p.Can(resCatalog, model.Read) {
+		t.Error("Can(service_catalog, Read) = true on illegible permissions, want false")
 	}
 }
 

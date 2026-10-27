@@ -31,9 +31,14 @@ func (m *Module) opMe(ctx router.Context) {
 		return
 	}
 	profile := auth.ProfileDTO{Id: u.Id, Name: u.Name, Email: u.Email, Avatar: u.Avatar}
-	if p := m.config.Permissions; p != nil && p.Resolver != nil {
-		for _, res := range p.Resources {
-			profile.Grant(res, p.Resolver.AllowedActions(p.ProjectID, userID, res))
+	if p := m.config.Permissions; p != nil && p.Grants != nil {
+		grants, err := p.Grants.SubjectGrants(p.ProjectID, userID)
+		if err != nil {
+			ctx.WriteStatus(500)
+			return
+		}
+		for _, g := range grants {
+			profile.Grant(g.Resource, g.Actions)
 		}
 	}
 	if err := ctx.Encode(&profile); err != nil {

@@ -45,6 +45,7 @@ Rules:
 - `session/cookie`: the session transport (opaque cookie, per-row `SessionPolicy`).
 - `passkey`: WebAuthn authenticator; a verified assertion issues the step-up session.
 - `clientassertion`: `private_key_jwt` machine clients (`RequestIdentifier`).
+- `cfaccess`: Cloudflare Access `RequestIdentifier`. Trusts only the signed token, maps the e-mail to a user (via an identity row, or `UserByEmail` plus a new link). It never issues a session. Enable only on the tunnel listener if another mode trusts IPs.
 - `email_password`: email+password credential authenticator.
 - `trusted_ip`: RUT + IP allowlist authenticator.
 - `local`: deterministic development login scenarios; it never contacts Google,
@@ -124,13 +125,12 @@ New event types:
 authMod, _ := authority.New(db, auth.Config{
     IDs: ids,
     Permissions: &auth.Permissions{
-        Resolver:  rbacSvc, // satisfies ActionResolver structurally
+        Grants:    rbacSvc, // satisfies auth.GrantLister structurally
         ProjectID: "main",
-        Resources: []model.Resource{"service_catalog", "staff"},
     },
 })
 ```
-`ProfileDTO` provides `Grant(resource, actions)` to produce wire permissions ("resource:actions") and `Allows(resource)` to evaluate access on the client.
+`ProfileDTO` provides `Grant(resource, actions)` to produce wire permissions as stored ("resource:actions", `*:crud` for a wildcard) and `Can(resource, action)` to evaluate them on the client with `model.Grant.Matches` — the same rule as the server.
 
 ## Session policy
 
