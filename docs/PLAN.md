@@ -2,8 +2,10 @@
 PLAN: "feat(cfaccess): identify requests by the Cloudflare Access JWT; me sends grants as stored"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 5307545931739264509
+PR: https://github.com/webtyp/auth/pull/8
+REVIEWED_COMMIT: 03f9edbdcbf8ec32f81f6b4b3106558baf0afe1b
 ---
 
 > Read AGENTS.md at the repo root before any change.

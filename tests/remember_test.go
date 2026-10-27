@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"webtyp.com/auth"
+	"webtyp.com/model"
 )
 
 // memStore stands in for the browser's localStorage.
@@ -24,7 +25,7 @@ func TestRememberedSessionLastsTheDay(t *testing.T) {
 		t.Fatalf("RememberSession: %v", err)
 	}
 	got, ok := auth.RememberedSession(s, "2026-10-12")
-	if !ok || got.Id != "u1" || got.Name != "Ana" || len(got.Roles) != 1 || !got.Allows("reservation") {
+	if !ok || got.Id != "u1" || got.Name != "Ana" || len(got.Roles) != 1 || !got.Can("reservation", model.Read) {
 		t.Fatalf("same day: %+v %v", got, ok)
 	}
 	if _, ok := auth.RememberedSession(s, "2026-10-13"); ok {

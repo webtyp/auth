@@ -75,6 +75,7 @@ const (
 	EventPasskeyRejected                                  // passkey: enrollment or verification refused (Reason says why)
 	EventPasskeyDeleted                                   // passkey: a credential was removed
 	EventClientAssertionRejected                          // clientassertion: a private_key_jwt bearer was refused (Reason says why)
+	EventCloudflareAccessRejected                         // cfaccess: a Cf-Access-Jwt-Assertion was refused (Reason says why)
 )
 
 // String returns the event's stable name (lower snake_case), so a logger
@@ -124,6 +125,8 @@ func (t SecurityEventType) String() string {
 		return "passkey_deleted"
 	case EventClientAssertionRejected:
 		return "client_assertion_rejected"
+	case EventCloudflareAccessRejected:
+		return "cloudflare_access_rejected"
 	}
 	return "unknown"
 }
@@ -387,19 +390,19 @@ func HostFromAddr(addr string) string {
 	return addr
 }
 
-// ActionResolver resolves which actions a subject holds on one resource.
-// rbac.Service satisfies it structurally (AllowedActions); auth never
-// imports rbac — the composition root injects it.
-type ActionResolver interface {
-	AllowedActions(projectID, subjectID string, resource model.Resource) model.Action
+// GrantLister lists the grants a subject holds within a project, as stored: a
+// wildcard grant stays {Resource: model.Wildcard}. rbac.Service satisfies it
+// structurally (SubjectGrants); auth never imports rbac — the composition root
+// injects it.
+type GrantLister interface {
+	SubjectGrants(projectID, subjectID string) ([]model.Grant, error)
 }
 
-// Permissions configures opMe to populate ProfileDTO.Permissions.
-// nil (the default) ⇒ opMe returns no permissions — closed by default.
+// Permissions configures opMe to send ProfileDTO.Permissions.
+// nil (the default) ⇒ opMe sends no permissions — closed by default.
 type Permissions struct {
-	Resolver  ActionResolver
+	Grants    GrantLister
 	ProjectID string
-	Resources []model.Resource
 }
 
 type Config struct {
@@ -433,7 +436,7 @@ type Config struct {
 	OnPasswordValidate func(password string) error
 
 	// Permissions, when set, makes opMe compose identity (this module) with
-	// authorization (the injected resolver) into ProfileDTO.Permissions.
+	// authorization (the injected GrantLister) into ProfileDTO.Permissions.
 	Permissions *Permissions
 
 	// IdleTTL, when > 0, ends a session of the default strategy after IdleTTL
@@ -490,6 +493,10 @@ const (
 // normalized RUT of a LAN user is stored.
 const ProviderTrustedIP = "trusted_ip"
 
+// ProviderCloudflareAccess is the Identity.Provider of an e-mail that
+// Cloudflare Access verified (package cfaccess); ProviderId is that e-mail.
+const ProviderCloudflareAccess = "cloudflare_access"
+
 // PathOAuthStart devuelve la ruta que inicia el intercambio OAuth2 con el
 // proveedor indicado. Un consumidor enlaza aqui su boton de "iniciar sesion".
 func PathOAuthStart(provider string) string {
@@ -543,7 +550,7 @@ type ProfileDTO struct {
 	Avatar      string
 	Roles       []string
 	RoleNames   []string
-	Permissions []string // "resource:actions" pairs, e.g. "service_catalog:rc"
+	Permissions []string // "resource:actions" entries as stored, e.g. "service:rc", "*:crud"
 	Locale      string
 }
 
@@ -581,15 +588,22 @@ func (p *ProfileDTO) Grant(resource model.Resource, actions model.Action) {
 	p.Permissions = append(p.Permissions, string(resource)+":"+actions.String())
 }
 
-// Allows reports whether the profile carries any action on resource — the
-// ONLY consumer of the format. Clients call this instead of parsing
-// Permissions themselves.
-func (p ProfileDTO) Allows(resource string) bool {
-	prefix := resource + ":"
+// Can reports whether the profile holds action on resource — the ONLY consumer of
+// the wire format. Each entry is parsed back into a model.Grant and evaluated with
+// model.Grant.Matches, the same rule the server applies, so "*:crud" means every
+// resource on both sides. An illegible entry grants nothing.
+func (p ProfileDTO) Can(resource model.Resource, action model.Action) bool {
 	for _, perm := range p.Permissions {
-		if fmt.HasPrefix(perm, prefix) {
-			parts := fmt.Split(perm, ":")
-			return len(parts) == 2 && parts[1] != ""
+		i := fmt.LastIndex(perm, ":")
+		if i < 0 {
+			continue
+		}
+		actions, err := model.ParseAction(perm[i+1:])
+		if err != nil {
+			continue
+		}
+		if (model.Grant{Resource: model.Resource(perm[:i]), Actions: actions}).Matches(resource, action) {
+			return true
 		}
 	}
 	return false
