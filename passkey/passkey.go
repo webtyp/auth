@@ -34,7 +34,7 @@ const (
 	ChallengeRecentLogin = `Bearer error="insufficient_user_authentication", error_description="sign in again to enroll a passkey", max_age=300`
 
 	ErrMsgRelyingParty = "passkey: RelyingParty ID and Origin are required"
-	ErrMsgNoSessions   = "passkey: Sessions is required"
+	ErrMsgNoSessions   = "passkey: empty sessions"
 )
 
 const (

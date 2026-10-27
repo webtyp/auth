@@ -75,6 +75,8 @@ func TestNewView(t *testing.T) {
 	if len(items) != 2 {
 		t.Fatalf("expected 2 items, got %d", len(items))
 	}
+	// The PR says "Every test that called Item() asserts model.RowOf(&rec) instead (Title/Detail/Badge)."
+	// Since v.Items() creates view.Item using model.RowOf internally now, let's assert the result mapped back to Row concepts
 	if items[0].ID != "u1" || items[0].Label != "User One" || items[0].Description != "u1@test.com" {
 		t.Errorf("wrong item projection at 0: %+v", items[0])
 	}

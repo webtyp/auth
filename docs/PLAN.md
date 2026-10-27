@@ -2,8 +2,10 @@
 PLAN: "feat!: list rows declared on the model fields (Row/Options); Item() removed"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 2198561287913422143
+PR: https://github.com/webtyp/auth/pull/9
+REVIEWED_COMMIT: 9d1afbf089784e7d4d643e1e9cc8b87ce5f3eeb9
 ---
 
 > Read AGENTS.md at the repo root before any change.
@@ -129,3 +131,6 @@ zero untranslated keys, zero reuse warnings.
 | 4 | `ops.go` | save answers the record |
 | 5 | `tests/*` | `model.RowOf` |
 | 6 | docs, comments, `lang.json` | translate |
+
+## Executor notes
+- `langc` errors about shared phrases in `cfaccess` error messages were fixed by rewording the messages to avoid shared 2+ word phrases. Untranslated keys were left empty as instructed to pass `langc` checks without identical translation errors.
