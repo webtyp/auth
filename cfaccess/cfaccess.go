@@ -19,11 +19,11 @@ const (
 	// HeaderAssertion is the header Cloudflare Access adds to each request.
 	HeaderAssertion = "Cf-Access-Jwt-Assertion"
 
-	ErrMsgEmptyTeamDomain   = "cfaccess: team domain is required"
-	ErrMsgTeamDomainFormat  = "cfaccess: team domain must be a bare host such as acme.cloudflareaccess.com"
-	ErrMsgEmptyAudience     = "cfaccess: audience (application AUD tag) is required"
-	ErrMsgNilKeySource      = "cfaccess: key source is required"
-	ErrMsgNilIdentityStore  = "cfaccess: identity store is required"
+	ErrMsgEmptyTeamDomain   = "cfaccess: team domain required"
+	ErrMsgTeamDomainFormat  = "cfaccess: invalid format"
+	ErrMsgEmptyAudience     = "cfaccess: AUD tag required"
+	ErrMsgNilKeySource      = "cfaccess: keys source required"
+	ErrMsgNilIdentityStore  = "cfaccess: store required"
 
 	statusActive = "active" // auth.User.Status of an enabled account (same literal authority writes)
 	pathSeparator = "/"

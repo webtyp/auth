@@ -23,7 +23,7 @@ import (
 const (
 	name = "client_assertion"
 
-	ErrMsgEmptyAudience = "clientassertion: audience is required"
+	ErrMsgEmptyAudience = "clientassertion: empty audience"
 
 	jtiSeparator = ":"
 )

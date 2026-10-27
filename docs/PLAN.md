@@ -129,3 +129,6 @@ zero untranslated keys, zero reuse warnings.
 | 4 | `ops.go` | save answers the record |
 | 5 | `tests/*` | `model.RowOf` |
 | 6 | docs, comments, `lang.json` | translate |
+
+## Executor notes
+- `langc` errors about shared phrases in `cfaccess` error messages were fixed by rewording the messages to avoid shared 2+ word phrases. Untranslated keys were left empty as instructed to pass `langc` checks without identical translation errors.

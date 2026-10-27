@@ -68,13 +68,20 @@ func (m *Module) opUpsertUser(ctx router.Context) {
 		return
 	}
 	if u.Id == "" {
-		if _, err := createUser(m.db, m.ids, u.Email, u.Name, u.Phone); err != nil {
+		res, err := createUser(m.db, m.ids, u.Email, u.Name, u.Phone)
+		if err != nil {
 			ctx.WriteStatus(500)
+			return
 		}
+		_ = ctx.Encode(&res)
 		return
 	}
 	if err := updateUser(m.db, m.ucache, u.Id, u.Name, u.Phone); err != nil {
 		ctx.WriteStatus(500)
+		return
+	}
+	if res, err := m.GetUser(u.Id); err == nil {
+		_ = ctx.Encode(&res)
 	}
 }
 
