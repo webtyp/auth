@@ -18,7 +18,7 @@ require (
 	webtyp.com/router v0.4.6
 	webtyp.com/time v0.6.2
 	webtyp.com/user v0.3.13
-	webtyp.com/view v0.6.45
+	webtyp.com/view v0.6.46
 	webtyp.com/webauthn v0.1.6
 )
 
@@ -26,6 +26,7 @@ require (
 	webtyp.com/await v0.1.2 // indirect
 	webtyp.com/calendar v0.1.0 // indirect
 	webtyp.com/dbus v0.1.1 // indirect
+	webtyp.com/dom v0.13.29 // indirect
 	webtyp.com/escape v0.1.0 // indirect
 	webtyp.com/filepath v0.1.0 // indirect
 	webtyp.com/keyring v0.2.4 // indirect
