@@ -5,7 +5,7 @@ go 1.26.8
 require (
 	webtyp.com/base64 v0.0.6
 	webtyp.com/crypto v0.0.30
-	webtyp.com/ddl v0.0.17
+	webtyp.com/ddl v0.0.32
 	webtyp.com/env v0.0.12
 	webtyp.com/events v0.1.0
 	webtyp.com/fetch v0.1.29
@@ -31,5 +31,5 @@ require (
 	webtyp.com/filepath v0.1.0 // indirect
 	webtyp.com/keyring v0.2.4 // indirect
 	webtyp.com/lang v0.1.9 // indirect
-	webtyp.com/storage v0.1.7 // indirect
+	webtyp.com/storage v0.1.8 // indirect
 )
