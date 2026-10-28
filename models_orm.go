@@ -59,6 +59,10 @@ func (m *User) Validate(action byte) error {
 	return model.ValidateFields(action, m)
 }
 
+func (m *User) Item() model.Item {
+	return model.Item{ID: m.Id, Label: m.Name, Description: m.Email}
+}
+
 var User_ = struct {
 	Id string
 	Email string
