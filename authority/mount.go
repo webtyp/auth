@@ -15,9 +15,7 @@ func (m *Module) ModelName() string { return auth.ModelName }
 // never inspects what a mode mounts.
 func (m *Module) MountAPI(r router.Router) {
 	r.Post(auth.PathLogout, func(ctx router.Context) {
-		if m.stepUp != nil {
-			m.stepUp.Revoke(ctx)
-		}
+		m.stepUp.Revoke(ctx)
 		m.strategy.Revoke(ctx)
 		ctx.SetHeader("Location", auth.PathLogin)
 		ctx.WriteStatus(302)

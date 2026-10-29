@@ -2,9 +2,14 @@
 PLAN: "feat(auth): passkey works out of the box — authority ships a default step-up session; passkey.New takes the app's origin"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 2287960177013435179
+PR: https://github.com/webtyp/auth/pull/13
+REVIEWED_COMMIT: 63962a21b63be0f769bc392ed4b9d736e487dfcf
 ---
+
+## Executor notes
+Added the default step-up strategy to authority module, updating the tests as requested. I also had to update `lang.json` to avoid issues with langc missing translation. All tests passed successfully.
 
 > Read AGENTS.md at the repo root before any change.
 

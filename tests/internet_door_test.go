@@ -116,7 +116,7 @@ func TestPasskeyLogin_WithoutSession(t *testing.T) {
 
 	// 2. Verify assertion
 	flags := byte(0x05)
-	respBody := buildGetResponse("iam.velty.cl", chalBytes, []byte("https://iam.velty.cl"), privKey, 1, []byte("user-cred-internet"), flags)
+	respBody := buildGetResponse("app.example.com", chalBytes, []byte("https://app.example.com"), privKey, 1, []byte("user-cred-internet"), flags)
 	respBodyBase64 := base64.URLEncode([]byte(respBody))
 
 	ctxVer := &mock.Context{InMethod: "POST", InPath: passkey.PathVerify, InBody: []byte(respBodyBase64)}
@@ -178,7 +178,7 @@ func TestPasskeyLogin_ChallengeSingleUse(t *testing.T) {
 	chalBytes, _ := base64.URLDecode(ch)
 
 	flags := byte(0x05)
-	respBody := buildGetResponse("iam.velty.cl", chalBytes, []byte("https://iam.velty.cl"), privKey, 1, []byte("user-cred-internet-2"), flags)
+	respBody := buildGetResponse("app.example.com", chalBytes, []byte("https://app.example.com"), privKey, 1, []byte("user-cred-internet-2"), flags)
 	respBodyBase64 := base64.URLEncode([]byte(respBody))
 
 	ctxVer := &mock.Context{InMethod: "POST", InPath: passkey.PathVerify, InBody: []byte(respBodyBase64)}
@@ -213,7 +213,7 @@ func TestPasskeyLogin_UnknownCredential(t *testing.T) {
 
 	_, privKey, _ := asym.GenerateKeyPair()
 	flags := byte(0x05)
-	respBody := buildGetResponse("iam.velty.cl", chalBytes, []byte("https://iam.velty.cl"), privKey, 1, []byte("unknown-cred"), flags)
+	respBody := buildGetResponse("app.example.com", chalBytes, []byte("https://app.example.com"), privKey, 1, []byte("unknown-cred"), flags)
 	respBodyBase64 := base64.URLEncode([]byte(respBody))
 
 	ctxVer := &mock.Context{InMethod: "POST", InPath: passkey.PathVerify, InBody: []byte(respBodyBase64)}
@@ -257,7 +257,7 @@ func TestPasskeyLogin_ExpiredChallenge(t *testing.T) {
 
 	chalBytes, _ := base64.URLDecode(ch)
 	flags := byte(0x05)
-	respBody := buildGetResponse("iam.velty.cl", chalBytes, []byte("https://iam.velty.cl"), privKey, 1, []byte("user-cred-internet-3"), flags)
+	respBody := buildGetResponse("app.example.com", chalBytes, []byte("https://app.example.com"), privKey, 1, []byte("user-cred-internet-3"), flags)
 	respBodyBase64 := base64.URLEncode([]byte(respBody))
 
 	ctxVer := &mock.Context{InMethod: "POST", InPath: passkey.PathVerify, InBody: []byte(respBodyBase64)}

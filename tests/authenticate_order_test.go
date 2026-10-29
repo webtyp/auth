@@ -81,6 +81,25 @@ func TestAuthenticate_Order_A1_A2(t *testing.T) {
 		}
 	})
 
+	t.Run("SetStepUpStrategy replaces the default step-up session", func(t *testing.T) {
+		m3, _ := authority.New(db, auth.Config{IDs: testIDs})
+		custom, err := cookie.New(m3, cookie.Options{Name: "admin", Policy: stepUpPolicy})
+		if err != nil {
+			t.Fatal(err)
+		}
+		m3.SetStepUpStrategy(custom)
+		ctx := &mock.Context{}
+		if err := m3.IssueStepUpSession(ctx, u.Id); err != nil {
+			t.Fatal(err)
+		}
+		if _, ok := ctx.Cookie("__Host-admin"); !ok {
+			t.Error("expected the override's cookie __Host-admin")
+		}
+		if _, ok := ctx.Cookie("__Host-" + authority.StepUpCookieName); ok {
+			t.Error("the default step-up cookie must not be issued once replaced")
+		}
+	})
+
 	t.Run("A2 - step-up cookie + main cookie -> MultiFactor", func(t *testing.T) {
 		// New module to avoid the fake RequestIdentifier from A1
 		m2, _ := authority.New(db, auth.Config{IDs: testIDs})
@@ -209,23 +228,4 @@ func TestAuthenticate_Order_A3_A5(t *testing.T) {
 	})
 }
 
-func TestAuthenticate_StepUpNoStrategy(t *testing.T) {
-	db := newTestDB(t)
-	m, err := authority.New(db, auth.Config{IDs: testIDs})
-	if err != nil {
-		t.Fatal(err)
-	}
 
-	u, err := m.CreateUser("stepup@test.com", "StepUp", "")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	m.SetStepUpStrategy(nil) // Ignored or explicit reset
-
-	ctx := &mock.Context{}
-	err = m.IssueStepUpSession(ctx, u.Id)
-	if err != authority.ErrNoStepUpStrategy {
-		t.Errorf("expected ErrNoStepUpStrategy, got %v", err)
-	}
-}

@@ -3,12 +3,14 @@
 package tests
 
 import (
+	"strings"
+	"webtyp.com/fmt"
+
 	"crypto/sha256"
 	"testing"
 	"webtyp.com/time"
 
-	"strings"
-	"webtyp.com/auth"
+		"webtyp.com/auth"
 	"webtyp.com/auth/authority"
 	"webtyp.com/auth/passkey"
 	"webtyp.com/auth/session/cookie"
@@ -19,8 +21,7 @@ import (
 	"webtyp.com/orm"
 	"webtyp.com/router"
 	"webtyp.com/router/mock"
-	"webtyp.com/webauthn/server"
-)
+	)
 
 func buildCreateResponse(rpID string, challenge, origin, spki []byte, signCount uint32, credID []byte, flags byte) string {
 	cdJSON := `{"type":"webauthn.create","challenge":"` + base64.URLEncode(challenge) + `","origin":"` + string(origin) + `"}`
@@ -113,12 +114,7 @@ func setupPasskeyEnv(t *testing.T) pkEnv {
 	mainStrat, _ := cookie.New(m, cookie.Options{Name: "session", Domain: "", Policy: mainPolicy})
 	m.SetStrategy(mainStrat)
 
-	stepUpPolicy := auth.SessionPolicy{Absolute: 900, Idle: 300, Assurance: model.AssuranceMultiFactor}
-	stepUpStrat, _ := cookie.New(m, cookie.Options{Name: "stepup", Domain: "", Policy: stepUpPolicy})
-	m.SetStepUpStrategy(stepUpStrat)
-
-	rp := server.RelyingParty{ID: "iam.velty.cl", Origin: "https://iam.velty.cl"}
-	pk, err := passkey.New(db, testIDs, m, rp)
+	pk, err := passkey.New(db, testIDs, m, "https://app.example.com")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -188,8 +184,7 @@ func TestPasskey_K1_K2(t *testing.T) {
 		mainStrat, _ := cookie.New(m2, cookie.Options{Name: "session", Domain: "", Policy: mainPolicy})
 		m2.SetStrategy(mainStrat)
 
-		rp := server.RelyingParty{ID: "iam.velty.cl", Origin: "https://iam.velty.cl"}
-		pk, _ := passkey.New(env2.db, testIDs, m2, rp)
+		pk, _ := passkey.New(env2.db, testIDs, m2, "https://app.example.com")
 		r2 := &mock.Router{}
 		m2.MountAPI(r2)
 		pk.Mount(r2)
@@ -235,7 +230,7 @@ func TestPasskey_K3(t *testing.T) {
 		credID := []byte("new-cred-123")
 		flags := byte(0x45) // UP | UV | AT
 
-		respBody := buildCreateResponse("iam.velty.cl", chalBytes, []byte("https://iam.velty.cl"), spki, 0, credID, flags)
+		respBody := buildCreateResponse("app.example.com", chalBytes, []byte("https://app.example.com"), spki, 0, credID, flags)
 
 		// 2. Register
 		ctxReg := &mock.Context{InMethod: "POST", InPath: passkey.PathRegister, InBody: []byte(base64.URLEncode([]byte(respBody)))}
@@ -304,7 +299,7 @@ func TestPasskey_K4_K5(t *testing.T) {
 		// Use a different credID not owned by the user
 		otherCredID := []byte("other-user-cred")
 		flags := byte(0x05)
-		respBody := buildGetResponse("iam.velty.cl", chalBytes, []byte("https://iam.velty.cl"), privKey, 1, otherCredID, flags)
+		respBody := buildGetResponse("app.example.com", chalBytes, []byte("https://app.example.com"), privKey, 1, otherCredID, flags)
 		respBodyBase64 := base64.URLEncode([]byte(respBody))
 
 		ctxVer := &mock.Context{InMethod: "POST", InPath: passkey.PathVerify, InBody: []byte(respBodyBase64)}
@@ -324,7 +319,7 @@ func TestPasskey_K4_K5(t *testing.T) {
 	t.Run("K5 - wrong signature -> 401 empty body", func(t *testing.T) {
 		_, badPriv, _ := asym.GenerateKeyPair()
 		flags := byte(0x05)
-		respBody := buildGetResponse("iam.velty.cl", chalBytes, []byte("https://iam.velty.cl"), badPriv, 1, []byte("user-cred"), flags)
+		respBody := buildGetResponse("app.example.com", chalBytes, []byte("https://app.example.com"), badPriv, 1, []byte("user-cred"), flags)
 		respBodyBase64 := base64.URLEncode([]byte(respBody))
 
 		ctxVer := &mock.Context{InMethod: "POST", InPath: passkey.PathVerify, InBody: []byte(respBodyBase64)}
@@ -386,7 +381,7 @@ func TestPasskey_K6_Misc(t *testing.T) {
 
 	t.Run("K6 - valid assertion -> 204, step-up cookie, events", func(t *testing.T) {
 		flags := byte(0x05)
-		respBody := buildGetResponse("iam.velty.cl", chalBytes, []byte("https://iam.velty.cl"), privKey, 1, []byte("user-cred-k6"), flags)
+		respBody := buildGetResponse("app.example.com", chalBytes, []byte("https://app.example.com"), privKey, 1, []byte("user-cred-k6"), flags)
 		respBodyBase64 := base64.URLEncode([]byte(respBody))
 
 		ctxVer := &mock.Context{InMethod: "POST", InPath: passkey.PathVerify, InBody: []byte(respBodyBase64)}
@@ -439,16 +434,33 @@ func TestPasskey_K6_Misc(t *testing.T) {
 		}
 	})
 
-	t.Run("passkey.New error checks", func(t *testing.T) {
-		rp := server.RelyingParty{ID: "", Origin: "https://iam.velty.cl"}
-		_, err := passkey.New(env.db, testIDs, env.m, rp)
-		if err == nil {
-			t.Errorf("expected error for empty RP ID")
+	t.Run("TestPasskey_OriginRequired", func(t *testing.T) {
+		_, err := passkey.New(env.db, testIDs, env.m, "")
+		if err == nil || err.Error() != passkey.ErrMsgOrigin {
+			t.Errorf("expected %q, got %v", passkey.ErrMsgOrigin, err)
 		}
-		rp2 := server.RelyingParty{ID: "iam.velty.cl", Origin: ""}
-		_, err = passkey.New(env.db, testIDs, env.m, rp2)
-		if err == nil {
-			t.Errorf("expected error for empty RP Origin")
+		_, err = passkey.New(env.db, testIDs, env.m, "https://")
+		if err == nil || err.Error() != passkey.ErrMsgOrigin {
+			t.Errorf("expected %q, got %v", passkey.ErrMsgOrigin, err)
+		}
+	})
+
+	t.Run("TestPasskey_OriginWithPort", func(t *testing.T) {
+		pk, err := passkey.New(env.db, testIDs, env.m, "https://localhost:6060")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		r2 := &mock.Router{}
+		pk.Mount(r2)
+		ctxOpt := &mock.Context{InMethod: "POST", InPath: passkey.PathVerifyOptions}
+		ctxOpt.SetValue(router.ContextKeyNetwork, router.NetworkLocal)
+		r2.Invoke("POST", passkey.PathVerifyOptions, ctxOpt)
+		if ctxOpt.Status != 200 && ctxOpt.Status != 0 {
+			t.Errorf("expected 200, got %d", ctxOpt.Status)
+		}
+		body := string(ctxOpt.ResponseBody())
+		if fmt.Index(body, `"rpId":"localhost"`) == -1 {
+			t.Errorf("expected rpId to be 'localhost', got %s", body)
 		}
 	})
 
