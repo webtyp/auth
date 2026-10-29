@@ -174,3 +174,15 @@ writes `""` and the second call fails loudly with `ErrEmailTaken`.
 key: `oauth2`'s callback links the caller's provider identity to whatever
 `UserByEmail` returns, so a provider reporting a verified-but-empty address
 would otherwise take over the first account with no email.
+
+
+## The internet door
+
+Through Cloudflare Tunnel every visit reaches the server from `127.0.0.1`, which the first-admin setup
+assigns to the admin's device, and `X-Forwarded-For` is forgeable: on the internet door the IP proves
+nothing. So `trusted_ip` (RUT + registered device) and the setup do not exist there, and enrolling a
+passkey is local only (registering the second factor only from a trusted location, as Microsoft Entra
+Conditional Access allows: https://learn.microsoft.com/en-us/entra/identity/conditional-access/policy-all-users-security-info-registration).
+Before login there is no session to hold the challenge, so a login challenge is stored without a user
+and found by its own random, single-use value (`webauthn/server.UnverifiedChallenge`); `VerifyAssertion`
+still checks it against the signed client data.

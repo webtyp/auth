@@ -8,6 +8,7 @@ import (
 	"webtyp.com/auth"
 	"webtyp.com/auth/authority"
 	trustedip "webtyp.com/auth/trusted_ip"
+	"webtyp.com/router"
 	"webtyp.com/json"
 	"webtyp.com/router/mock"
 )
@@ -64,6 +65,7 @@ func newSetupHarness(t *testing.T) *setupHarness {
 func (h *setupHarness) get(t *testing.T) *mock.Context {
 	t.Helper()
 	ctx := &mock.Context{InMethod: "GET", InPath: auth.PathSetup}
+	ctx.SetValue(router.ContextKeyNetwork, router.NetworkLocal)
 	ctx.SetValue("RemoteAddr", setupIP+":54321")
 	h.r.Invoke("GET", auth.PathSetup, ctx)
 	return ctx
@@ -72,6 +74,7 @@ func (h *setupHarness) get(t *testing.T) *mock.Context {
 func (h *setupHarness) post(t *testing.T, code, name string) *mock.Context {
 	t.Helper()
 	ctx := &mock.Context{InMethod: "POST", InPath: auth.PathSetup}
+	ctx.SetValue(router.ContextKeyNetwork, router.NetworkLocal)
 	ctx.SetHeader("Content-Type", "application/json")
 	ctx.SetValue("RemoteAddr", setupIP+":54321")
 
@@ -206,6 +209,7 @@ func TestFirstAdminSetup_UnreadableRegistryStaysClosedAndSaysSo(t *testing.T) {
 
 	from := len(pub.SecurityEvents())
 	ctx := &mock.Context{InMethod: "GET", InPath: auth.PathSetup}
+	ctx.SetValue(router.ContextKeyNetwork, router.NetworkLocal)
 	ctx.SetValue("RemoteAddr", setupIP+":54321")
 	r.Invoke("GET", auth.PathSetup, ctx)
 
@@ -217,6 +221,7 @@ func TestFirstAdminSetup_UnreadableRegistryStaysClosedAndSaysSo(t *testing.T) {
 	// And a POST must not reach the consumer's create callback either.
 	from = len(pub.SecurityEvents())
 	post := &mock.Context{InMethod: "POST", InPath: auth.PathSetup}
+	post.SetValue(router.ContextKeyNetwork, router.NetworkLocal)
 	post.SetHeader("Content-Type", "application/json")
 	post.SetValue("RemoteAddr", setupIP+":54321")
 	post.InBody = []byte(`{"code":"` + setupRUT + `","name":"Admin"}`)

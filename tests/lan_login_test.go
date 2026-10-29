@@ -8,6 +8,7 @@ import (
 	"webtyp.com/auth"
 	"webtyp.com/auth/authority"
 	trustedip "webtyp.com/auth/trusted_ip"
+	"webtyp.com/router"
 	"webtyp.com/json"
 	"webtyp.com/router/mock"
 )
@@ -229,6 +230,7 @@ func TestLANRUTLogin_UniformRejectionBody(t *testing.T) {
 func postRUT(t *testing.T, r *mock.Router, rut, ip string) *mock.Context {
 	t.Helper()
 	ctx := &mock.Context{InMethod: "POST", InPath: auth.PathLoginRUT}
+	ctx.SetValue(router.ContextKeyNetwork, router.NetworkLocal)
 	ctx.SetHeader("Content-Type", "application/json")
 	ctx.SetValue("RemoteAddr", ip+":54321")
 

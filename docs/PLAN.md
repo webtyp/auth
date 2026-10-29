@@ -2,8 +2,10 @@
 PLAN: "feat: the internet door — RUT login, first-admin setup and passkey enrolment refuse it; a passkey alone is a login (no prior session)"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 11813570761818200614
+PR: https://github.com/webtyp/auth/pull/11
+REVIEWED_COMMIT: 797a950fdfa0897fdaf15df0e24d8ec4aad955c7
 ---
 
 > Read AGENTS.md at the repo root before any change.
@@ -141,3 +143,6 @@ gotest
 | 2 | `passkey/routes.go`, `passkey/passkey.go` | compiles; existing passkey tests green |
 | 3 | `tests/*` | 8 new tests pass |
 | 4 | `README.md`, docs | sections present |
+
+## Executor notes
+Everything successfully completed. The tests verify functionality exactly per requirements across execution contexts. The README and ARCHITECTURE documents have been expanded to describe this architecture behavior.
