@@ -39,6 +39,22 @@ flowchart TD
 - `email_password`, `trusted_ip` — Credential authenticators.
 - `local` — Development selector authenticator; no network, no env vars.
 
+## Local door and internet door
+
+An app served on two ports (`webtyp/server`: `Config.Port` is the local door, `Config.InternetPort` the
+internet one, e.g. behind Cloudflare Tunnel) marks each request (`router.FromInternet(ctx)`; an unmarked
+request counts as internet). On the internet door:
+
+- the RUT login (`auth.PathLoginRUT`) and the first-admin setup (`auth.PathSetup`) answer 404;
+- passkey enrolment (`passkey.PathRegisterOptions`, `passkey.PathRegister`) answers 404 — a passkey is
+  registered only from the local door, so a stolen RUT on the internet can never add one;
+- a passkey alone is a login: `passkey.PathVerifyOptions` and `passkey.PathVerify` work without a prior
+  session (the user comes from the stored credential) and issue the step-up session
+  (`model.AssuranceMultiFactor`), the only kind the internet door accepts for non-public routes.
+
+Login challenges asked for without a session are single use, expire after 5 minutes, and the expired
+ones are deleted each time a new one is asked for.
+
 ## Sessions
 
 `TokenTTL` is the **absolute** lifetime of the default strategy's sessions: an

@@ -90,6 +90,7 @@ func (m *Module) register(ctx router.Context) {
 func (m *Module) verifyOptions(ctx router.Context) {
 	userID := ctx.UserID()
 	if userID == "" {
+		m.purgeExpiredAnonymous()
 		challenge, err := m.newChallenge(anonymous, purposeVerify)
 		if err != nil {
 			ctx.WriteStatus(500)

@@ -268,3 +268,33 @@ func TestPasskeyLogin_ExpiredChallenge(t *testing.T) {
 		t.Errorf("expected 401 for expired challenge, got %d", ctxVer.Status)
 	}
 }
+
+// Anyone may ask for a login challenge without a session, so the challenges
+// nobody used must not pile up: asking for a new one deletes the expired ones.
+func TestPasskeyLogin_ExpiredAnonymousChallengesArePurged(t *testing.T) {
+	env := setupPasskeyEnv(t)
+
+	ask := func() string {
+		ctx := &mock.Context{InMethod: "POST", InPath: passkey.PathVerifyOptions}
+		ctx.SetValue(router.ContextKeyNetwork, router.NetworkInternet)
+		env.r.Invoke("POST", passkey.PathVerifyOptions, ctx)
+		body := string(ctx.ResponseBody())
+		start := strings.Index(body, `"challenge":"`) + len(`"challenge":"`)
+		end := strings.Index(body[start:], `"`)
+		return body[start : start+end]
+	}
+
+	old := ask()
+	if err := env.db.RawConn().Exec("UPDATE passkey_challenge SET expires_at = 0 WHERE id = ?", old); err != nil {
+		t.Fatal(err)
+	}
+	ask()
+
+	rows, err := passkey.ReadAllPasskeyChallenge(env.db.Query(&passkey.PasskeyChallenge{}).Where(passkey.PasskeyChallenge_.Id).Eq(old))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 0 {
+		t.Errorf("expired anonymous challenge %q still stored after a new request", old)
+	}
+}

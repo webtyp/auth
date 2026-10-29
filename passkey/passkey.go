@@ -130,6 +130,26 @@ func (m *Module) consumeChallenge(userID, purpose string) ([]byte, bool) {
 	return b, true
 }
 
+// purgeExpiredAnonymous deletes the login challenges nobody used. Anyone may ask
+// for one without a session, so the expired ones must not pile up.
+func (m *Module) purgeExpiredAnonymous() {
+	qb := m.db.Query(&PasskeyChallenge{}).
+		Where(PasskeyChallenge_.UserId).Eq(anonymous).
+		Where(PasskeyChallenge_.Purpose).Eq(purposeVerify)
+	rows, err := ReadAllPasskeyChallenge(qb)
+	if err != nil {
+		return
+	}
+	t := now()
+	for _, c := range rows {
+		if c.ExpiresAt <= t {
+			m.db.Delete(c, orm.Eq(PasskeyChallenge_.Id, c.Id))
+		}
+	}
+}
+
+// consumeAnonymousChallenge deletes the login challenge chal and reports whether
+// it existed and was still live.
 func (m *Module) consumeAnonymousChallenge(chal []byte) bool {
 	id := base64.URLEncode(chal)
 	qb := m.db.Query(&PasskeyChallenge{}).
