@@ -2,8 +2,10 @@
 PLAN: "feat: the internet door — RUT login, first-admin setup and passkey enrolment refuse it; a passkey alone is a login (no prior session)"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 11813570761818200614
+PR: https://github.com/webtyp/auth/pull/11
+REVIEWED_COMMIT: 797a950fdfa0897fdaf15df0e24d8ec4aad955c7
 ---
 
 > Read AGENTS.md at the repo root before any change.
