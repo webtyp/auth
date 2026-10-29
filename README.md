@@ -52,6 +52,8 @@ request counts as internet). On the internet door:
   session (the user comes from the stored credential) and issue the step-up session
   (`model.AssuranceMultiFactor`), the only kind the internet door accepts for non-public routes.
 
+`passkey/browser.SignIn` and `Enroll` are the browser half. `Enroll` registers a passkey on this device for the person signed in, and it only works on the local door. Both functions call `navigator.credentials` which requires a user gesture, so they must be called from a goroutine started by a click handler.
+
 Login challenges asked for without a session are single use, expire after 5 minutes, and the expired
 ones are deleted each time a new one is asked for.
 

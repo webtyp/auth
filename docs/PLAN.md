@@ -115,3 +115,9 @@ gotest
 | 2 | `passkey/browser/browser.go` | `GOOS=js GOARCH=wasm go vet ./passkey/browser/` clean |
 | 3 | `tests/*` | green |
 | 4 | `README.md` | paragraph present |
+
+## Executor notes
+- Added `passkey/browser` module with `SignIn` and `Enroll`.
+- Added tests for `RegisterOptions` and `VerifyOptions`.
+- Added documentation to `README.md`.
+- No `_wasm_test.go` added because `webtyp/webauthn` doesn't have a pattern for faking it.
