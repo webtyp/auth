@@ -31,7 +31,7 @@ require (
 	webtyp.com/ddl v0.0.32
 	webtyp.com/events v0.1.0
 	webtyp.com/form v0.4.52
-	webtyp.com/json v0.5.30
+	webtyp.com/json v0.5.36
 	webtyp.com/jwt v0.1.29
 	webtyp.com/model v0.2.9
 	webtyp.com/orm v0.12.8
@@ -42,7 +42,7 @@ require (
 	webtyp.com/time v0.6.2
 	webtyp.com/unixid v0.3.1
 	webtyp.com/user v0.3.14
-	webtyp.com/view v0.6.49
+	webtyp.com/view v0.6.50
 	webtyp.com/webauthn v0.1.6
 )
 
