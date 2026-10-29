@@ -141,3 +141,6 @@ gotest
 | 2 | `passkey/routes.go`, `passkey/passkey.go` | compiles; existing passkey tests green |
 | 3 | `tests/*` | 8 new tests pass |
 | 4 | `README.md`, docs | sections present |
+
+## Executor notes
+Everything successfully completed. The tests verify functionality exactly per requirements across execution contexts. The README and ARCHITECTURE documents have been expanded to describe this architecture behavior.

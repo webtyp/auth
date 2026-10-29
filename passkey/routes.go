@@ -14,13 +14,17 @@ var _ auth.Authenticator = (*Module)(nil)
 func (m *Module) Mount(r router.Router) {
 	r.Post(PathRegisterOptions, m.registerOptions).Authenticated()
 	r.Post(PathRegister, m.register).Authenticated()
-	r.Post(PathVerifyOptions, m.verifyOptions).Authenticated()
-	r.Post(PathVerify, m.verify).Authenticated()
+	r.Post(PathVerifyOptions, m.verifyOptions).Public()
+	r.Post(PathVerify, m.verify).Public()
 	r.Get(PathList, m.list).Authenticated().RequiresMFA()
 	r.Post(PathDelete, m.remove).Authenticated().RequiresMFA()
 }
 
 func (m *Module) registerOptions(ctx router.Context) {
+	if router.FromInternet(ctx) {
+		ctx.WriteStatus(404)
+		return
+	}
 	if !m.enrollmentAllowed(ctx) {
 		return
 	}
@@ -49,6 +53,10 @@ func (m *Module) registerOptions(ctx router.Context) {
 }
 
 func (m *Module) register(ctx router.Context) {
+	if router.FromInternet(ctx) {
+		ctx.WriteStatus(404)
+		return
+	}
 	if !m.enrollmentAllowed(ctx) {
 		return
 	}
@@ -81,6 +89,19 @@ func (m *Module) register(ctx router.Context) {
 
 func (m *Module) verifyOptions(ctx router.Context) {
 	userID := ctx.UserID()
+	if userID == "" {
+		challenge, err := m.newChallenge(anonymous, purposeVerify)
+		if err != nil {
+			ctx.WriteStatus(500)
+			return
+		}
+		ctx.Encode(&verifyOptions{
+			Challenge: base64.URLEncode(challenge),
+			RPID:      m.rp.ID,
+		})
+		return
+	}
+
 	existing, err := m.credentialsOf(userID)
 	if err != nil {
 		ctx.WriteStatus(500)
@@ -109,6 +130,30 @@ func (m *Module) verifyOptions(ctx router.Context) {
 func (m *Module) verify(ctx router.Context) {
 	userID := ctx.UserID()
 	raw := string(ctx.Body())
+	if userID == "" {
+		rawID, err := server.UnverifiedCredentialID(raw)
+		if err != nil {
+			m.reject(ctx, 401, err.Error())
+			return
+		}
+		cred, found := m.credential(base64.URLEncode(rawID))
+		if !found {
+			m.reject(ctx, 401, reasonForeignCredential)
+			return
+		}
+		chal, err := server.UnverifiedChallenge(raw)
+		if err != nil {
+			m.reject(ctx, 401, reasonChallenge)
+			return
+		}
+		if !m.consumeAnonymousChallenge(chal) {
+			m.reject(ctx, 401, reasonChallenge)
+			return
+		}
+		m.completeVerify(ctx, cred, chal, raw)
+		return
+	}
+
 	rawID, err := server.UnverifiedCredentialID(raw)
 	if err != nil {
 		m.reject(ctx, 401, err.Error())
@@ -124,11 +169,16 @@ func (m *Module) verify(ctx router.Context) {
 		m.reject(ctx, 401, reasonChallenge)
 		return
 	}
+	m.completeVerify(ctx, cred, challenge, raw)
+}
+
+func (m *Module) completeVerify(ctx router.Context, cred *PasskeyCredential, challenge []byte, raw string) {
 	pub, err := base64.URLDecode(cred.PublicKey)
 	if err != nil {
 		ctx.WriteStatus(500)
 		return
 	}
+	rawID, _ := server.UnverifiedCredentialID(raw)
 	count, err := m.rp.VerifyAssertion(raw, challenge, server.StoredCredential{
 		ID: rawID, PublicKey: pub, SignCount: uint32(cred.SignCount),
 	})
@@ -142,11 +192,11 @@ func (m *Module) verify(ctx router.Context) {
 		ctx.WriteStatus(500)
 		return
 	}
-	if err := m.sessions.IssueStepUpSession(ctx, userID); err != nil {
+	if err := m.sessions.IssueStepUpSession(ctx, cred.UserId); err != nil {
 		ctx.WriteStatus(500)
 		return
 	}
-	m.sessions.Notify(auth.SecurityEvent{Type: auth.EventPasskeyVerified, UserID: userID})
+	m.sessions.Notify(auth.SecurityEvent{Type: auth.EventPasskeyVerified, UserID: cred.UserId})
 	ctx.WriteStatus(204)
 }
 

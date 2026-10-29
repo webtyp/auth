@@ -17,6 +17,8 @@ type loginFailure struct {
 
 func (f loginFailure) Error() string { return f.body }
 
+const statusNotFound = 404
+
 func writeFailure(ctx router.Context, err error) {
 	if f, ok := err.(loginFailure); ok {
 		ctx.WriteStatus(f.status)
@@ -175,6 +177,10 @@ func (a *Authenticator) Mount(r router.Router) {
 	}
 
 	r.Post(auth.PathLoginRUT, func(ctx router.Context) {
+		if router.FromInternet(ctx) {
+			ctx.WriteStatus(statusNotFound)
+			return
+		}
 		userID, err := a.Login(ctx, ctx.Body())
 		if err != nil {
 			writeFailure(ctx, err)
@@ -220,6 +226,10 @@ func (a *Authenticator) mountSetup(r router.Router, afterLogin string) {
 	}
 
 	r.Get(auth.PathSetup, func(ctx router.Context) {
+		if router.FromInternet(ctx) {
+			ctx.WriteStatus(statusNotFound)
+			return
+		}
 		if ok, _ := open(auth.ClientIP(ctx, a.trustProxy)); !ok {
 			ctx.WriteStatus(404)
 			return
@@ -229,6 +239,10 @@ func (a *Authenticator) mountSetup(r router.Router, afterLogin string) {
 	}).Public()
 
 	r.Post(auth.PathSetup, func(ctx router.Context) {
+		if router.FromInternet(ctx) {
+			ctx.WriteStatus(statusNotFound)
+			return
+		}
 		ip := auth.ClientIP(ctx, a.trustProxy)
 		ok, err := open(ip)
 		if !ok {

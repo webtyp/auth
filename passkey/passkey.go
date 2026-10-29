@@ -22,6 +22,7 @@ const (
 
 	purposeRegister = "register"
 	purposeVerify   = "verify"
+	anonymous       = ""
 
 	challengeBytes = 32
 	challengeTTL   = 300 // seconds a challenge stays valid
@@ -127,6 +128,21 @@ func (m *Module) consumeChallenge(userID, purpose string) ([]byte, bool) {
 		return nil, false
 	}
 	return b, true
+}
+
+func (m *Module) consumeAnonymousChallenge(chal []byte) bool {
+	id := base64.URLEncode(chal)
+	qb := m.db.Query(&PasskeyChallenge{}).
+		Where(PasskeyChallenge_.Id).Eq(id).
+		Where(PasskeyChallenge_.UserId).Eq(anonymous).
+		Where(PasskeyChallenge_.Purpose).Eq(purposeVerify)
+	rows, err := ReadAllPasskeyChallenge(qb)
+	if err != nil || len(rows) == 0 {
+		return false
+	}
+	c := rows[0]
+	m.db.Delete(c, orm.Eq(PasskeyChallenge_.Id, c.Id))
+	return c.ExpiresAt > now()
 }
 
 func (m *Module) credentialsOf(userID string) (PasskeyCredentialList, error) {

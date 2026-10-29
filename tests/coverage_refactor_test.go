@@ -8,6 +8,7 @@ import (
 
 	"webtyp.com/auth"
 	"webtyp.com/auth/authority"
+	"webtyp.com/router"
 	emailpassword "webtyp.com/auth/email_password"
 	"webtyp.com/auth/oauth2"
 	"webtyp.com/auth/session/cookie"
@@ -181,6 +182,8 @@ func TestCoverage_TrustedIP(t *testing.T) {
 			InMethod: "POST",
 			InPath:   auth.PathLoginRUT,
 		}
+		ctx.SetValue(router.ContextKeyNetwork, router.NetworkLocal)
+
 		ctx.SetHeader("Content-Type", "application/json")
 		ctx.SetValue("RemoteAddr", "192.168.10.10:1234")
 		ctx.InBody = []byte(`{"code":"12345678-5"}`)
@@ -196,6 +199,8 @@ func TestCoverage_TrustedIP(t *testing.T) {
 			InMethod: "POST",
 			InPath:   auth.PathLoginRUT,
 		}
+		ctx.SetValue(router.ContextKeyNetwork, router.NetworkLocal)
+
 		ctx.SetHeader("Content-Type", "application/json")
 		ctx.SetValue("RemoteAddr", "192.168.10.99:1234")
 		ctx.InBody = []byte(`{"code":"12345678-5"}`)
@@ -221,6 +226,8 @@ func TestCoverage_TrustedIP(t *testing.T) {
 			InMethod: "POST",
 			InPath:   auth.PathLoginRUT,
 		}
+		ctx.SetValue(router.ContextKeyNetwork, router.NetworkLocal)
+
 		ctx.SetHeader("Content-Type", "application/json")
 		ctx.InBody = []byte(`{"code":"invalid-rut"}`)
 

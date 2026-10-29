@@ -153,6 +153,7 @@ func TestPasskey_K1_K2(t *testing.T) {
 
 	t.Run("K1 - user with passkey and single-factor session calls RegisterOptions -> 401 MFA Required", func(t *testing.T) {
 		ctx := &mock.Context{InMethod: "POST", InPath: passkey.PathRegisterOptions}
+		ctx.SetValue(router.ContextKeyNetwork, router.NetworkLocal)
 		ctx.SetCookie(env.cMain)
 
 		env.m.Authenticate()(func(c router.Context) { env.r.Invoke("POST", passkey.PathRegisterOptions, c.(*mock.Context)) })(ctx)
@@ -194,6 +195,7 @@ func TestPasskey_K1_K2(t *testing.T) {
 		pk.Mount(r2)
 
 		ctx := &mock.Context{InMethod: "POST", InPath: passkey.PathRegisterOptions}
+		ctx.SetValue(router.ContextKeyNetwork, router.NetworkLocal)
 		ctx.SetCookie(env2.cMain)
 
 		m2.Authenticate()(func(c router.Context) { r2.Invoke("POST", passkey.PathRegisterOptions, c.(*mock.Context)) })(ctx)
@@ -213,6 +215,7 @@ func TestPasskey_K3(t *testing.T) {
 	t.Run("K3 - first enrollment from fresh session succeeds and replay fails", func(t *testing.T) {
 		// 1. Get options
 		ctxOpt := &mock.Context{InMethod: "POST", InPath: passkey.PathRegisterOptions}
+		ctxOpt.SetValue(router.ContextKeyNetwork, router.NetworkLocal)
 		ctxOpt.SetCookie(env.cMain)
 
 		env.m.Authenticate()(func(c router.Context) {
@@ -236,6 +239,7 @@ func TestPasskey_K3(t *testing.T) {
 
 		// 2. Register
 		ctxReg := &mock.Context{InMethod: "POST", InPath: passkey.PathRegister, InBody: []byte(base64.URLEncode([]byte(respBody)))}
+		ctxReg.SetValue(router.ContextKeyNetwork, router.NetworkLocal)
 		ctxReg.SetCookie(env.cMain)
 
 		env.m.Authenticate()(func(c router.Context) {
@@ -250,6 +254,7 @@ func TestPasskey_K3(t *testing.T) {
 
 		// 3. Replay
 		ctxReplay := &mock.Context{InMethod: "POST", InPath: passkey.PathRegister, InBody: []byte(base64.URLEncode([]byte(respBody)))}
+		ctxReplay.SetValue(router.ContextKeyNetwork, router.NetworkLocal)
 		ctxReplay.SetCookie(env.cMain)
 
 		env.m.Authenticate()(func(c router.Context) {
@@ -278,6 +283,7 @@ func TestPasskey_K4_K5(t *testing.T) {
 
 	// 1. Get verify options
 	ctxOpt := &mock.Context{InMethod: "POST", InPath: passkey.PathVerifyOptions}
+		ctxOpt.SetValue(router.ContextKeyNetwork, router.NetworkLocal)
 	ctxOpt.SetCookie(env.cMain)
 
 	env.m.Authenticate()(func(c router.Context) {
@@ -302,6 +308,7 @@ func TestPasskey_K4_K5(t *testing.T) {
 		respBodyBase64 := base64.URLEncode([]byte(respBody))
 
 		ctxVer := &mock.Context{InMethod: "POST", InPath: passkey.PathVerify, InBody: []byte(respBodyBase64)}
+		ctxVer.SetValue(router.ContextKeyNetwork, router.NetworkLocal)
 		ctxVer.SetCookie(env.cMain)
 
 		env.m.Authenticate()(func(c router.Context) {
@@ -321,6 +328,7 @@ func TestPasskey_K4_K5(t *testing.T) {
 		respBodyBase64 := base64.URLEncode([]byte(respBody))
 
 		ctxVer := &mock.Context{InMethod: "POST", InPath: passkey.PathVerify, InBody: []byte(respBodyBase64)}
+		ctxVer.SetValue(router.ContextKeyNetwork, router.NetworkLocal)
 		ctxVer.SetCookie(env.cMain)
 
 		env.m.Authenticate()(func(c router.Context) {
@@ -363,6 +371,7 @@ func TestPasskey_K6_Misc(t *testing.T) {
 
 	// 1. Get verify options
 	ctxOpt := &mock.Context{InMethod: "POST", InPath: passkey.PathVerifyOptions}
+		ctxOpt.SetValue(router.ContextKeyNetwork, router.NetworkLocal)
 	ctxOpt.SetCookie(env.cMain)
 
 	env.m.Authenticate()(func(c router.Context) {
@@ -381,6 +390,7 @@ func TestPasskey_K6_Misc(t *testing.T) {
 		respBodyBase64 := base64.URLEncode([]byte(respBody))
 
 		ctxVer := &mock.Context{InMethod: "POST", InPath: passkey.PathVerify, InBody: []byte(respBodyBase64)}
+		ctxVer.SetValue(router.ContextKeyNetwork, router.NetworkLocal)
 		ctxVer.SetCookie(env.cMain)
 
 		env.m.Authenticate()(func(c router.Context) {
@@ -417,6 +427,7 @@ func TestPasskey_K6_Misc(t *testing.T) {
 	t.Run("PathVerifyOptions no passkey -> 404", func(t *testing.T) {
 		env2 := setupPasskeyEnv(t)
 		ctxOpt := &mock.Context{InMethod: "POST", InPath: passkey.PathVerifyOptions}
+		ctxOpt.SetValue(router.ContextKeyNetwork, router.NetworkLocal)
 		ctxOpt.SetCookie(env2.cMain)
 
 		env2.m.Authenticate()(func(c router.Context) {
