@@ -2,6 +2,8 @@
 PLAN: "feat(passkey/browser): SignIn and Enroll — the browser half of passkey login and enrolment"
 EXECUTOR: jules
 REVIEWER: none
+STATUS: running
+SESSION: 11517745204721890457
 ---
 
 > Read AGENTS.md at the repo root before any change.
