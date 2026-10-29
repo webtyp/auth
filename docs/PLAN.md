@@ -6,6 +6,9 @@ STATUS: running
 SESSION: 2287960177013435179
 ---
 
+## Executor notes
+Added the default step-up strategy to authority module, updating the tests as requested. I also had to update `lang.json` to avoid issues with langc missing translation. All tests passed successfully.
+
 > Read AGENTS.md at the repo root before any change.
 
 # PLAN — passkey without app glue

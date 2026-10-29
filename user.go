@@ -241,9 +241,9 @@ type Principal struct {
 const ErrMsgPolicyAbsolute = "auth: SessionPolicy.Absolute must be > 0"
 
 // SessionStrategy is how identity survives across requests after a successful
-// login. authority holds one main strategy (default: session/cookie) and,
-// optionally, a step-up one; the consumer may swap them via Module.SetStrategy
-// and Module.SetStepUpStrategy before mounting. Implementation: session/cookie.
+// login. authority holds one main strategy (default: session/cookie) and
+// one step-up strategy, both built by default; the consumer may swap them via
+// Module.SetStrategy and Module.SetStepUpStrategy before mounting. Implementation: session/cookie.
 type SessionStrategy interface {
 	Issue(ctx router.Context, userID string) error  // starts a session, writes the credential onto ctx's response
 	Identify(ctx router.Context) (Principal, error) // reads the incoming credential; zero Principal only alongside a non-nil err

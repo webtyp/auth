@@ -85,10 +85,13 @@ stepUp, _ := cookie.New(authMod, cookie.Options{ // host-only: __Host-admin
 })
 authMod.SetStepUpStrategy(stepUp)
 
-pk, _ := passkey.New(db, ids, authMod, server.RelyingParty{ID: "iam.velty.cl", Origin: "https://iam.velty.cl"})
+pk, _ := passkey.New(db, ids, authMod, "https://iam.velty.cl")
 ca, _ := clientassertion.New(db, clientKeys, "https://iam.velty.cl", authMod.Notify)
 authMod.Enable(pk, ca)
 ```
+
+
+The step-up session exists by default (cookie `__Host-stepup`, same lifetimes as the main one, `AssuranceMultiFactor`) and `SetStepUpStrategy` only changes it.
 
 Routes marked `.RequiresMFA()` answer a single-factor caller with 401 and the
 RFC 9470 challenge; the client then runs `passkey` verify to get the step-up

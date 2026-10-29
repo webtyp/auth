@@ -48,10 +48,8 @@ func (m *Module) resolve(ctx router.Context, allowDev bool) auth.Principal {
 			}
 		}
 	}
-	if m.stepUp != nil {
-		if p, err := m.stepUp.Identify(ctx); err == nil && p.UserID != "" {
-			return p
-		}
+	if p, err := m.stepUp.Identify(ctx); err == nil && p.UserID != "" {
+		return p
 	}
 	if p, err := m.strategy.Identify(ctx); err == nil && p.UserID != "" {
 		return p

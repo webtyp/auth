@@ -34,7 +34,7 @@ const (
 	// first passkey is enrolled from a session older than freshLoginWindow.
 	ChallengeRecentLogin = `Bearer error="insufficient_user_authentication", error_description="sign in again to enroll a passkey", max_age=300`
 
-	ErrMsgRelyingParty = "passkey: RelyingParty ID and Origin are required"
+	ErrMsgOrigin = "passkey: origin is required, e.g. https://app.example.com"
 	ErrMsgNoSessions   = "passkey: empty sessions"
 )
 
@@ -63,15 +63,36 @@ type Module struct {
 }
 
 // New builds the passkey authenticator. db stores credentials and challenges;
-// rp is who the passkeys are for (ID "iam.velty.cl", Origin "https://iam.velty.cl").
-func New(db *orm.DB, ids model.IDGenerator, sessions Sessions, rp server.RelyingParty) (*Module, error) {
-	if rp.ID == "" || rp.Origin == "" {
-		return nil, fmt.Err(ErrMsgRelyingParty)
+// origin must be exactly what the browser shows in the address bar, port included
+// (https://localhost:6060 in development) — WebAuthn compares it byte for byte.
+func New(db *orm.DB, ids model.IDGenerator, sessions Sessions, origin string) (*Module, error) {
+	if origin == "" || hostOf(origin) == "" {
+		return nil, fmt.Err(ErrMsgOrigin)
 	}
 	if sessions == nil {
 		return nil, fmt.Err(ErrMsgNoSessions)
 	}
+	rp := server.RelyingParty{ID: hostOf(origin), Origin: origin}
 	return &Module{db: db, ids: ids, sessions: sessions, rp: rp}, nil
+}
+
+
+// hostOf strips https:// or http://, then cuts at the first : or /
+// "https://app.example.com" -> "app.example.com"
+// "https://localhost:6060" -> "localhost"
+func hostOf(origin string) string {
+	s := origin
+	if fmt.HasPrefix(s, "https://") {
+		s = s[8:]
+	} else if fmt.HasPrefix(s, "http://") {
+		s = s[7:]
+	}
+	for i := 0; i < len(s); i++ {
+		if s[i] == ':' || s[i] == '/' {
+			return s[:i]
+		}
+	}
+	return s
 }
 
 func (m *Module) Name() string { return name }

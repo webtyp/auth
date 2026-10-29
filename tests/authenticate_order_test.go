@@ -209,23 +209,4 @@ func TestAuthenticate_Order_A3_A5(t *testing.T) {
 	})
 }
 
-func TestAuthenticate_StepUpNoStrategy(t *testing.T) {
-	db := newTestDB(t)
-	m, err := authority.New(db, auth.Config{IDs: testIDs})
-	if err != nil {
-		t.Fatal(err)
-	}
 
-	u, err := m.CreateUser("stepup@test.com", "StepUp", "")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	m.SetStepUpStrategy(nil) // Ignored or explicit reset
-
-	ctx := &mock.Context{}
-	err = m.IssueStepUpSession(ctx, u.Id)
-	if err != authority.ErrNoStepUpStrategy {
-		t.Errorf("expected ErrNoStepUpStrategy, got %v", err)
-	}
-}

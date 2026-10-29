@@ -43,7 +43,7 @@ Rules:
 - `oauth2`: OAuth authorization-code flow (begin/callback, state handling).
 - `oauth2/provider/*`: concrete Google and Microsoft protocol adapters.
 - `session/cookie`: the session transport (opaque cookie, per-row `SessionPolicy`).
-- `passkey`: WebAuthn authenticator; a verified assertion issues the step-up session.
+- `passkey`: WebAuthn authenticator; a verified assertion issues the step-up session. The step-up session exists by default (cookie `__Host-stepup`, same lifetimes as the main one, `AssuranceMultiFactor`) and `SetStepUpStrategy` only changes it.
 - `clientassertion`: `private_key_jwt` machine clients (`RequestIdentifier`).
 - `cfaccess`: Cloudflare Access `RequestIdentifier`. Trusts only the signed token, maps the e-mail to a user (via an identity row, or `UserByEmail` plus a new link). It never issues a session. Enable only on the tunnel listener if another mode trusts IPs.
 - `email_password`: email+password credential authenticator.

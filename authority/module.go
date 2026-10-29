@@ -15,6 +15,8 @@ import (
 
 // Module is the user/auth/rbac handle. All backend operations are methods on
 // this type. Created exclusively via New().
+const StepUpCookieName = "stepup"
+
 type Module struct {
 	db     *orm.DB
 	cache  *sessionCache
@@ -25,7 +27,7 @@ type Module struct {
 	events events.Publisher
 
 	strategy       auth.SessionStrategy
-	stepUp         auth.SessionStrategy // sessions proven by a second factor; nil = none
+	stepUp         auth.SessionStrategy // sessions proven by a second factor
 	authenticators []auth.Authenticator
 
 	devLogin       []byte      // DEV_AUTOLOGIN body; nil = production behaviour
@@ -74,6 +76,20 @@ func New(db *orm.DB, cfg auth.Config) (*Module, error) {
 	m.strategy = strategy
 	m.devLogin = devAutologinBody()
 
+	stepUp, err := cookie.New(m, cookie.Options{
+		Name: StepUpCookieName,
+		Policy: auth.SessionPolicy{
+			Absolute:  cfg.TokenTTL,
+			Idle:      cfg.IdleTTL,
+			Assurance: model.AssuranceMultiFactor,
+		},
+		TrustProxy: cfg.TrustProxy,
+	})
+	if err != nil {
+		return nil, err
+	}
+	m.stepUp = stepUp
+
 	return m, nil
 }
 
@@ -86,15 +102,7 @@ func (m *Module) SetStrategy(s auth.SessionStrategy) {
 	}
 }
 
-// ErrNoStepUpStrategy is what IssueStepUpSession returns when no step-up
-// strategy was configured.
-const ErrNoStepUpStrategy domainErr = "auth: no step-up strategy configured"
-
-type domainErr string
-
-func (e domainErr) Error() string { return string(e) }
-
-// SetStepUpStrategy sets how sessions proven by a second factor are carried.
+// SetStepUpStrategy overrides the default step-up session.
 // Call before mounting; a nil argument is ignored, like SetStrategy.
 func (m *Module) SetStepUpStrategy(s auth.SessionStrategy) {
 	if s != nil {
@@ -104,9 +112,6 @@ func (m *Module) SetStepUpStrategy(s auth.SessionStrategy) {
 
 // IssueStepUpSession starts a session proven by a second factor.
 func (m *Module) IssueStepUpSession(ctx router.Context, userID string) error {
-	if m.stepUp == nil {
-		return ErrNoStepUpStrategy
-	}
 	return m.stepUp.Issue(ctx, userID)
 }
 
