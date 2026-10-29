@@ -1,4 +1,5 @@
 //go:build wasm
+
 package browser
 
 import (
@@ -121,12 +122,12 @@ func Enroll() error {
 
 	// Note: CreateOptions in webtyp.com/webauthn v0.1.16 does not support ExcludeCredentials
 	cred, err := webauthn.Create(webauthn.CreateOptions{
-		RPID:               opts.RPID,
-		UserID:             userID,
-		UserName:           opts.UserName,
-		Challenge:          challenge,
-		ResidentKey:        true,
-		UserVerification:   "required",
+		RPID:             opts.RPID,
+		UserID:           userID,
+		UserName:         opts.UserName,
+		Challenge:        challenge,
+		ResidentKey:      true,
+		UserVerification: "required",
 	})
 	if err != nil {
 		return err
