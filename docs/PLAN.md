@@ -2,8 +2,10 @@
 PLAN: "feat(auth): passkey works out of the box — authority ships a default step-up session; passkey.New takes the app's origin"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 2287960177013435179
+PR: https://github.com/webtyp/auth/pull/13
+REVIEWED_COMMIT: 63962a21b63be0f769bc392ed4b9d736e487dfcf
 ---
 
 ## Executor notes
