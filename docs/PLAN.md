@@ -2,6 +2,8 @@
 PLAN: "feat(auth): passkey works out of the box — authority ships a default step-up session; passkey.New takes the app's origin"
 EXECUTOR: jules
 REVIEWER: none
+STATUS: running
+SESSION: 2287960177013435179
 ---
 
 > Read AGENTS.md at the repo root before any change.
