@@ -54,28 +54,28 @@ func IsRUTTaken(err error) bool {
 type SecurityEventType uint8
 
 const (
-	EventJWTTampered             SecurityEventType = iota // validateJWT: jwt.Forged (never jwt.Expired)
-	EventOAuthReplay                                      // consumeState: state already consumed (2nd use)
-	EventOAuthExpiredState                                // consumeState: state found but past ExpiresAt
-	EventOAuthCrossProvider                               // consumeState: provider mismatch (state preserved)
-	EventIPMismatch                                       // LoginLAN: IP not registered
-	EventNonActiveAccess                                  // Login/LoginLAN: status != "active"
-	EventUnauthorizedAccess                               // validateSession: cookie present but session invalid
-	EventAccessDenied                                     // AccessCheck: RBAC denied with valid session
-	EventPermissionCorrupt                                // HasPermission: permissions.action is not a CRUD string
-	EventRateLimited                                      // POST /login: Config.RateLimit rejected the attempt before bcrypt
-	EventInvalidRUT                                       // trusted_ip: the typed value is not a checksum-valid RUT (probe or typo)
-	EventUnknownRUT                                       // trusted_ip: valid RUT, no identity registered for it
-	EventSetupCompleted                                   // trusted_ip: the first administrator was created through PathSetup
-	EventSetupRejected                                    // trusted_ip: PathSetup was hit after an admin already existed
-	EventSetupUnavailable                                 // trusted_ip: the registry could not be read, so PathSetup stayed shut
-	EventDevAutologin                                     // authority: DEV_AUTOLOGIN opened a session (development builds only)
-	EventPasskeyRegistered                                // passkey: a credential was enrolled
-	EventPasskeyVerified                                  // passkey: an assertion verified and a step-up session was issued
-	EventPasskeyRejected                                  // passkey: enrollment or verification refused (Reason says why)
-	EventPasskeyDeleted                                   // passkey: a credential was removed
-	EventClientAssertionRejected                          // clientassertion: a private_key_jwt bearer was refused (Reason says why)
-	EventCloudflareAccessRejected                         // cfaccess: a Cf-Access-Jwt-Assertion was refused (Reason says why)
+	EventJWTTampered              SecurityEventType = iota // validateJWT: jwt.Forged (never jwt.Expired)
+	EventOAuthReplay                                       // consumeState: state already consumed (2nd use)
+	EventOAuthExpiredState                                 // consumeState: state found but past ExpiresAt
+	EventOAuthCrossProvider                                // consumeState: provider mismatch (state preserved)
+	EventIPMismatch                                        // LoginLAN: IP not registered
+	EventNonActiveAccess                                   // Login/LoginLAN: status != "active"
+	EventUnauthorizedAccess                                // validateSession: cookie present but session invalid
+	EventAccessDenied                                      // AccessCheck: RBAC denied with valid session
+	EventPermissionCorrupt                                 // HasPermission: permissions.action is not a CRUD string
+	EventRateLimited                                       // POST /login: Config.RateLimit rejected the attempt before bcrypt
+	EventInvalidRUT                                        // trusted_ip: the typed value is not a checksum-valid RUT (probe or typo)
+	EventUnknownRUT                                        // trusted_ip: valid RUT, no identity registered for it
+	EventSetupCompleted                                    // trusted_ip: the first administrator was created through PathSetup
+	EventSetupRejected                                     // trusted_ip: PathSetup was hit after an admin already existed
+	EventSetupUnavailable                                  // trusted_ip: the registry could not be read, so PathSetup stayed shut
+	EventDevAutologin                                      // authority: DEV_AUTOLOGIN opened a session (development builds only)
+	EventPasskeyRegistered                                 // passkey: a credential was enrolled
+	EventPasskeyVerified                                   // passkey: an assertion verified and a step-up session was issued
+	EventPasskeyRejected                                   // passkey: enrollment or verification refused (Reason says why)
+	EventPasskeyDeleted                                    // passkey: a credential was removed
+	EventClientAssertionRejected                           // clientassertion: a private_key_jwt bearer was refused (Reason says why)
+	EventCloudflareAccessRejected                          // cfaccess: a Cf-Access-Jwt-Assertion was refused (Reason says why)
 )
 
 // String returns the event's stable name (lower snake_case), so a logger
@@ -564,17 +564,14 @@ func (p ProfileDTO) EncodeFields(w model.FieldWriter) {
 	for _, r := range p.Roles {
 		aw.String(r)
 	}
-	aw.Close()
 	awn := w.Array("role_names", len(p.RoleNames))
 	for _, rn := range p.RoleNames {
 		awn.String(rn)
 	}
-	awn.Close()
 	pw := w.Array("permissions", len(p.Permissions))
 	for _, perm := range p.Permissions {
 		pw.String(perm)
 	}
-	pw.Close()
 }
 
 func (p ProfileDTO) IsNil() bool { return false }

@@ -43,7 +43,6 @@ func writeStrings(w model.FieldWriter, field string, vals []string) {
 	for _, v := range vals {
 		a.String(v)
 	}
-	a.Close()
 }
 
 // credentialList is the PathList body: id, created and last used of each credential.
@@ -55,7 +54,6 @@ func (l *credentialList) EncodeFields(w model.FieldWriter) {
 	for _, c := range l.items {
 		a.Object(&credentialView{c})
 	}
-	a.Close()
 }
 
 type credentialView struct{ c *PasskeyCredential }
