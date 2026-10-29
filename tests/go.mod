@@ -36,7 +36,7 @@ require (
 	webtyp.com/model v0.2.10
 	webtyp.com/orm v0.12.20
 	webtyp.com/router v0.4.12
-	webtyp.com/server v0.2.86
+	webtyp.com/server v0.2.99
 	webtyp.com/sitec v0.2.80
 	webtyp.com/sqlite v0.3.7
 	webtyp.com/time v0.6.2
@@ -87,7 +87,7 @@ require (
 	webtyp.com/input v0.0.20 // indirect
 	webtyp.com/js v0.1.3 // indirect
 	webtyp.com/keyring v0.2.4 // indirect
-	webtyp.com/lang v0.1.9 // indirect
+	webtyp.com/lang v0.1.10 // indirect
 	webtyp.com/modfind v0.0.11 // indirect
 	webtyp.com/pwa v0.2.13 // indirect
 	webtyp.com/sqlt v0.0.11 // indirect
