@@ -25,7 +25,7 @@ replace webtyp.com/auth => ..
 
 require (
 	modernc.org/sqlite v1.58.0
-	webtyp.com/auth v0.0.85
+	webtyp.com/auth v0.0.86
 	webtyp.com/base64 v0.0.6
 	webtyp.com/crypto v0.0.30
 	webtyp.com/ddl v0.0.32
@@ -33,9 +33,9 @@ require (
 	webtyp.com/form v0.4.52
 	webtyp.com/json v0.5.37
 	webtyp.com/jwt v0.1.29
-	webtyp.com/model v0.2.9
+	webtyp.com/model v0.2.10
 	webtyp.com/orm v0.12.8
-	webtyp.com/router v0.4.9
+	webtyp.com/router v0.4.12
 	webtyp.com/server v0.2.86
 	webtyp.com/sitec v0.2.80
 	webtyp.com/sqlite v0.3.7
@@ -43,7 +43,7 @@ require (
 	webtyp.com/unixid v0.3.1
 	webtyp.com/user v0.3.14
 	webtyp.com/view v0.6.50
-	webtyp.com/webauthn v0.1.6
+	webtyp.com/webauthn v0.1.16
 )
 
 require (
