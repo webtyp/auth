@@ -97,7 +97,7 @@ require (
 	webtyp.com/lang v0.1.10 // indirect
 	webtyp.com/modfind v0.0.11 // indirect
 	webtyp.com/pwa v0.2.13 // indirect
-	webtyp.com/rpc v0.2.7 // indirect
+	webtyp.com/rpc v0.2.13 // indirect
 	webtyp.com/sqlt v0.0.11 // indirect
 	webtyp.com/storage v0.1.8 // indirect
 	webtyp.com/svg v0.3.30 // indirect
