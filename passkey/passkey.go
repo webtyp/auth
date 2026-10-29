@@ -34,8 +34,8 @@ const (
 	// first passkey is enrolled from a session older than freshLoginWindow.
 	ChallengeRecentLogin = `Bearer error="insufficient_user_authentication", error_description="sign in again to enroll a passkey", max_age=300`
 
-	ErrMsgOrigin = "passkey: origin is required, e.g. https://app.example.com"
-	ErrMsgNoSessions   = "passkey: empty sessions"
+	ErrMsgOrigin     = "passkey: origin is required, e.g. https://app.example.com"
+	ErrMsgNoSessions = "passkey: empty sessions"
 )
 
 const (
@@ -75,7 +75,6 @@ func New(db *orm.DB, ids model.IDGenerator, sessions Sessions, origin string) (*
 	rp := server.RelyingParty{ID: hostOf(origin), Origin: origin}
 	return &Module{db: db, ids: ids, sessions: sessions, rp: rp}, nil
 }
-
 
 // hostOf strips https:// or http://, then cuts at the first : or /
 // "https://app.example.com" -> "app.example.com"

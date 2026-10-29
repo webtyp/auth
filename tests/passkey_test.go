@@ -114,7 +114,7 @@ func setupPasskeyEnv(t *testing.T) pkEnv {
 	mainStrat, _ := cookie.New(m, cookie.Options{Name: "session", Domain: "", Policy: mainPolicy})
 	m.SetStrategy(mainStrat)
 
-	pk, err := passkey.New(db, testIDs, m, "https://iam.velty.cl")
+	pk, err := passkey.New(db, testIDs, m, "https://app.example.com")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -184,7 +184,7 @@ func TestPasskey_K1_K2(t *testing.T) {
 		mainStrat, _ := cookie.New(m2, cookie.Options{Name: "session", Domain: "", Policy: mainPolicy})
 		m2.SetStrategy(mainStrat)
 
-		pk, _ := passkey.New(env2.db, testIDs, m2, "https://iam.velty.cl")
+		pk, _ := passkey.New(env2.db, testIDs, m2, "https://app.example.com")
 		r2 := &mock.Router{}
 		m2.MountAPI(r2)
 		pk.Mount(r2)
@@ -230,7 +230,7 @@ func TestPasskey_K3(t *testing.T) {
 		credID := []byte("new-cred-123")
 		flags := byte(0x45) // UP | UV | AT
 
-		respBody := buildCreateResponse("iam.velty.cl", chalBytes, []byte("https://iam.velty.cl"), spki, 0, credID, flags)
+		respBody := buildCreateResponse("app.example.com", chalBytes, []byte("https://app.example.com"), spki, 0, credID, flags)
 
 		// 2. Register
 		ctxReg := &mock.Context{InMethod: "POST", InPath: passkey.PathRegister, InBody: []byte(base64.URLEncode([]byte(respBody)))}
@@ -299,7 +299,7 @@ func TestPasskey_K4_K5(t *testing.T) {
 		// Use a different credID not owned by the user
 		otherCredID := []byte("other-user-cred")
 		flags := byte(0x05)
-		respBody := buildGetResponse("iam.velty.cl", chalBytes, []byte("https://iam.velty.cl"), privKey, 1, otherCredID, flags)
+		respBody := buildGetResponse("app.example.com", chalBytes, []byte("https://app.example.com"), privKey, 1, otherCredID, flags)
 		respBodyBase64 := base64.URLEncode([]byte(respBody))
 
 		ctxVer := &mock.Context{InMethod: "POST", InPath: passkey.PathVerify, InBody: []byte(respBodyBase64)}
@@ -319,7 +319,7 @@ func TestPasskey_K4_K5(t *testing.T) {
 	t.Run("K5 - wrong signature -> 401 empty body", func(t *testing.T) {
 		_, badPriv, _ := asym.GenerateKeyPair()
 		flags := byte(0x05)
-		respBody := buildGetResponse("iam.velty.cl", chalBytes, []byte("https://iam.velty.cl"), badPriv, 1, []byte("user-cred"), flags)
+		respBody := buildGetResponse("app.example.com", chalBytes, []byte("https://app.example.com"), badPriv, 1, []byte("user-cred"), flags)
 		respBodyBase64 := base64.URLEncode([]byte(respBody))
 
 		ctxVer := &mock.Context{InMethod: "POST", InPath: passkey.PathVerify, InBody: []byte(respBodyBase64)}
@@ -381,7 +381,7 @@ func TestPasskey_K6_Misc(t *testing.T) {
 
 	t.Run("K6 - valid assertion -> 204, step-up cookie, events", func(t *testing.T) {
 		flags := byte(0x05)
-		respBody := buildGetResponse("iam.velty.cl", chalBytes, []byte("https://iam.velty.cl"), privKey, 1, []byte("user-cred-k6"), flags)
+		respBody := buildGetResponse("app.example.com", chalBytes, []byte("https://app.example.com"), privKey, 1, []byte("user-cred-k6"), flags)
 		respBodyBase64 := base64.URLEncode([]byte(respBody))
 
 		ctxVer := &mock.Context{InMethod: "POST", InPath: passkey.PathVerify, InBody: []byte(respBodyBase64)}

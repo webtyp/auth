@@ -13,10 +13,12 @@ import (
 	"webtyp.com/time"
 )
 
-// Module is the user/auth/rbac handle. All backend operations are methods on
-// this type. Created exclusively via New().
+// StepUpCookieName names the default step-up session cookie; the browser sees
+// "__Host-stepup" because the cookie is host-only.
 const StepUpCookieName = "stepup"
 
+// Module is the user/auth/rbac handle. All backend operations are methods on
+// this type. Created exclusively via New().
 type Module struct {
 	db     *orm.DB
 	cache  *sessionCache
