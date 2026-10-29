@@ -2,6 +2,8 @@
 PLAN: "feat: the internet door — RUT login, first-admin setup and passkey enrolment refuse it; a passkey alone is a login (no prior session)"
 EXECUTOR: jules
 REVIEWER: none
+STATUS: running
+SESSION: 11813570761818200614
 ---
 
 > Read AGENTS.md at the repo root before any change.
