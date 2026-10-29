@@ -43,7 +43,7 @@ func (m *Module) registerOptions(ctx router.Context) {
 	for i, c := range existing {
 		ids[i] = c.Id
 	}
-	ctx.Encode(&registerOptions{
+	ctx.Encode(&RegisterOptions{
 		Challenge:          base64.URLEncode(challenge),
 		RPID:               m.rp.ID,
 		UserID:             base64.URLEncode([]byte(userID)),
@@ -96,7 +96,7 @@ func (m *Module) verifyOptions(ctx router.Context) {
 			ctx.WriteStatus(500)
 			return
 		}
-		ctx.Encode(&verifyOptions{
+		ctx.Encode(&VerifyOptions{
 			Challenge: base64.URLEncode(challenge),
 			RPID:      m.rp.ID,
 		})
@@ -121,7 +121,7 @@ func (m *Module) verifyOptions(ctx router.Context) {
 	for i, c := range existing {
 		ids[i] = c.Id
 	}
-	ctx.Encode(&verifyOptions{
+	ctx.Encode(&VerifyOptions{
 		Challenge:        base64.URLEncode(challenge),
 		RPID:             m.rp.ID,
 		AllowCredentials: ids,

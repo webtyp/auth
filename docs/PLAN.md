@@ -2,8 +2,10 @@
 PLAN: "feat(passkey/browser): SignIn and Enroll — the browser half of passkey login and enrolment"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 11517745204721890457
+PR: https://github.com/webtyp/auth/pull/12
+REVIEWED_COMMIT: 693b4588f3af329a56b9eda56ea028e5c119c0c1
 ---
 
 > Read AGENTS.md at the repo root before any change.
@@ -115,3 +117,9 @@ gotest
 | 2 | `passkey/browser/browser.go` | `GOOS=js GOARCH=wasm go vet ./passkey/browser/` clean |
 | 3 | `tests/*` | green |
 | 4 | `README.md` | paragraph present |
+
+## Executor notes
+- Added `passkey/browser` module with `SignIn` and `Enroll`.
+- Added tests for `RegisterOptions` and `VerifyOptions`.
+- Added documentation to `README.md`.
+- No `_wasm_test.go` added because `webtyp/webauthn` doesn't have a pattern for faking it.
