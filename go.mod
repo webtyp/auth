@@ -32,5 +32,5 @@ require (
 	webtyp.com/keyring v0.2.9 // indirect
 	webtyp.com/lang v0.1.9 // indirect
 	webtyp.com/rpc v0.2.14 // indirect
-	webtyp.com/storage v0.1.8 // indirect
+	webtyp.com/storage v0.1.18 // indirect
 )
