@@ -82,7 +82,7 @@ require (
 	webtyp.com/dbus v0.1.1 // indirect
 	webtyp.com/device v0.1.0 // indirect
 	webtyp.com/dom v0.13.29 // indirect
-	webtyp.com/env v0.0.12 // indirect
+	webtyp.com/env v0.1.3 // indirect
 	webtyp.com/escape v0.1.0 // indirect
 	webtyp.com/fetch v0.1.29 // indirect
 	webtyp.com/filepath v0.1.0 // indirect
@@ -92,7 +92,7 @@ require (
 	webtyp.com/image v0.1.16 // indirect
 	webtyp.com/input v0.0.20 // indirect
 	webtyp.com/js v0.1.3 // indirect
-	webtyp.com/keyring v0.2.4 // indirect
+	webtyp.com/keyring v0.2.9 // indirect
 	webtyp.com/lang v0.1.10 // indirect
 	webtyp.com/modfind v0.0.11 // indirect
 	webtyp.com/pwa v0.2.13 // indirect
