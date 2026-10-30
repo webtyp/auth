@@ -31,6 +31,6 @@ require (
 	webtyp.com/filepath v0.1.0 // indirect
 	webtyp.com/keyring v0.2.4 // indirect
 	webtyp.com/lang v0.1.9 // indirect
-	webtyp.com/rpc v0.2.13 // indirect
+	webtyp.com/rpc v0.2.14 // indirect
 	webtyp.com/storage v0.1.8 // indirect
 )
