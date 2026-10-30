@@ -111,3 +111,7 @@ Commit after this stage.
 | 1 | `tests/list_users_test.go` | Empty, two users (with and without e-mail), closed database |
 | 2 | `authority/ports.go` | `ListUsers`; green |
 | 3 | `docs/ARCHITECTURE.md`, `README.md` | Docs current |
+
+## Executor notes
+
+- `README.md` did not list the `Module` methods, so no additions were made to it.
