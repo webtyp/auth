@@ -2,8 +2,10 @@
 PLAN: "feat: authority.Module.ListUsers — every user, for screens that pick a person"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 12421134209932989562
+PR: https://github.com/webtyp/auth/pull/14
+REVIEWED_COMMIT: 4a339ed6d4e52abc92d32f38faf7b1f73e9af4e2
 ---
 
 > Read AGENTS.md at the repo root before any change.
@@ -111,3 +113,7 @@ Commit after this stage.
 | 1 | `tests/list_users_test.go` | Empty, two users (with and without e-mail), closed database |
 | 2 | `authority/ports.go` | `ListUsers`; green |
 | 3 | `docs/ARCHITECTURE.md`, `README.md` | Docs current |
+
+## Executor notes
+
+- `README.md` did not list the `Module` methods, so no additions were made to it.

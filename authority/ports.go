@@ -31,6 +31,12 @@ func (m *Module) UserByID(id string) (auth.User, error) { return getUser(m.db, m
 func (m *Module) UserByEmail(email string) (auth.User, error) {
 	return getUserByEmail(m.db, m.ucache, email)
 }
+
+// ListUsers returns every user of the app, with or without e-mail — what a
+// screen that picks a person (e.g. "give this role to…") lists.
+// Example: users, err := authMod.ListUsers()
+func (m *Module) ListUsers() ([]auth.User, error) { return listUsers(m.db) }
+
 func (m *Module) CreateUser(email, name, phone string) (auth.User, error) {
 	return createUser(m.db, m.ids, email, name, phone)
 }

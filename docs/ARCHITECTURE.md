@@ -160,20 +160,14 @@ users" imply account takeover wherever `TrustedIPStore` answers per network
 rather than per user. An app that never administers LAN identities simply never
 grants the resource — closed by default.
 
-## Email-less users — not supported yet
+## Email-less users
 
-`UserModel.email` is `Unique`, so two users created with an empty email collide.
-Storing NULL instead is the standard answer and is currently impossible:
-`orm.Create` writes every schema column (`Field.OmitEmpty` guards only the wire
-codec), and `database/sql` refuses to scan a NULL into a `string`. Both are
-defects in pieces one layer down and are fixed there — see
-`NULLABLE_COLUMNS_MASTER_PLAN.md`. Until those tags ship, `CreateUser("", …)`
-writes `""` and the second call fails loudly with `ErrEmailTaken`.
-
-`UserByEmail("")` always returns `ErrNotFound`. An empty email is not a lookup
-key: `oauth2`'s callback links the caller's provider identity to whatever
+LAN staff are users without e-mail (the column stores NULL, so it stays unique). `UserByEmail("")` always
+returns `ErrNotFound`, because an empty e-mail is not a lookup key: `oauth2`'s callback links the caller's provider identity to whatever
 `UserByEmail` returns, so a provider reporting a verified-but-empty address
 would otherwise take over the first account with no email.
+
+`ListUsers()` lists every user, with or without e-mail.
 
 
 ## The internet door
