@@ -2,6 +2,8 @@
 PLAN: "feat: authority.Module.ListUsers — every user, for screens that pick a person"
 EXECUTOR: jules
 REVIEWER: none
+STATUS: running
+SESSION: 12421134209932989562
 ---
 
 > Read AGENTS.md at the repo root before any change.
