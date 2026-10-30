@@ -39,7 +39,7 @@ require (
 	webtyp.com/router v0.4.17
 	webtyp.com/server v0.2.103
 	webtyp.com/sitec v0.2.80
-	webtyp.com/sqlite v0.3.7
+	webtyp.com/sqlite v0.3.26
 	webtyp.com/time v0.6.2
 	webtyp.com/unixid v0.3.1
 	webtyp.com/user v0.3.14
