@@ -28,7 +28,7 @@ require (
 	webtyp.com/auth v0.0.106
 	webtyp.com/base64 v0.0.6
 	webtyp.com/crypto v0.0.30
-	webtyp.com/ddl v0.0.39
+	webtyp.com/ddl v0.0.45
 	webtyp.com/events v0.1.0
 	webtyp.com/fmt v1.0.0
 	webtyp.com/form v0.4.52
@@ -97,7 +97,7 @@ require (
 	webtyp.com/modfind v0.0.11 // indirect
 	webtyp.com/pwa v0.2.13 // indirect
 	webtyp.com/rpc v0.2.14 // indirect
-	webtyp.com/sqlt v0.0.11 // indirect
+	webtyp.com/sqlt v0.0.14 // indirect
 	webtyp.com/storage v0.1.18 // indirect
 	webtyp.com/svg v0.3.30 // indirect
 	webtyp.com/tinygo v1.0.1 // indirect
