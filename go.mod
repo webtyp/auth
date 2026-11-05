@@ -30,7 +30,7 @@ require (
 	webtyp.com/escape v0.1.0 // indirect
 	webtyp.com/filepath v0.1.0 // indirect
 	webtyp.com/keyring v0.2.9 // indirect
-	webtyp.com/lang v0.1.9 // indirect
+	webtyp.com/lang v0.1.12 // indirect
 	webtyp.com/rpc v0.2.14 // indirect
 	webtyp.com/storage v0.1.18 // indirect
 )
