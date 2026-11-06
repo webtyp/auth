@@ -144,8 +144,15 @@ func reactivateUser(db *orm.DB, cache *userCache, id string) error {
 	return db.Update(u, orm.Eq(auth.User_.Id, u.Id))
 }
 
-func listUsers(db *orm.DB) ([]auth.User, error) {
+func listUsers(db *orm.DB, search, after string, limit int64) ([]auth.User, error) {
 	qb := db.Query(&auth.User{})
+	if search != "" {
+		qb = qb.Where(auth.User_.Name).Like("%" + search + "%")
+	}
+	if after != "" {
+		qb = qb.Where(auth.User_.Id).Gt(after)
+	}
+	qb = qb.OrderBy(auth.User_.Id).Asc().Limit(int(limit))
 	users, err := auth.ReadAllUser(qb)
 	if err != nil {
 		return nil, err

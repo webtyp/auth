@@ -10,6 +10,7 @@ import (
 	"webtyp.com/json"
 	"webtyp.com/model"
 	"webtyp.com/router/mock"
+	"webtyp.com/view"
 )
 
 func TestTools_Me(t *testing.T) {
@@ -102,6 +103,10 @@ func TestAdminOps(t *testing.T) {
 	// 2. Exercise handlers
 	t.Run("list_users handler", func(t *testing.T) {
 		ctx := &mock.Context{}
+		args := view.ListArgs{Limit: view.MaxPage}
+		var body string
+		json.Encode(&args, &body)
+		ctx.InBody = []byte(body)
 		listRoute.handler(ctx)
 
 		if ctx.Status != 0 && ctx.Status != 200 {

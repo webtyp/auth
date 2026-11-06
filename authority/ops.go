@@ -1,16 +1,17 @@
 package authority
 
 import (
+	"webtyp.com/auth"
 	"webtyp.com/model"
 	"webtyp.com/router"
-	"webtyp.com/auth"
+	"webtyp.com/view"
 )
 
 var _ router.OperationModule = (*Module)(nil)
 
 func (m *Module) MountOperations(reg router.OperationRegistry) {
 	reg.Operation(auth.OpMe, m.opMe).Authenticated()
-	reg.Operation(auth.OpListUsers, m.opListUsers).Requires("users", model.Read)
+	reg.Operation(auth.OpListUsers, m.opListUsers).Requires("users", model.Read).Accepts(&view.ListArgs{})
 	reg.Operation(auth.OpUpsertUser, m.opUpsertUser).Requires("users", model.Create|model.Update).Accepts(&auth.User{})
 	reg.Operation(auth.OpDeleteUser, m.opDeleteUser).Requires("users", model.Delete).Accepts(&auth.User{})
 
@@ -47,7 +48,12 @@ func (m *Module) opMe(ctx router.Context) {
 }
 
 func (m *Module) opListUsers(ctx router.Context) {
-	us, err := listUsers(m.db)
+	var args view.ListArgs
+	if err := ctx.Decode(&args); err != nil {
+		ctx.WriteStatus(400)
+		return
+	}
+	us, err := listUsers(m.db, args.Search, args.After, view.Cap(args.Limit))
 	if err != nil {
 		ctx.WriteStatus(500)
 		return

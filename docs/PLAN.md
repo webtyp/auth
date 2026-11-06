@@ -2,8 +2,10 @@
 PLAN: "feat!: paged lists searched on the server (view v0.6.64)"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 13431435267517286961
+PR: https://github.com/webtyp/auth/pull/15
+REVIEWED_COMMIT: 4966c7964286a703d93032782c8a9fcb82bb536b
 ---
 
 > Read AGENTS.md at the repo root before any change.

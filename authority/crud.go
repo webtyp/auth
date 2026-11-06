@@ -1,9 +1,10 @@
 package authority
 
 import (
+	"webtyp.com/auth"
 	"webtyp.com/model"
 	"webtyp.com/orm"
-	"webtyp.com/auth"
+	"webtyp.com/view"
 )
 
 // --- userCRUD ---
@@ -24,7 +25,7 @@ func (h *userCRUD) Create(payload any) (any, error) {
 	return createUser(h.db, h.ids, u.Email, u.Name, u.Phone)
 }
 func (h *userCRUD) Read(id string) (any, error) { return getUser(h.db, h.cache, id) }
-func (h *userCRUD) List() (any, error)          { return listUsers(h.db) }
+func (h *userCRUD) List() (any, error)          { return listUsers(h.db, "", "", view.MaxPage) }
 func (h *userCRUD) Update(payload any) (any, error) {
 	u := payload.(auth.User)
 	return u, updateUser(h.db, h.cache, u.Id, u.Name, u.Phone)
