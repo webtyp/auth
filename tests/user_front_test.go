@@ -24,16 +24,24 @@ func (c *fakeCallerWasm) Call(op string, args model.Encodable, out model.Decodab
 	c.lastArgs = args
 	switch op {
 	case qualifiedOp(auth.OpListUsers):
+		var term string
+		if la, ok := args.(*view.ListArgs); ok && la != nil {
+			term = la.Search
+		}
 		if l, ok := out.(*auth.UserList); ok {
-			u1 := l.Append().(*auth.User)
-			u1.Id = "u1"
-			u1.Name = "User One"
-			u1.Email = "u1@test.com"
-
-			u2 := l.Append().(*auth.User)
-			u2.Id = "u2"
-			u2.Name = "User Two"
-			u2.Email = "u2@test.com"
+			*l = (*l)[:0]
+			if term == "" || term == "One" {
+				u1 := l.Append().(*auth.User)
+				u1.Id = "u1"
+				u1.Name = "User One"
+				u1.Email = "u1@test.com"
+			}
+			if term == "" || term == "Two" {
+				u2 := l.Append().(*auth.User)
+				u2.Id = "u2"
+				u2.Name = "User Two"
+				u2.Email = "u2@test.com"
+			}
 		}
 		cb(nil)
 	case qualifiedOp(auth.OpUpsertUser), qualifiedOp(auth.OpDeleteUser):
@@ -103,14 +111,14 @@ func TestNewView(t *testing.T) {
 		t.Errorf("expected selected to be empty after Deselect, got %s", v.Selected())
 	}
 
-	// 6. Test Filter
-	filtered := v.Filter("One")
-	if len(filtered) != 1 {
-		t.Errorf("expected 1 item after filtering for 'One', got %d", len(filtered))
+	// 6. Test Search
+	v2 := auth.NewView(fc)
+	v2.Search("One", nil)
+	if fc.lastArgs.(*view.ListArgs).Search != "One" {
+		t.Errorf("expected Search to pass 'One', got %v", fc.lastArgs.(*view.ListArgs).Search)
 	}
-	all := v.Filter("")
-	if len(all) != 2 {
-		t.Errorf("expected 2 items after clearing filter, got %d", len(all))
+	if len(v2.Items()) != 1 {
+		t.Errorf("expected 1 item after filtering for 'One', got %d", len(v2.Items()))
 	}
 
 	// 7. Save record and verify caller payload via view.Saver capability

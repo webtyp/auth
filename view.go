@@ -10,7 +10,7 @@ import (
 // renderer (crudview, or any other) wraps. The app decides which renderer draws it.
 func NewView(caller router.Caller) view.Presenter {
 	b := view.NewCallerLister(view.NewRecords().Caller(caller),
-		view.Ops{Module: ModelName, List: OpListUsers, Save: OpUpsertUser, Delete: OpDeleteUser},
+		view.Ops{Module: ModelName, List: OpListUsers, Save: OpUpsertUser, Delete: OpDeleteUser, Page: view.Page{First: view.All}},
 		func() model.ModelSlice { return &UserList{} })
 	return view.New(b, &User{}, view.WithTitle("Usuarios"))
 }

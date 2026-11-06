@@ -10,6 +10,7 @@ import (
 	"webtyp.com/time"
 	"webtyp.com/auth"
 	"webtyp.com/user"
+	"webtyp.com/view"
 )
 
 // oauthStateBytes: 32 bytes. El state es el token anti-CSRF del intercambio
@@ -35,7 +36,7 @@ func (m *Module) UserByEmail(email string) (auth.User, error) {
 // ListUsers returns every user of the app, with or without e-mail — what a
 // screen that picks a person (e.g. "give this role to…") lists.
 // Example: users, err := authMod.ListUsers()
-func (m *Module) ListUsers() ([]auth.User, error) { return listUsers(m.db) }
+func (m *Module) ListUsers() ([]auth.User, error) { return listUsers(m.db, "", "", view.MaxPage) }
 
 func (m *Module) CreateUser(email, name, phone string) (auth.User, error) {
 	return createUser(m.db, m.ids, email, name, phone)
