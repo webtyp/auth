@@ -90,7 +90,7 @@ require (
 	webtyp.com/font v0.0.5 // indirect
 	webtyp.com/html v0.0.30 // indirect
 	webtyp.com/image v0.1.16 // indirect
-	webtyp.com/input v0.0.20 // indirect
+	webtyp.com/input v0.0.36 // indirect
 	webtyp.com/js v0.1.3 // indirect
 	webtyp.com/keyring v0.2.9 // indirect
 	webtyp.com/lang v0.1.13 // indirect
