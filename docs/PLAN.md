@@ -2,6 +2,8 @@
 PLAN: "refactor!: authority on the closed crud contract (users, LAN identity); /me as an Infra route; view.go browser-only"
 EXECUTOR: jules
 REVIEWER: none
+STATUS: running
+SESSION: 8600479642742704008
 ---
 
 > Read AGENTS.md at the repo root before any change.
