@@ -18,7 +18,7 @@ require (
 	webtyp.com/router v0.4.17
 	webtyp.com/time v0.6.4
 	webtyp.com/user v0.3.13
-	webtyp.com/view v0.6.64
+	webtyp.com/view v0.6.65
 	webtyp.com/webauthn v0.1.16
 )
 
