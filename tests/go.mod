@@ -43,7 +43,7 @@ require (
 	webtyp.com/time v0.6.4
 	webtyp.com/unixid v0.3.1
 	webtyp.com/user v0.3.14
-	webtyp.com/view v0.6.64
+	webtyp.com/view v0.6.65
 )
 
 require (
