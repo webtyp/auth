@@ -32,7 +32,7 @@ require (
 	webtyp.com/events v0.1.0
 	webtyp.com/fmt v1.0.0
 	webtyp.com/form v0.4.52
-	webtyp.com/json v0.5.37
+	webtyp.com/json v0.5.40
 	webtyp.com/jwt v0.1.29
 	webtyp.com/model v0.2.12
 	webtyp.com/orm v0.12.26
