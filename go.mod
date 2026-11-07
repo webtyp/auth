@@ -4,6 +4,7 @@ go 1.26.8
 
 require (
 	webtyp.com/base64 v0.0.6
+	webtyp.com/crud v0.0.3
 	webtyp.com/crypto v0.0.30
 	webtyp.com/ddl v0.0.46
 	webtyp.com/env v0.1.3
@@ -13,12 +14,12 @@ require (
 	webtyp.com/input v0.0.36
 	webtyp.com/json v0.5.40
 	webtyp.com/jwt v0.1.29
-	webtyp.com/model v0.2.12
+	webtyp.com/model v0.2.14
 	webtyp.com/orm v0.12.26
-	webtyp.com/router v0.4.17
+	webtyp.com/router v0.4.19
 	webtyp.com/time v0.6.4
 	webtyp.com/user v0.3.13
-	webtyp.com/view v0.6.65
+	webtyp.com/view v0.6.66
 	webtyp.com/webauthn v0.1.16
 )
 
@@ -31,6 +32,5 @@ require (
 	webtyp.com/filepath v0.1.0 // indirect
 	webtyp.com/keyring v0.2.9 // indirect
 	webtyp.com/lang v0.1.14 // indirect
-	webtyp.com/rpc v0.2.14 // indirect
 	webtyp.com/storage v0.1.18 // indirect
 )
