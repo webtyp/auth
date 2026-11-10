@@ -2,8 +2,6 @@
 PLAN: "refactor!: auth/authority on crud tables — /me as an Infra route, users through orm.GlobalStore, LAN identity through its own repository"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
-SESSION: 3666154311299940771
 ---
 
 > Read AGENTS.md at the repo root before any change.
@@ -26,7 +24,7 @@ go install webtyp.com/lang/cmd/langc@latest
 go install webtyp.com/ormc/cmd/ormc@latest
 go get webtyp.com/model@latest webtyp.com/crud@latest webtyp.com/orm@latest webtyp.com/view@latest webtyp.com/rpc@latest
 ```
-These must contain `Definition.Allow`/`model.TableSlice` (model), `crud.Table`/`crud.Store` (crud), `orm.GlobalStore` (orm) and
+These must contain `Definition.Allow`/`model.TableSlice` (model), `crud.StoredEntity`/`crud.Store` (crud), `orm.GlobalStore` (orm) and
 `NewCallerLister(…, func() model.TableSlice)` (view). If `go doc webtyp.com/orm GlobalStore` fails, stop. No `replace`; `go mod tidy`; run `ormc`.
 
 ## Why
