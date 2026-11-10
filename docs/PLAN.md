@@ -2,6 +2,8 @@
 PLAN: "refactor!: auth/authority on crud tables — /me as an Infra route, users through orm.GlobalStore, LAN identity through its own repository"
 EXECUTOR: jules
 REVIEWER: none
+STATUS: running
+SESSION: 8720449775225433901
 ---
 
 > Read AGENTS.md at the repo root before any change.
