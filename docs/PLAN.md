@@ -2,8 +2,10 @@
 PLAN: "refactor!: auth/authority on the crud-by-declaration framework — the data models move to authority, users and LAN identities through crud, /me as an Infra route"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 12452980448774497843
+PR: https://github.com/webtyp/auth/pull/16
+REVIEWED_COMMIT: 1f7773501850ba9b77cb190366695e4f9a4aa4fa
 ---
 
 > Read AGENTS.md at the repo root before any change.
