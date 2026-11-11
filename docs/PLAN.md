@@ -2,8 +2,10 @@
 PLAN: "chore: auth after the authority/crud migration — translations and documentation check (part 2 of 2)"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 15329636798705440632
+PR: https://github.com/webtyp/auth/pull/17
+REVIEWED_COMMIT: 7c8600152725db406d643ebaf9ed0d770fb0ca7a
 ---
 
 > Read AGENTS.md at the repo root before any change.
