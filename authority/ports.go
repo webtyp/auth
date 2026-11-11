@@ -1,6 +1,7 @@
 package authority
 
 import (
+	"webtyp.com/crud"
 	"webtyp.com/base64"
 	"webtyp.com/crypto/hmac"
 	"webtyp.com/crypto/rand"
@@ -10,7 +11,6 @@ import (
 	"webtyp.com/time"
 	"webtyp.com/auth"
 	"webtyp.com/user"
-	"webtyp.com/view"
 )
 
 // oauthStateBytes: 32 bytes. El state es el token anti-CSRF del intercambio
@@ -36,7 +36,7 @@ func (m *Module) UserByEmail(email string) (auth.User, error) {
 // ListUsers returns every user of the app, with or without e-mail — what a
 // screen that picks a person (e.g. "give this role to…") lists.
 // Example: users, err := authMod.ListUsers()
-func (m *Module) ListUsers() ([]auth.User, error) { return listUsers(m.db, "", "", view.MaxPage) }
+func (m *Module) ListUsers() ([]auth.User, error) { return listUsers(m.db, "", "", crud.MaxPage) }
 
 func (m *Module) CreateUser(email, name, phone string) (auth.User, error) {
 	return createUser(m.db, m.ids, email, name, phone)
@@ -65,7 +65,7 @@ func (m *Module) CreateState(provider string) (string, string, error) {
 	}
 	nonceHash := base64.URLEncode(hmac.HMACSHA256([]byte(state), []byte(nonce)))
 	now := time.NowUnix()
-	s := &auth.OAuthState{
+	s := &OAuthState{
 		State:     state,
 		NonceHash: nonceHash,
 		Provider:  provider,
@@ -85,10 +85,10 @@ func (m *Module) ConsumeState(state, nonce, provider string) error {
 // PurgeExpiredOAuthStates is maintenance, not part of any port — call it
 // periodically from a cron-like task in the consuming app.
 func (m *Module) PurgeExpiredOAuthStates() error {
-	qb := m.db.Query(&auth.OAuthState{}).Where(auth.OAuthState_.ExpiresAt).Lt(time.NowUnix())
-	states, _ := auth.ReadAllOAuthState(qb)
+	qb := m.db.Query(&OAuthState{}).Where(OAuthState_.ExpiresAt).Lt(time.NowUnix())
+	states, _ := ReadAllOAuthState(qb)
 	for _, s := range states {
-		m.db.Delete(s, orm.Eq(auth.OAuthState_.State, s.State))
+		m.db.Delete(s, orm.Eq(OAuthState_.State, s.State))
 	}
 	return nil
 }
@@ -122,7 +122,7 @@ func (m *Module) GetOrCreateSubject(id user.SubjectID, email, name, avatar strin
 		}
 	}
 	now := time.NowUnix()
-	newUser := auth.User{
+	newUser := User{
 		Id:        string(id),
 		Email:     email,
 		Name:      name,
@@ -147,8 +147,8 @@ func (m *Module) GetOrCreateSubject(id user.SubjectID, email, name, avatar strin
 }
 
 func consumeState(db *orm.DB, m *Module, state, nonce, provider string) error {
-	qb := db.Query(&auth.OAuthState{}).Where(auth.OAuthState_.State).Eq(state)
-	results, err := auth.ReadAllOAuthState(qb)
+	qb := db.Query(&OAuthState{}).Where(OAuthState_.State).Eq(state)
+	results, err := ReadAllOAuthState(qb)
 	if err != nil {
 		return err
 	}
@@ -159,7 +159,7 @@ func consumeState(db *orm.DB, m *Module, state, nonce, provider string) error {
 	stateObj := results[0]
 
 	// 2. Delete immediately (single-use)
-	if err := db.Delete(stateObj, orm.Eq(auth.OAuthState_.State, stateObj.State)); err != nil {
+	if err := db.Delete(stateObj, orm.Eq(OAuthState_.State, stateObj.State)); err != nil {
 		return err
 	}
 

@@ -1,7 +1,6 @@
 package authority
 
 import (
-	"webtyp.com/auth"
 	"webtyp.com/ddl"
 	"webtyp.com/model"
 )
@@ -27,8 +26,8 @@ import (
 //	err := authority.Migrate(db.RawConn(), db.RawConn().(ddl.Compiler))
 func Migrate(conn ddl.Execer, ddlCompiler ddl.Compiler) error {
 	models := []model.Model{
-		&auth.User{}, &auth.Identity{}, &auth.LANIP{},
-		&auth.OAuthState{}, &auth.Session{},
+		&User{}, &Identity{}, &LANIP{},
+		&OAuthState{}, &Session{},
 	}
 	sorted, err := ddl.TopologicalSort(models)
 	if err != nil {

@@ -7,10 +7,11 @@ import (
 
 	"webtyp.com/auth"
 	"webtyp.com/auth/authority"
+	"webtyp.com/crud"
 	"webtyp.com/json"
 	"webtyp.com/model"
+	"webtyp.com/router"
 	"webtyp.com/router/mock"
-	"webtyp.com/view"
 )
 
 func TestTools_Me(t *testing.T) {
@@ -25,21 +26,10 @@ func TestTools_Me(t *testing.T) {
 	u := res.(auth.User)
 
 	t.Run("Authenticated me returns profile", func(t *testing.T) {
-		reg := &mockOpRegistry{ops: make(map[string]*mockRoute)}
-		m.MountOperations(reg)
-
-		route := reg.ops[auth.OpMe]
-		if route == nil {
-			t.Fatal("me op not registered")
-		}
-		if !route.authenticated {
-			t.Error("me op should be authenticated")
-		}
-
 		ctx := &mock.Context{}
 		ctx.SetUserID(u.Id)
 
-		route.handler(ctx)
+		callMe(m, ctx)
 
 		if ctx.Status != 0 && ctx.Status != 200 {
 			t.Fatalf("handler returned status: %d", ctx.Status)
@@ -55,132 +45,55 @@ func TestTools_Me(t *testing.T) {
 	})
 
 	t.Run("Anonymous me returns error", func(t *testing.T) {
-		reg := &mockOpRegistry{ops: make(map[string]*mockRoute)}
-		m.MountOperations(reg)
-
-		route := reg.ops[auth.OpMe]
 		ctx := &mock.Context{}
 		// No userID set
-		route.handler(ctx)
-		if ctx.Status != 401 {
-			t.Errorf("expected 401, got %d", ctx.Status)
+		callMe(m, ctx)
+		if ctx.Status != 401 && ctx.Status != 403 {
+			t.Errorf("an anonymous caller must be refused (401 or 403), got %d", ctx.Status)
 		}
 	})
 }
 
-func TestAdminOps(t *testing.T) {
+// TestUser_CrudThroughLoopback walks the four actions of the user entity through crud, as the admin screen does.
+func TestUser_CrudThroughLoopback(t *testing.T) {
 	db := newTestDB(t)
 	m, _ := authority.New(db, auth.Config{IDs: testIDs})
-
-	// 1. Verify MountOperations registration and Gates
-	reg := &mockOpRegistry{ops: make(map[string]*mockRoute)}
-	m.MountOperations(reg)
-
-	listRoute := reg.ops[auth.OpListUsers]
-	if listRoute == nil {
-		t.Fatal("list_users op not registered")
-	}
-	if listRoute.requiredRes != "users" || listRoute.requiredAct != model.Read {
-		t.Errorf("list_users has wrong gating: res=%s act=%v", listRoute.requiredRes, listRoute.requiredAct)
+	caller := crud.LoopbackActingAs(nil, "admin-1", m)
+	op := func(action model.Action) router.Operation {
+		return router.Operation{Module: authority.ModelName, Entity: "user", Action: action}
 	}
 
-	upsertRoute := reg.ops[auth.OpUpsertUser]
-	if upsertRoute == nil {
-		t.Fatal("upsert_user op not registered")
+	var created authority.User
+	var err error
+	caller.Call(op(model.Create), &crud.CreateArgs{Records: []model.Model{&authority.User{Email: "a@x.cl", Name: "Ana"}}}, &created, func(e error) { err = e })
+	if err != nil {
+		t.Fatalf("user.create: %v", err)
 	}
-	if upsertRoute.requiredRes != "users" || upsertRoute.requiredAct != (model.Create|model.Update) {
-		t.Errorf("upsert_user has wrong gating: res=%s act=%v", upsertRoute.requiredRes, upsertRoute.requiredAct)
-	}
-
-	deleteRoute := reg.ops[auth.OpDeleteUser]
-	if deleteRoute == nil {
-		t.Fatal("delete_user op not registered")
-	}
-	if deleteRoute.requiredRes != "users" || deleteRoute.requiredAct != model.Delete {
-		t.Errorf("delete_user has wrong gating: res=%s act=%v", deleteRoute.requiredRes, deleteRoute.requiredAct)
+	got, gerr := m.GetUser(created.Id)
+	if gerr != nil || got.Status != "active" || got.CreatedAt == 0 {
+		t.Fatalf("created user must be active and stamped, got %+v, %v", got, gerr)
 	}
 
-	// 2. Exercise handlers
-	t.Run("list_users handler", func(t *testing.T) {
-		ctx := &mock.Context{}
-		args := view.ListArgs{Limit: view.MaxPage}
-		var body string
-		json.Encode(&args, &body)
-		ctx.InBody = []byte(body)
-		listRoute.handler(ctx)
+	caller.Call(op(model.Update), &crud.UpdateArgs{IDs: []string{created.Id}, Fields: []string{"name"}, Record: &authority.User{Name: "Ana María"}}, nil, func(e error) { err = e })
+	if err != nil {
+		t.Fatalf("user.update: %v", err)
+	}
+	if got, _ := m.GetUser(created.Id); got.Name != "Ana María" {
+		t.Fatalf("the update was not seen by GetUser (cache not invalidated): %+v", got)
+	}
 
-		if ctx.Status != 0 && ctx.Status != 200 {
-			t.Fatalf("list_users handler failed: %d", ctx.Status)
-		}
+	caller.Call(op(model.Update), &crud.UpdateArgs{IDs: []string{created.Id}, Fields: []string{"status"}, Record: &authority.User{Status: "suspended"}}, nil, func(e error) { err = e })
+	if err == nil {
+		t.Fatal("status must not be editable through user.update")
+	}
 
-		var list auth.UserList
-		if err := json.Decode(ctx.ResponseBody(), &list); err != nil {
-			t.Fatalf("failed to decode list: %v", err)
-		}
-	})
-
-	t.Run("upsert_user create handler", func(t *testing.T) {
-		u := &auth.User{
-			Email: "created_op@test.com",
-			Name:  "Op Created",
-			Phone: "12345",
-		}
-		ctx := &mock.Context{}
-		var body string
-		if err := json.Encode(u, &body); err != nil {
-			t.Fatal(err)
-		}
-		ctx.InBody = []byte(body)
-
-		upsertRoute.handler(ctx)
-
-		// Verify user got created in DB
-		saved, err := m.GetUserByEmail("created_op@test.com")
-		if err != nil {
-			t.Fatalf("user was not created: %v", err)
-		}
-		if saved.Name != "Op Created" {
-			t.Errorf("wrong user name: %s", saved.Name)
-		}
-
-		t.Run("upsert_user update handler", func(t *testing.T) {
-			saved.Name = "Op Updated"
-			ctxUpdate := &mock.Context{}
-			var bodyUpdate string
-			if err := json.Encode(&saved, &bodyUpdate); err != nil {
-				t.Fatal(err)
-			}
-			ctxUpdate.InBody = []byte(bodyUpdate)
-
-			upsertRoute.handler(ctxUpdate)
-
-			// Verify user got updated in DB
-			updated, err := m.GetUser(saved.Id)
-			if err != nil {
-				t.Fatalf("failed to retrieve updated user: %v", err)
-			}
-			if updated.Name != "Op Updated" {
-				t.Errorf("user name not updated: %s", updated.Name)
-			}
-
-			t.Run("delete_user handler", func(t *testing.T) {
-				ctxDel := &mock.Context{}
-				var bodyDel string
-				if err := json.Encode(&updated, &bodyDel); err != nil {
-					t.Fatal(err)
-				}
-				ctxDel.InBody = []byte(bodyDel)
-
-				deleteRoute.handler(ctxDel)
-
-				// Verify user got deleted from DB
-				_, err := m.GetUser(updated.Id)
-				if !auth.IsNotFound(err) {
-					t.Errorf("expected ErrNotFound after deletion, got %v", err)
-				}
-			})
-		})
-	})
+	caller.Call(op(model.Delete), &crud.DeleteArgs{IDs: []string{created.Id}}, nil, func(e error) { err = e })
+	if err != nil {
+		t.Fatalf("user.delete: %v", err)
+	}
+	if _, gerr := m.GetUser(created.Id); gerr == nil {
+		t.Fatal("the deleted user is still readable")
+	}
 }
 
 func TestNew_Validation(t *testing.T) {

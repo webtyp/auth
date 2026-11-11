@@ -27,23 +27,24 @@ require (
 	modernc.org/sqlite v1.58.0
 	webtyp.com/auth v0.0.111
 	webtyp.com/base64 v0.0.6
+	webtyp.com/crud v0.0.14
 	webtyp.com/crypto v0.0.30
-	webtyp.com/ddl v0.0.46
-	webtyp.com/events v0.1.0
+	webtyp.com/ddl v0.0.49
+	webtyp.com/events v0.1.8
 	webtyp.com/fmt v1.0.0
 	webtyp.com/form v0.4.52
 	webtyp.com/json v0.5.40
 	webtyp.com/jwt v0.1.29
-	webtyp.com/model v0.2.12
-	webtyp.com/orm v0.12.26
-	webtyp.com/router v0.4.17
+	webtyp.com/model v0.2.20
+	webtyp.com/orm v0.12.33
+	webtyp.com/router v0.4.22
 	webtyp.com/server v0.2.114
 	webtyp.com/sitec v0.2.87
-	webtyp.com/sqlite v0.3.26
+	webtyp.com/sqlite v0.3.36
 	webtyp.com/time v0.6.4
 	webtyp.com/unixid v0.3.1
 	webtyp.com/user v0.3.14
-	webtyp.com/view v0.6.65
+	webtyp.com/view v0.6.74
 )
 
 require (
@@ -80,6 +81,7 @@ require (
 	webtyp.com/context v0.0.23 // indirect
 	webtyp.com/css v0.4.30 // indirect
 	webtyp.com/dbus v0.1.1 // indirect
+	webtyp.com/definitioncheck v0.0.3 // indirect
 	webtyp.com/device v0.1.0 // indirect
 	webtyp.com/dom v0.13.29 // indirect
 	webtyp.com/env v0.1.3 // indirect
@@ -93,12 +95,12 @@ require (
 	webtyp.com/input v0.0.36 // indirect
 	webtyp.com/js v0.1.3 // indirect
 	webtyp.com/keyring v0.2.9 // indirect
-	webtyp.com/lang v0.1.14 // indirect
+	webtyp.com/lang v0.1.16 // indirect
 	webtyp.com/modfind v0.0.11 // indirect
+	webtyp.com/msgtype v0.1.0 // indirect
 	webtyp.com/pwa v0.2.13 // indirect
-	webtyp.com/rpc v0.2.14 // indirect
-	webtyp.com/sqlt v0.0.14 // indirect
-	webtyp.com/storage v0.1.18 // indirect
+	webtyp.com/sqlt v0.0.17 // indirect
+	webtyp.com/storage v0.2.2 // indirect
 	webtyp.com/svg v0.3.30 // indirect
 	webtyp.com/tinygo v1.0.1 // indirect
 	webtyp.com/webauthn v0.1.16 // indirect

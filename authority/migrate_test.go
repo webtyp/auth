@@ -6,12 +6,13 @@ import (
 	"webtyp.com/auth/authority"
 	"webtyp.com/ddl"
 	"webtyp.com/model"
+	"webtyp.com/storage"
 )
 
 type dummyExecer struct{}
 
-func (d *dummyExecer) Exec(sql string, args ...any) error {
-	return nil
+func (d *dummyExecer) Exec(sql string, args ...any) (storage.Result, error) {
+	return nil, nil
 }
 
 type dummyCompiler struct{}

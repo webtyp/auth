@@ -94,7 +94,7 @@ func TestPasskeyLogin_WithoutSession(t *testing.T) {
 	}
 	credID := base64.URLEncode([]byte("user-cred-internet"))
 	pubKey := base64.URLEncode(spki)
-	if err := env.db.RawConn().Exec("INSERT INTO passkey_credential (id, user_id, public_key, sign_count) VALUES (?, ?, ?, ?)", credID, env.userID, pubKey, 0); err != nil {
+	if _, err := env.db.RawConn().Exec("INSERT INTO passkey_credential (id, user_id, public_key, sign_count) VALUES (?, ?, ?, ?)", credID, env.userID, pubKey, 0); err != nil {
 		t.Fatal(err)
 	}
 
@@ -163,7 +163,7 @@ func TestPasskeyLogin_ChallengeSingleUse(t *testing.T) {
 	}
 	credID := base64.URLEncode([]byte("user-cred-internet-2"))
 	pubKey := base64.URLEncode(spki)
-	if err := env.db.RawConn().Exec("INSERT INTO passkey_credential (id, user_id, public_key, sign_count) VALUES (?, ?, ?, ?)", credID, env.userID, pubKey, 0); err != nil {
+	if _, err := env.db.RawConn().Exec("INSERT INTO passkey_credential (id, user_id, public_key, sign_count) VALUES (?, ?, ?, ?)", credID, env.userID, pubKey, 0); err != nil {
 		t.Fatal(err)
 	}
 
@@ -237,7 +237,7 @@ func TestPasskeyLogin_ExpiredChallenge(t *testing.T) {
 	}
 	credID := base64.URLEncode([]byte("user-cred-internet-3"))
 	pubKey := base64.URLEncode(spki)
-	if err := env.db.RawConn().Exec("INSERT INTO passkey_credential (id, user_id, public_key, sign_count) VALUES (?, ?, ?, ?)", credID, env.userID, pubKey, 0); err != nil {
+	if _, err := env.db.RawConn().Exec("INSERT INTO passkey_credential (id, user_id, public_key, sign_count) VALUES (?, ?, ?, ?)", credID, env.userID, pubKey, 0); err != nil {
 		t.Fatal(err)
 	}
 
@@ -251,7 +251,7 @@ func TestPasskeyLogin_ExpiredChallenge(t *testing.T) {
 	ch := body[start : start+end]
 
 	// manually expire challenge in DB
-	if err := env.db.RawConn().Exec("UPDATE passkey_challenge SET expires_at = 0 WHERE id = ?", ch); err != nil {
+	if _, err := env.db.RawConn().Exec("UPDATE passkey_challenge SET expires_at = 0 WHERE id = ?", ch); err != nil {
 		t.Fatal(err)
 	}
 
@@ -285,7 +285,7 @@ func TestPasskeyLogin_ExpiredAnonymousChallengesArePurged(t *testing.T) {
 	}
 
 	old := ask()
-	if err := env.db.RawConn().Exec("UPDATE passkey_challenge SET expires_at = 0 WHERE id = ?", old); err != nil {
+	if _, err := env.db.RawConn().Exec("UPDATE passkey_challenge SET expires_at = 0 WHERE id = ?", old); err != nil {
 		t.Fatal(err)
 	}
 	ask()

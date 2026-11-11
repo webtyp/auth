@@ -181,7 +181,7 @@ func TestOAuthStateEmitsExpiredEvent(t *testing.T) {
 	}
 
 	// Set expires_at to past
-	if err := db.RawConn().Exec("UPDATE oauth_state SET expires_at = 0 WHERE state = ?", state); err != nil {
+	if _, err := db.RawConn().Exec("UPDATE oauth_state SET expires_at = 0 WHERE state = ?", state); err != nil {
 		t.Fatalf("failed to expire oauth_state row: %v", err)
 	}
 

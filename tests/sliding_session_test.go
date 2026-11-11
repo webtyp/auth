@@ -37,7 +37,7 @@ func TestSlidingSessionExtendsOnActivity(t *testing.T) {
 	}
 
 	sess.ExpiresAt -= 61
-	db.Update(&sess, orm.Eq(auth.Session_.Id, sess.Id))
+	db.Update(rowOf(sess), orm.Eq(authority.Session_.Id, sess.Id))
 	m, _ = authority.New(db, auth.Config{IDs: testIDs, IdleTTL: 200})
 
 	got, err := m.GetSession(sess.Id)
@@ -50,8 +50,8 @@ func TestSlidingSessionExtendsOnActivity(t *testing.T) {
 
 	// The slide must reach storage: the cache is per-isolate and a Worker
 	// that evicts it would otherwise resurrect the old expiry.
-	qb := db.Query(&auth.Session{}).Where(auth.Session_.Id).Eq(sess.Id)
-	rows, err := auth.ReadAllSession(qb)
+	qb := db.Query(&authority.Session{}).Where(authority.Session_.Id).Eq(sess.Id)
+	rows, err := authority.ReadAllSession(qb)
 	if err != nil || len(rows) == 0 {
 		t.Fatalf("session row unreadable: %v", err)
 	}
@@ -79,7 +79,7 @@ func TestFixedSessionNeverSlides(t *testing.T) {
 	}
 
 	sess.ExpiresAt -= 61
-	db.Update(&sess, orm.Eq(auth.Session_.Id, sess.Id))
+	db.Update(rowOf(sess), orm.Eq(authority.Session_.Id, sess.Id))
 	m, _ = authority.New(db, auth.Config{IDs: testIDs})
 
 	got, err := m.GetSession(sess.Id)

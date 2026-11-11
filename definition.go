@@ -5,68 +5,6 @@ import (
 	"webtyp.com/model"
 )
 
-var UserModel = model.Definition{
-	Name: "user",
-	Fields: model.Fields{
-		{Name: "id", Type: model.Text(), DB: &model.FieldDB{PK: true}},
-		{Name: "email", Type: input.Email(), OmitEmpty: true, DB: &model.FieldDB{Unique: true}, Item: model.ItemDescription},
-		{Name: "name", Type: input.Text(), Item: model.ItemLabel},
-		{Name: "phone", Type: input.Phone()},
-		{Name: "status", Type: model.Text()},
-		{Name: "avatar", Type: model.Text()},
-		{Name: "created_at", Type: model.UnixTime()},
-	},
-}
-
-var SessionModel = model.Definition{
-	Name: "session",
-	Fields: model.Fields{
-		{Name: "id", Type: model.Text(), DB: &model.FieldDB{PK: true}},
-		{Name: "user_id", Type: model.Text(), DB: &model.FieldDB{RefColumn: "id"}, Ref: &UserModel},
-		{Name: "expires_at", Type: model.UnixTime()},
-		{Name: "ip", Type: model.Text()},
-		{Name: "user_agent", Type: model.Text()},
-		{Name: "created_at", Type: model.UnixTime()},
-		{Name: "absolute_at", Type: model.UnixTime()},
-		{Name: "idle_seconds", Type: model.UnixTime()},
-		{Name: "assurance", Type: model.Int()},
-	},
-}
-
-var IdentityModel = model.Definition{
-	Name: "identity",
-	Fields: model.Fields{
-		{Name: "id", Type: model.Text(), DB: &model.FieldDB{PK: true}},
-		{Name: "user_id", Type: model.Text(), DB: &model.FieldDB{RefColumn: "id"}, Ref: &UserModel},
-		{Name: "provider", Type: model.Text()},
-		{Name: "provider_id", Type: model.Text()},
-		{Name: "email", Type: model.Text()},
-		{Name: "created_at", Type: model.UnixTime()},
-	},
-}
-
-var LANIPModel = model.Definition{
-	Name: "lanip",
-	Fields: model.Fields{
-		{Name: "id", Type: model.Text(), DB: &model.FieldDB{PK: true}},
-		{Name: "user_id", Type: model.Text(), DB: &model.FieldDB{RefColumn: "id"}, Ref: &UserModel},
-		{Name: "ip", Type: model.Text()},
-		{Name: "label", Type: model.Text()},
-		{Name: "created_at", Type: model.UnixTime()},
-	},
-}
-
-var OAuthStateModel = model.Definition{
-	Name: "oauth_state",
-	Fields: model.Fields{
-		{Name: "state", Type: model.Text(), DB: &model.FieldDB{PK: true}},
-		{Name: "nonce_hash", Type: model.Text()},
-		{Name: "provider", Type: model.Text()},
-		{Name: "expires_at", Type: model.UnixTime()},
-		{Name: "created_at", Type: model.UnixTime()},
-	},
-}
-
 var LoginDataModel = model.Definition{
 	Name: "login_data",
 	Fields: model.Fields{
@@ -126,25 +64,3 @@ var PasswordDataModel = model.Definition{
 	},
 }
 
-var RegisterLANArgsModel = model.Definition{
-	Name: "register_lan_args",
-	Fields: model.Fields{
-		{Name: "user_id", Type: model.Text(), NotNull: true},
-		{Name: "rut", Type: input.Text(), NotNull: true},
-	},
-}
-
-var LANUserArgsModel = model.Definition{
-	Name: "lan_user_args",
-	Fields: model.Fields{
-		{Name: "user_id", Type: model.Text(), NotNull: true},
-	},
-}
-
-var LANIdentityModel = model.Definition{
-	Name: "lan_identity",
-	Fields: model.Fields{
-		{Name: "user_id", Type: model.Text()},
-		{Name: "rut", Type: model.Text()},
-	},
-}

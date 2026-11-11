@@ -55,9 +55,7 @@ func New(scenarios []Scenario, store auth.SubjectStore, issuer auth.SessionIssue
 	copied := make([]Scenario, len(scenarios))
 	for i, s := range scenarios {
 		roles := make([]string, len(s.Roles))
-		for j, r := range s.Roles {
-			roles[j] = r
-		}
+		copy(roles, s.Roles)
 		copied[i] = Scenario{
 			ID:    s.ID,
 			Name:  s.Name,

@@ -56,6 +56,9 @@ func (m *PasskeyCredential) Validate(action byte) error {
 	return model.ValidateFields(action, m)
 }
 
+func (*PasskeyCredential) Allow() model.Action     { return PasskeyCredentialModel.Allow }
+func (*PasskeyCredentialList) Allow() model.Action { return PasskeyCredentialModel.Allow }
+
 var PasskeyCredential_ = struct {
 	Id string
 	UserId string
@@ -130,6 +133,9 @@ func (s *PasskeyChallengeList) DecodeFields(_ model.FieldReader) {}
 func (m *PasskeyChallenge) Validate(action byte) error {
 	return model.ValidateFields(action, m)
 }
+
+func (*PasskeyChallenge) Allow() model.Action     { return PasskeyChallengeModel.Allow }
+func (*PasskeyChallengeList) Allow() model.Action { return PasskeyChallengeModel.Allow }
 
 var PasskeyChallenge_ = struct {
 	Id string

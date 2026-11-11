@@ -156,8 +156,8 @@ posts it to `auth.PathLoginRUT`. `trustedIPStore` is the consumer's
 `auth.TrustedIPStore` — answer it per user, not per network, or anyone inside
 the LAN can log in as anyone else.
 
-Administering which RUT belongs to which user goes through the `register_lan`,
-`unregister_lan` and `get_lan` operations, gated on `auth.ResourceLANIdentity`.
+Administering which RUT belongs to which user goes through the `lan_identity.create`,
+`lan_identity.delete` and `lan_identity.read` operations, gated on `auth.ResourceLANIdentity`.
 Grant that resource only to LAN administrators: registering a RUT mints a login
 credential, which is a different privilege from editing user records.
 

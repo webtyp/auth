@@ -19,11 +19,12 @@ type domainError string
 func (e domainError) Error() string { return string(e) }
 
 const (
-	ErrInvalidCredentials domainError = "access denied"          // EN: Access Denied                    / ES: Acceso Denegado
-	ErrSuspended          domainError = "user suspended"         // EN: User Suspended                   / ES: Usuario Suspendido
-	ErrEmailTaken         domainError = "email registered"       // EN: Email Registered                 / ES: Correo electrónico Registrado
-	ErrWeakPassword       domainError = "password weak"          // EN: Password Weak                    / ES: Contraseña Débil
-	ErrSessionExpired     domainError = "token expired"          // EN: Token Expired                    / ES: Token Expirado
+	ErrInvalidCredentials domainError = "access denied"    // EN: Access Denied                    / ES: Acceso Denegado
+	ErrSuspended          domainError = "user suspended"   // EN: User Suspended                   / ES: Usuario Suspendido
+	ErrEmailTaken         domainError = "email registered" // EN: Email Registered                 / ES: Correo electrónico Registrado
+	ErrWeakPassword       domainError = "password weak"    // EN: Password Weak                    / ES: Contraseña Débil
+	ErrSessionExpired     domainError = "token expired"    // EN: Token Expired                    / ES: Token Expirado
+	ErrNotEditable        domainError = "field not editable"
 	ErrNotFound           domainError = "user not found"         // EN: User Not Found                   / ES: Usuario No Encontrado
 	ErrProviderNotFound   domainError = "provider not found"     // EN: Provider Not Found               / ES: Proveedor No Encontrado
 	ErrInvalidOAuthState  domainError = "state invalid"          // EN: State Invalid                    / ES: Estado Inválido
@@ -449,6 +450,7 @@ type Config struct {
 const (
 	PathLogin  = "/login"
 	PathLogout = "/logout"
+	PathMe     = "/me" // the authenticated caller's profile
 
 	// PathAfterLogin is where every authenticator redirects once a session
 	// exists. It is the WASM application shell, not the site root: "/" is
@@ -513,24 +515,40 @@ func PathOAuthCallback(provider string) string {
 // TopicSecurity is the events topic every SecurityEvent is published on.
 const TopicSecurity = "auth.security"
 
-// ModelName is this module's identity: authority.Module.ModelName() returns
-// it, and mcp.HarvestOps qualifies every op below as "user.<name>" on the
-// wire. NewView (below) passes this same constant as view.Ops.Module, so the
-// client composes the identical qualified name — neither side hand-writes
-// "user.list_users" as a literal.
-const ModelName = "user"
+// User is the contract's view of a user: what the identity ports hand to callers. The module stores it as
+// authority.User (a model it mounts through crud) and converts at the port.
+type User struct {
+	Id        string
+	Email     string
+	Name      string
+	Phone     string
+	Status    string
+	Avatar    string
+	CreatedAt time.Unix
+}
 
-// Op names — shared vocabulary between the wasm view and the server module.
-const (
-	OpMe         = "me"          // authenticated caller's profile
-	OpListUsers  = "list_users"  // admin: list users
-	OpUpsertUser = "upsert_user" // admin: create (Id=="") or update
-	OpDeleteUser = "delete_user" // admin: delete by record
+// Identity is the contract's view of a provider identity of a user (password, oauth, trusted_ip…).
+type Identity struct {
+	Id         string
+	UserId     string
+	Provider   string
+	ProviderId string
+	Email      string
+	CreatedAt  time.Unix
+}
 
-	OpRegisterLAN   = "register_lan"   // admin: link a RUT to a user (trusted_ip identity)
-	OpUnregisterLAN = "unregister_lan" // admin: remove the user's trusted_ip identity
-	OpGetLAN        = "get_lan"        // admin: read the user's normalized RUT
-)
+// Session is the contract's view of a session.
+type Session struct {
+	Id          string
+	UserId      string
+	ExpiresAt   time.Unix
+	Ip          string
+	UserAgent   string
+	CreatedAt   time.Unix
+	AbsoluteAt  time.Unix
+	IdleSeconds time.Unix
+	Assurance   int64
+}
 
 // ResourceLANIdentity gates the LAN identity ops. It is deliberately NOT the
 // "users" resource those ops sit next to: registering a RUT MINTS A LOGIN

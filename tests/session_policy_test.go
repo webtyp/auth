@@ -36,7 +36,7 @@ func TestSessionPolicy_Expiration(t *testing.T) {
 		sess.CreatedAt -= age
 		sess.ExpiresAt -= age
 		sess.AbsoluteAt -= age
-		if err := db.Update(&sess, orm.Eq(auth.Session_.Id, sess.Id)); err != nil {
+		if err := db.Update(rowOf(sess), orm.Eq(authority.Session_.Id, sess.Id)); err != nil {
 			t.Fatal(err)
 		}
 		m, _ = authority.New(db, auth.Config{IDs: testIDs})
@@ -58,7 +58,7 @@ func TestSessionPolicy_Expiration(t *testing.T) {
 		sess.CreatedAt -= age
 		sess.ExpiresAt -= age
 		sess.AbsoluteAt -= age
-		if err := db.Update(&sess, orm.Eq(auth.Session_.Id, sess.Id)); err != nil {
+		if err := db.Update(rowOf(sess), orm.Eq(authority.Session_.Id, sess.Id)); err != nil {
 			t.Fatal(err)
 		}
 		m, _ = authority.New(db, auth.Config{IDs: testIDs})
@@ -80,7 +80,7 @@ func TestSessionPolicy_Expiration(t *testing.T) {
 		sess.CreatedAt -= age
 		sess.ExpiresAt -= age
 		sess.AbsoluteAt -= age
-		if err := db.Update(&sess, orm.Eq(auth.Session_.Id, sess.Id)); err != nil {
+		if err := db.Update(rowOf(sess), orm.Eq(authority.Session_.Id, sess.Id)); err != nil {
 			t.Fatal(err)
 		}
 		m, _ = authority.New(db, auth.Config{IDs: testIDs})
@@ -125,7 +125,7 @@ func TestSessionPolicy_Expiration(t *testing.T) {
 		// Make sure now + Idle exceeds AbsoluteAt:
 		// If age is 3000, now is T+0. CreatedAt is T-3000. AbsoluteAt is CreatedAt + 3600 = T+600.
 		// Idle is 900. now + 900 = T+900 > T+600. So it should be capped at T+600.
-		if err := db.Update(&sess, orm.Eq(auth.Session_.Id, sess.Id)); err != nil {
+		if err := db.Update(rowOf(sess), orm.Eq(authority.Session_.Id, sess.Id)); err != nil {
 			t.Fatal(err)
 		}
 		m, _ = authority.New(db, auth.Config{IDs: testIDs})
@@ -152,7 +152,7 @@ func TestSessionPolicy_Expiration(t *testing.T) {
 		sess.CreatedAt -= age
 		sess.ExpiresAt -= age
 		sess.AbsoluteAt -= age
-		if err := db.Update(&sess, orm.Eq(auth.Session_.Id, sess.Id)); err != nil {
+		if err := db.Update(rowOf(sess), orm.Eq(authority.Session_.Id, sess.Id)); err != nil {
 			t.Fatal(err)
 		}
 		m, _ = authority.New(db, auth.Config{IDs: testIDs})
@@ -239,7 +239,7 @@ func TestSessionPolicy_Rotate(t *testing.T) {
 	sess.CreatedAt -= age
 	sess.AbsoluteAt -= age
 	sess.ExpiresAt -= age
-	if err := db.Update(&sess, orm.Eq(auth.Session_.Id, sess.Id)); err != nil {
+	if err := db.Update(rowOf(sess), orm.Eq(authority.Session_.Id, sess.Id)); err != nil {
 		t.Fatal(err)
 	}
 	m, _ = authority.New(db, auth.Config{IDs: testIDs})

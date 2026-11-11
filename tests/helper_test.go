@@ -7,9 +7,11 @@ import (
 	"sync"
 
 	"webtyp.com/auth"
+	"webtyp.com/auth/authority"
 	"webtyp.com/events"
 	"webtyp.com/model"
 	"webtyp.com/router"
+	"webtyp.com/router/mock"
 )
 
 type testIDGenerator struct {
@@ -100,3 +102,11 @@ func (r *mockRoute) RequiresMFA() router.Route {
 }
 
 var testPolicy = auth.SessionPolicy{Absolute: 3600, Assurance: model.AssuranceSingleFactor}
+
+// callMe mounts the module's API on a mock router and runs GET /me as the caller of ctx.
+func callMe(m *authority.Module, ctx *mock.Context) {
+	r := &mock.Router{}
+	m.MountAPI(r)
+	ctx.InMethod, ctx.InPath = "GET", auth.PathMe
+	r.Invoke("GET", auth.PathMe, ctx)
+}

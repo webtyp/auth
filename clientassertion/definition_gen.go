@@ -44,6 +44,9 @@ func (m *ClientAssertionJti) Validate(action byte) error {
 	return model.ValidateFields(action, m)
 }
 
+func (*ClientAssertionJti) Allow() model.Action     { return ClientAssertionJtiModel.Allow }
+func (*ClientAssertionJtiList) Allow() model.Action { return ClientAssertionJtiModel.Allow }
+
 var ClientAssertionJti_ = struct {
 	Id string
 	ExpiresAt string

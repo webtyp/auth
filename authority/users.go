@@ -4,16 +4,16 @@ import (
 	"webtyp.com/fmt"
 	"webtyp.com/time"
 
+	"webtyp.com/auth"
 	"webtyp.com/model"
 	"webtyp.com/orm"
-	"webtyp.com/auth"
 )
 
 func createUser(db *orm.DB, ids model.IDGenerator, email, name, phone string) (auth.User, error) {
 	id := ids.NewID()
 	now := time.NowUnix()
 
-	newUser := auth.User{
+	newUser := User{
 		Id:        id,
 		Email:     email,
 		Name:      name,
@@ -28,7 +28,7 @@ func createUser(db *orm.DB, ids model.IDGenerator, email, name, phone string) (a
 		}
 		return auth.User{}, err
 	}
-	return newUser, nil
+	return auth.User(newUser), nil
 }
 
 func (m *Module) GetUser(id string) (auth.User, error) {
@@ -42,8 +42,8 @@ func getUser(db *orm.DB, cache *userCache, id string) (auth.User, error) {
 		}
 	}
 
-	qb := db.Query(&auth.User{}).Where(auth.User_.Id).Eq(id)
-	results, err := auth.ReadAllUser(qb)
+	qb := db.Query(&User{}).Where(User_.Id).Eq(id)
+	results, err := ReadAllUser(qb)
 	if err != nil {
 		return auth.User{}, err
 	}
@@ -53,9 +53,10 @@ func getUser(db *orm.DB, cache *userCache, id string) (auth.User, error) {
 	u := results[0]
 
 	if cache != nil {
-		cache.Set(u.Id, u)
+		cu := auth.User(*u)
+		cache.Set(u.Id, &cu)
 	}
-	return *u, nil
+	return auth.User(*u), nil
 }
 
 func getUserByEmail(db *orm.DB, cache *userCache, email string) (auth.User, error) {
@@ -68,8 +69,8 @@ func getUserByEmail(db *orm.DB, cache *userCache, email string) (auth.User, erro
 		return auth.User{}, auth.ErrNotFound
 	}
 
-	qb := db.Query(&auth.User{}).Where(auth.User_.Email).Eq(email)
-	results, err := auth.ReadAllUser(qb)
+	qb := db.Query(&User{}).Where(User_.Email).Eq(email)
+	results, err := ReadAllUser(qb)
 	if err != nil {
 		return auth.User{}, err
 	}
@@ -82,84 +83,85 @@ func getUserByEmail(db *orm.DB, cache *userCache, email string) (auth.User, erro
 		if cached, ok := cache.Get(u.Id); ok {
 			return *cached, nil
 		}
-		cache.Set(u.Id, u)
+		cu := auth.User(*u)
+		cache.Set(u.Id, &cu)
 	}
-	return *u, nil
+	return auth.User(*u), nil
 }
 
 func updateUser(db *orm.DB, cache *userCache, id, name, phone string) error {
 	if cache != nil {
 		cache.Delete(id)
 	}
-	qb := db.Query(&auth.User{}).Where(auth.User_.Id).Eq(id)
-	results, err := auth.ReadAllUser(qb)
+	qb := db.Query(&User{}).Where(User_.Id).Eq(id)
+	results, err := ReadAllUser(qb)
 	if err != nil || len(results) == 0 {
 		return auth.ErrNotFound
 	}
 	u := results[0]
 	u.Name = name
 	u.Phone = phone
-	return db.Update(u, orm.Eq(auth.User_.Id, u.Id))
+	return db.Update(u, orm.Eq(User_.Id, u.Id))
 }
 
 func updateUserAvatar(db *orm.DB, cache *userCache, id, avatar string) error {
 	if cache != nil {
 		cache.Delete(id)
 	}
-	qb := db.Query(&auth.User{}).Where(auth.User_.Id).Eq(id)
-	results, err := auth.ReadAllUser(qb)
+	qb := db.Query(&User{}).Where(User_.Id).Eq(id)
+	results, err := ReadAllUser(qb)
 	if err != nil || len(results) == 0 {
 		return auth.ErrNotFound
 	}
 	u := results[0]
 	u.Avatar = avatar
-	return db.Update(u, orm.Eq(auth.User_.Id, u.Id))
+	return db.Update(u, orm.Eq(User_.Id, u.Id))
 }
 
 func suspendUser(db *orm.DB, cache *userCache, id string) error {
 	if cache != nil {
 		cache.Delete(id)
 	}
-	qb := db.Query(&auth.User{}).Where(auth.User_.Id).Eq(id)
-	results, err := auth.ReadAllUser(qb)
+	qb := db.Query(&User{}).Where(User_.Id).Eq(id)
+	results, err := ReadAllUser(qb)
 	if err != nil || len(results) == 0 {
 		return auth.ErrNotFound
 	}
 	u := results[0]
 	u.Status = "suspended"
-	return db.Update(u, orm.Eq(auth.User_.Id, u.Id))
+	return db.Update(u, orm.Eq(User_.Id, u.Id))
 }
 
 func reactivateUser(db *orm.DB, cache *userCache, id string) error {
 	if cache != nil {
 		cache.Delete(id)
 	}
-	qb := db.Query(&auth.User{}).Where(auth.User_.Id).Eq(id)
-	results, err := auth.ReadAllUser(qb)
+	qb := db.Query(&User{}).Where(User_.Id).Eq(id)
+	results, err := ReadAllUser(qb)
 	if err != nil || len(results) == 0 {
 		return auth.ErrNotFound
 	}
 	u := results[0]
 	u.Status = "active"
-	return db.Update(u, orm.Eq(auth.User_.Id, u.Id))
+	return db.Update(u, orm.Eq(User_.Id, u.Id))
 }
 
 func listUsers(db *orm.DB, search, after string, limit int64) ([]auth.User, error) {
-	qb := db.Query(&auth.User{})
+	qb := db.Query(&User{})
 	if search != "" {
-		qb = qb.Where(auth.User_.Name).Like("%" + search + "%")
+		qb = qb.Where(User_.Name).Like("%" + search + "%")
 	}
 	if after != "" {
-		qb = qb.Where(auth.User_.Id).Gt(after)
+		qb = qb.Where(User_.Id).Gt(after)
 	}
-	qb = qb.OrderBy(auth.User_.Id).Asc().Limit(int(limit))
-	users, err := auth.ReadAllUser(qb)
+	qb = qb.OrderBy(User_.Id).Asc().Limit(int(limit))
+	users, err := ReadAllUser(qb)
 	if err != nil {
 		return nil, err
 	}
 	res := make([]auth.User, len(users))
 	for i, u := range users {
-		res[i] = *u
+		res[i] = auth.User(*u)
 	}
 	return res, nil
 }
@@ -168,13 +170,13 @@ func deleteUser(db *orm.DB, cache *userCache, id string) error {
 	if cache != nil {
 		cache.Delete(id)
 	}
-	qb := db.Query(&auth.User{}).Where(auth.User_.Id).Eq(id)
-	results, err := auth.ReadAllUser(qb)
+	qb := db.Query(&User{}).Where(User_.Id).Eq(id)
+	results, err := ReadAllUser(qb)
 	if err != nil || len(results) == 0 {
 		return auth.ErrNotFound
 	}
 	u := results[0]
-	return db.Delete(u, orm.Eq(auth.User_.Id, u.Id))
+	return db.Delete(u, orm.Eq(User_.Id, u.Id))
 }
 
 func isUniqueViolation(err error) bool {

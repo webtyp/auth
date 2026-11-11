@@ -21,6 +21,7 @@ const StepUpCookieName = "stepup"
 // this type. Created exclusively via New().
 type Module struct {
 	db     *orm.DB
+	users  *orm.Store // users table through crud (no tenant: users are global)
 	cache  *sessionCache
 	ucache *userCache
 	config auth.Config
@@ -57,6 +58,7 @@ func New(db *orm.DB, cfg auth.Config) (*Module, error) {
 
 	m := &Module{
 		db:     db,
+		users:  orm.GlobalStore(db, cfg.IDs),
 		cache:  newSessionCache(),
 		ucache: newUserCache(),
 		config: cfg,
@@ -143,23 +145,14 @@ func (m *Module) ReactivateUser(id string) error { return reactivateUser(m.db, m
 
 // PurgeSessionsByUser deletes all sessions belonging to userID from cache and DB.
 func (m *Module) PurgeSessionsByUser(userID string) error {
-	qb := m.db.Query(&auth.Session{}).Where(auth.Session_.UserId).Eq(userID)
-	sessions, err := auth.ReadAllSession(qb)
+	qb := m.db.Query(&Session{}).Where(Session_.UserId).Eq(userID)
+	sessions, err := ReadAllSession(qb)
 	if err != nil {
 		return err
 	}
 	for _, s := range sessions {
-		m.db.Delete(s, orm.Eq(auth.Session_.Id, s.Id))
+		m.db.Delete(s, orm.Eq(Session_.Id, s.Id))
 		m.cache.delete(s.Id)
 	}
 	return nil
-}
-
-// Add returns all admin-managed CRUDP handlers for registration.
-// Usage: cp.RegisterHandlers(m.Add()...)
-func (m *Module) Add() []any {
-	return []any{
-		&userCRUD{db: m.db, cache: m.ucache, ids: m.ids},
-		&lanipCRUD{m: m},
-	}
 }

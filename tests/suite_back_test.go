@@ -11,9 +11,12 @@ import (
 	emailpassword "webtyp.com/auth/email_password"
 	"webtyp.com/auth/oauth2"
 	trustedip "webtyp.com/auth/trusted_ip"
+	"webtyp.com/crud"
 	"webtyp.com/crypto/bcrypt"
 	"webtyp.com/ddl"
+	"webtyp.com/model"
 	"webtyp.com/orm"
+	"webtyp.com/router"
 	"webtyp.com/router/mock"
 	"webtyp.com/sqlite"
 )
@@ -58,23 +61,35 @@ func testInit(t *testing.T) {
 	_ = m // to be used later
 }
 
-func getHandler(m *authority.Module, name string) interface {
-	Create(any) (any, error)
-	Read(string) (any, error)
-	Update(any) (any, error)
-	Delete(string) error
-} {
-	for _, h := range m.Add() {
-		if hr, ok := h.(interface{ HandlerName() string }); ok && hr.HandlerName() == name {
-			return h.(interface {
-				Create(any) (any, error)
-				Read(string) (any, error)
-				Update(any) (any, error)
-				Delete(string) error
-			})
-		}
-	}
-	return nil
+// userHandler adapts the kept methods and the crud operations of the user entity to the small Create/Read/Update/Delete
+// shape the older tests of this suite were written against.
+type userHandler struct{ m *authority.Module }
+
+func getHandler(m *authority.Module, name string) *userHandler { return &userHandler{m: m} }
+
+func (h *userHandler) call(action model.Action, args model.Encodable) error {
+	var callErr error
+	crud.LoopbackActingAs(nil, "admin-1", h.m).Call(
+		router.Operation{Module: authority.ModelName, Entity: "user", Action: action},
+		args, nil, func(err error) { callErr = err })
+	return callErr
+}
+
+func (h *userHandler) Create(payload any) (any, error) {
+	u := payload.(auth.User)
+	return h.m.CreateUser(u.Email, u.Name, u.Phone)
+}
+
+func (h *userHandler) Read(id string) (any, error) { return h.m.GetUser(id) }
+
+func (h *userHandler) Update(payload any) (any, error) {
+	u := payload.(auth.User)
+	err := h.call(model.Update, &crud.UpdateArgs{IDs: []string{u.Id}, Fields: []string{"name", "phone"}, Record: &authority.User{Name: u.Name, Phone: u.Phone}})
+	return u, err
+}
+
+func (h *userHandler) Delete(id string) error {
+	return h.call(model.Delete, &crud.DeleteArgs{IDs: []string{id}})
 }
 
 func testCRUD(t *testing.T) {
@@ -185,7 +200,7 @@ func testSessions(t *testing.T) {
 	}
 
 	// Instant expire via SQL
-	if err := db.RawConn().Exec("UPDATE session SET expires_at = 0 WHERE id = ?", sess.Id); err != nil {
+	if _, err := db.RawConn().Exec("UPDATE session SET expires_at = 0 WHERE id = ?", sess.Id); err != nil {
 		t.Fatalf("failed to expire session in DB: %v", err)
 	}
 

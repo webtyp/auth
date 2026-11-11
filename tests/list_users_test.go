@@ -7,12 +7,12 @@ import (
 
 	"webtyp.com/auth"
 	"webtyp.com/auth/authority"
+	"webtyp.com/crud"
 	"webtyp.com/ddl"
-	"webtyp.com/json"
+	"webtyp.com/model"
 	"webtyp.com/orm"
-	"webtyp.com/router/mock"
+	"webtyp.com/router"
 	"webtyp.com/sqlite"
-	"webtyp.com/view"
 )
 
 func TestListUsers_Empty(t *testing.T) {
@@ -76,67 +76,41 @@ func TestListUsers_DatabaseClosed(t *testing.T) {
 	}
 }
 
-func TestUsers_ListAcceptsListArgs(t *testing.T) {
+func TestUsers_ListAcceptsReadArgs(t *testing.T) {
 	db := newTestDB(t)
 	m, _ := authority.New(db, auth.Config{IDs: testIDs})
-
-	reg := &mockOpRegistry{ops: make(map[string]*mockRoute)}
-	m.MountOperations(reg)
-
-	route, ok := reg.ops[auth.OpListUsers]
-	if !ok || route == nil {
-		t.Fatalf("op %s not mounted", auth.OpListUsers)
-	}
-	if _, ok := route.acceptedArg.(*view.ListArgs); !ok {
-		t.Fatalf("expected acceptedArg to be *view.ListArgs, got %T", route.acceptedArg)
-	}
-
 	m.CreateUser("user1@test.com", "Alice", "")
 	m.CreateUser("user2@test.com", "Bob", "")
 	m.CreateUser("user3@test.com", "Charlie", "")
 
+	caller := crud.LoopbackActingAs(nil, "admin-1", m)
+	read := func(args *crud.ReadArgs) authority.UserList {
+		t.Helper()
+		var list authority.UserList
+		var callErr error
+		caller.Call(router.Operation{Module: authority.ModelName, Entity: "user", Action: model.Read}, args, &list, func(err error) { callErr = err })
+		if callErr != nil {
+			t.Fatalf("user.read: %v", callErr)
+		}
+		return list
+	}
+
 	// 1. Limit
-	ctx := &mock.Context{}
-	args := view.ListArgs{Limit: 2}
-	var body string
-	json.Encode(&args, &body)
-	ctx.InBody = []byte(body)
-	route.handler(ctx)
-	if ctx.Status != 0 && ctx.Status != 200 {
-		t.Fatalf("handler failed: %d", ctx.Status)
-	}
-	var list auth.UserList
-	if err := json.Decode(ctx.ResponseBody(), &list); err != nil {
-		t.Fatalf("decode failed: %v", err)
-	}
+	list := read(&crud.ReadArgs{Limit: 2})
 	if len(list) != 2 {
 		t.Fatalf("expected 2 users with Limit=2, got %d", len(list))
 	}
 
 	// 2. Search
-	ctx = &mock.Context{}
-	args = view.ListArgs{Search: "Bob", Limit: 10}
-	json.Encode(&args, &body)
-	ctx.InBody = []byte(body)
-	route.handler(ctx)
-	var searchList auth.UserList
-	json.Decode(ctx.ResponseBody(), &searchList)
-	if len(searchList) != 1 || searchList[0].Name != "Bob" {
-		t.Fatalf("search failed, got %+v", searchList)
+	found := read(&crud.ReadArgs{Search: "Bob", Limit: 10})
+	if len(found) != 1 || found[0].Name != "Bob" {
+		t.Fatalf("search failed, got %+v", found)
 	}
 
 	// 3. After
-	ctx = &mock.Context{}
-	args = view.ListArgs{After: list[0].Id, Limit: 10}
-	json.Encode(&args, &body)
-	ctx.InBody = []byte(body)
-	route.handler(ctx)
-	var afterList auth.UserList
-	json.Decode(ctx.ResponseBody(), &afterList)
-	for _, u := range afterList {
+	for _, u := range read(&crud.ReadArgs{After: list[0].Id, Limit: 10}) {
 		if u.Id <= list[0].Id {
 			t.Fatalf("after failed, found id %s <= %s", u.Id, list[0].Id)
 		}
 	}
 }
-

@@ -140,19 +140,16 @@ Each session row carries its own `SessionPolicy`: `AbsoluteAt` (hard cap), `Idle
 
 ## LAN Identity Administration Operations
 
-`authority` exports three operations for LAN RUT identity administration:
+`authority` mounts the `lan_identity` entity through `crud` (the store is `lanStore`, a projection of the `trusted_ip` identities, not a table):
 
-| Op | Name | Gate |
+| Operation | What it does | Permission |
 |---|---|---|
-| `OpRegisterLAN` | `register_lan` | `ResourceLANIdentity` + `Create\|Update` |
-| `OpUnregisterLAN` | `unregister_lan` | `ResourceLANIdentity` + `Delete` |
-| `OpGetLAN` | `get_lan` | `ResourceLANIdentity` + `Read` |
-
-`register_lan` links a normalized RUT to a user id, `unregister_lan` removes
-that identity and the user's allowed IPs, `get_lan` reads the registered RUT.
+| `lan_identity.create` | links a normalized RUT to a user id (the answer carries the normalized RUT) | `lan_identity` + Create |
+| `lan_identity.delete` | removes that identity and the user's allowed IPs | `lan_identity` + Delete |
+| `lan_identity.read` | reads the registered RUT of a user | `lan_identity` + Read |
 
 They are gated on `auth.ResourceLANIdentity` (`"lan_identity"`) and deliberately
-**not** on `"users"`, which gates the user CRUD ops next to them. Registering a
+**not** on `"user"`, which gates the user CRUD operations next to them. Registering a
 RUT mints a login credential: an actor who could link their own RUT to a
 privileged user's id would obtain that user's session as soon as their IP passes
 `TrustedIPStore`. Gating both on one resource would make "may create or update

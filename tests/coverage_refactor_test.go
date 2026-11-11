@@ -422,10 +422,10 @@ func TestCoverage_OAuthTokenDecode(t *testing.T) {
 
 func TestCoverage_GeneratedTypes(t *testing.T) {
 	models := []model.Model{
-		&auth.User{},
-		&auth.Identity{}, &auth.LANIP{},
-		&auth.OAuthState{},
-		&auth.Session{},
+		&authority.User{},
+		&authority.Identity{}, &authority.LANIP{},
+		&authority.OAuthState{},
+		&authority.Session{},
 	}
 	for _, m := range models {
 		_ = m.ModelName()
@@ -439,10 +439,10 @@ func TestCoverage_GeneratedTypes(t *testing.T) {
 	}
 
 	lists := []model.ModelSlice{
-		&auth.UserList{},
-		&auth.IdentityList{}, &auth.LANIPList{},
-		&auth.OAuthStateList{},
-		&auth.SessionList{},
+		&authority.UserList{},
+		&authority.IdentityList{}, &authority.LANIPList{},
+		&authority.OAuthStateList{},
+		&authority.SessionList{},
 	}
 	for _, l := range lists {
 		// No Schema()/Pointers() here: a list is a sequence of rows and has no

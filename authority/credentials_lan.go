@@ -62,51 +62,51 @@ func (m *Module) UnregisterLAN(userID string) error {
 	if err != nil {
 		return err
 	}
-	qb := m.db.Query(&auth.LANIP{}).Where(auth.LANIP_.UserId).Eq(userID)
-	ips, _ := auth.ReadAllLANIP(qb)
+	qb := m.db.Query(&LANIP{}).Where(LANIP_.UserId).Eq(userID)
+	ips, _ := ReadAllLANIP(qb)
 	for _, ip := range ips {
-		m.db.Delete(ip, orm.Eq(auth.LANIP_.Id, ip.Id))
+		m.db.Delete(ip, orm.Eq(LANIP_.Id, ip.Id))
 	}
-	qbId := m.db.Query(&auth.Identity{}).Where(auth.Identity_.UserId).Eq(userID).Where(auth.Identity_.Provider).Eq(auth.ProviderTrustedIP)
-	ids, _ := auth.ReadAllIdentity(qbId)
+	qbId := m.db.Query(&Identity{}).Where(Identity_.UserId).Eq(userID).Where(Identity_.Provider).Eq(auth.ProviderTrustedIP)
+	ids, _ := ReadAllIdentity(qbId)
 	for _, id := range ids {
-		m.db.Delete(id, orm.Eq(auth.Identity_.Id, id.Id))
+		m.db.Delete(id, orm.Eq(Identity_.Id, id.Id))
 	}
 	return nil
 }
 
 func (m *Module) AssignLANIP(userID, ip, label string) error {
-	qb := m.db.Query(&auth.LANIP{}).Where(auth.LANIP_.Ip).Eq(ip)
-	results, err := auth.ReadAllLANIP(qb)
+	qb := m.db.Query(&LANIP{}).Where(LANIP_.Ip).Eq(ip)
+	results, err := ReadAllLANIP(qb)
 	if err != nil {
 		return err
 	}
 	if len(results) > 0 {
 		return auth.ErrIPTaken
 	}
-	i := &auth.LANIP{Id: m.ids.NewID(), UserId: userID, Ip: ip, Label: label, CreatedAt: time.NowUnix()}
+	i := &LANIP{Id: m.ids.NewID(), UserId: userID, Ip: ip, Label: label, CreatedAt: time.NowUnix()}
 	return m.db.Create(i)
 }
 
 func (m *Module) RevokeLANIP(userID, ip string) error {
-	qb := m.db.Query(&auth.LANIP{}).Where(auth.LANIP_.UserId).Eq(userID).Where(auth.LANIP_.Ip).Eq(ip)
-	results, err := auth.ReadAllLANIP(qb)
+	qb := m.db.Query(&LANIP{}).Where(LANIP_.UserId).Eq(userID).Where(LANIP_.Ip).Eq(ip)
+	results, err := ReadAllLANIP(qb)
 	if err != nil {
 		return err
 	}
 	if len(results) == 0 {
 		return auth.ErrNotFound
 	}
-	return m.db.Delete(results[0], orm.Eq(auth.LANIP_.Id, results[0].Id))
+	return m.db.Delete(results[0], orm.Eq(LANIP_.Id, results[0].Id))
 }
 
-func (m *Module) GetLANIPs(userID string) ([]auth.LANIP, error) {
-	qb := m.db.Query(&auth.LANIP{}).Where(auth.LANIP_.UserId).Eq(userID).OrderBy(auth.LANIP_.CreatedAt).Asc()
-	results, err := auth.ReadAllLANIP(qb)
+func (m *Module) GetLANIPs(userID string) ([]LANIP, error) {
+	qb := m.db.Query(&LANIP{}).Where(LANIP_.UserId).Eq(userID).OrderBy(LANIP_.CreatedAt).Asc()
+	results, err := ReadAllLANIP(qb)
 	if err != nil {
 		return nil, err
 	}
-	ips := make([]auth.LANIP, 0, len(results))
+	ips := make([]LANIP, 0, len(results))
 	for _, r := range results {
 		ips = append(ips, *r)
 	}
@@ -116,8 +116,8 @@ func (m *Module) GetLANIPs(userID string) ([]auth.LANIP, error) {
 // checkLANIP is used by both LoginLAN above and Module.IsTrustedIP (ports.go) —
 // the TrustedIPStore port implementation.
 func checkLANIP(db *orm.DB, userID, ip string) error {
-	qb := db.Query(&auth.LANIP{}).Where(auth.LANIP_.UserId).Eq(userID).Where(auth.LANIP_.Ip).Eq(ip)
-	results, err := auth.ReadAllLANIP(qb)
+	qb := db.Query(&LANIP{}).Where(LANIP_.UserId).Eq(userID).Where(LANIP_.Ip).Eq(ip)
+	results, err := ReadAllLANIP(qb)
 	if err != nil || len(results) == 0 {
 		return auth.ErrInvalidCredentials
 	}

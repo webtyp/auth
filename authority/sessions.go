@@ -8,8 +8,8 @@ import (
 	"webtyp.com/model"
 	"webtyp.com/time"
 
-	"webtyp.com/orm"
 	"webtyp.com/auth"
+	"webtyp.com/orm"
 )
 
 // sessionIDBytes: 32 bytes = 256 bits de entropía para el id de sesión. Un id
@@ -118,7 +118,7 @@ func (m *Module) CreateSession(userID, ip, userAgent string, p auth.SessionPolic
 	if p.Idle > 0 {
 		expiresAt = min(now+p.Idle, absoluteAt)
 	}
-	sess := auth.Session{
+	sess := Session{
 		Id:          id,
 		UserId:      userID,
 		ExpiresAt:   expiresAt,
@@ -133,8 +133,9 @@ func (m *Module) CreateSession(userID, ip, userAgent string, p auth.SessionPolic
 	if err := m.db.Create(&sess); err != nil {
 		return auth.Session{}, err
 	}
-	m.cache.set(sess.Id, sess)
-	return sess, nil
+	contract := auth.Session(sess)
+	m.cache.set(contract.Id, contract)
+	return contract, nil
 }
 
 // GetSession applies the row's own policy: a session past its sliding expiry
@@ -143,15 +144,15 @@ func (m *Module) CreateSession(userID, ip, userAgent string, p auth.SessionPolic
 func (m *Module) GetSession(id string) (auth.Session, error) {
 	s, ok := m.cache.get(id)
 	if !ok {
-		qb := m.db.Query(&auth.Session{}).Where(auth.Session_.Id).Eq(id)
-		results, err := auth.ReadAllSession(qb)
+		qb := m.db.Query(&Session{}).Where(Session_.Id).Eq(id)
+		results, err := ReadAllSession(qb)
 		if err != nil {
 			return auth.Session{}, err
 		}
 		if len(results) == 0 {
 			return auth.Session{}, auth.ErrNotFound
 		}
-		s = *results[0]
+		s = auth.Session(*results[0])
 	}
 
 	now := time.NowUnix()
@@ -176,7 +177,8 @@ func (m *Module) slideSession(s *auth.Session, now time.Unix) {
 		return
 	}
 	s.ExpiresAt = newExpiry
-	if err := m.db.Update(s, orm.Eq(auth.Session_.Id, s.Id)); err != nil && m.log != nil {
+	row := Session(*s)
+	if err := m.db.Update(&row, orm.Eq(Session_.Id, s.Id)); err != nil && m.log != nil {
 		// The session stays valid — failing the request over a bookkeeping
 		// write would log the user out on a transient storage error. But the
 		// slide did not reach the row, so a later isolate will read the older
@@ -187,10 +189,10 @@ func (m *Module) slideSession(s *auth.Session, now time.Unix) {
 
 func (m *Module) DeleteSession(id string) error {
 	m.cache.delete(id)
-	qb := m.db.Query(&auth.Session{}).Where(auth.Session_.Id).Eq(id)
-	results, err := auth.ReadAllSession(qb)
+	qb := m.db.Query(&Session{}).Where(Session_.Id).Eq(id)
+	results, err := ReadAllSession(qb)
 	if err == nil && len(results) > 0 {
-		return m.db.Delete(results[0], orm.Eq(auth.Session_.Id, results[0].Id))
+		return m.db.Delete(results[0], orm.Eq(Session_.Id, results[0].Id))
 	}
 	return err
 }
@@ -208,10 +210,10 @@ func (m *Module) PurgeExpiredSessions() error {
 	m.cache.items = active
 	m.cache.mu.Unlock()
 
-	qb := m.db.Query(&auth.Session{}).Where(auth.Session_.ExpiresAt).Lt(now)
-	sessions, _ := auth.ReadAllSession(qb)
+	qb := m.db.Query(&Session{}).Where(Session_.ExpiresAt).Lt(now)
+	sessions, _ := ReadAllSession(qb)
 	for _, s := range sessions {
-		m.db.Delete(s, orm.Eq(auth.Session_.Id, s.Id))
+		m.db.Delete(s, orm.Eq(Session_.Id, s.Id))
 	}
 
 	return nil

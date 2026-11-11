@@ -143,7 +143,7 @@ func TestPasskey_K1_K2(t *testing.T) {
 	}
 	credID := base64.URLEncode([]byte("cred_k1"))
 	pubKey := base64.URLEncode(spki)
-	if err := env.db.RawConn().Exec("INSERT INTO passkey_credential (id, user_id, public_key, sign_count) VALUES (?, ?, ?, ?)", credID, env.userID, pubKey, 0); err != nil {
+	if _, err := env.db.RawConn().Exec("INSERT INTO passkey_credential (id, user_id, public_key, sign_count) VALUES (?, ?, ?, ?)", credID, env.userID, pubKey, 0); err != nil {
 		t.Fatal(err)
 	}
 
@@ -174,7 +174,7 @@ func TestPasskey_K1_K2(t *testing.T) {
 		sess.CreatedAt -= age
 		sess.AbsoluteAt -= age
 		sess.ExpiresAt -= age
-		if err := env2.db.Update(&sess, orm.Eq(auth.Session_.Id, sess.Id)); err != nil {
+		if err := env2.db.Update(rowOf(sess), orm.Eq(authority.Session_.Id, sess.Id)); err != nil {
 			t.Fatal(err)
 		}
 
@@ -272,7 +272,7 @@ func TestPasskey_K4_K5(t *testing.T) {
 	}
 	credID := base64.URLEncode([]byte("user-cred"))
 	pubKey := base64.URLEncode(spki)
-	if err := env.db.RawConn().Exec("INSERT INTO passkey_credential (id, user_id, public_key, sign_count) VALUES (?, ?, ?, ?)", credID, env.userID, pubKey, 0); err != nil {
+	if _, err := env.db.RawConn().Exec("INSERT INTO passkey_credential (id, user_id, public_key, sign_count) VALUES (?, ?, ?, ?)", credID, env.userID, pubKey, 0); err != nil {
 		t.Fatal(err)
 	}
 
@@ -360,7 +360,7 @@ func TestPasskey_K6_Misc(t *testing.T) {
 	}
 	credID := base64.URLEncode([]byte("user-cred-k6"))
 	pubKey := base64.URLEncode(spki)
-	if err := env.db.RawConn().Exec("INSERT INTO passkey_credential (id, user_id, public_key, sign_count) VALUES (?, ?, ?, ?)", credID, env.userID, pubKey, 0); err != nil {
+	if _, err := env.db.RawConn().Exec("INSERT INTO passkey_credential (id, user_id, public_key, sign_count) VALUES (?, ?, ?, ?)", credID, env.userID, pubKey, 0); err != nil {
 		t.Fatal(err)
 	}
 

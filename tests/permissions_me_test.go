@@ -8,6 +8,7 @@ import (
 
 	"webtyp.com/auth"
 	"webtyp.com/auth/authority"
+	"webtyp.com/crud"
 	"webtyp.com/json"
 	"webtyp.com/model"
 	"webtyp.com/router/mock"
@@ -88,11 +89,9 @@ func TestMeGrantsErrorIs500(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	reg := &mockOpRegistry{ops: make(map[string]*mockRoute)}
-	m.MountOperations(reg)
 	ctx := &mock.Context{}
 	ctx.SetUserID(u.Id)
-	reg.ops[auth.OpMe].handler(ctx)
+	callMe(m, ctx)
 	if ctx.Status != 500 {
 		t.Fatalf("me with a failing GrantLister: status %d, want 500", ctx.Status)
 	}
@@ -146,9 +145,9 @@ func TestCanIgnoresIllegibleEntry(t *testing.T) {
 	}
 }
 
-// TestLANOpsGate proves the LAN ops are gated on their own resource: holding
-// full "users" administration must NOT let a caller mint a login credential.
-func TestLANOpsGate(t *testing.T) {
+// TestLANIdentity_NeedsItsOwnPermission proves the LAN identity is its own resource: a caller who may administer users
+// must NOT be able to mint a login credential. A permission check that answers "users" only refuses every lan_identity action.
+func TestLANIdentity_NeedsItsOwnPermission(t *testing.T) {
 	db := newTestDB(t)
 	m, err := authority.New(db, auth.Config{IDs: testIDs})
 	if err != nil {
@@ -159,20 +158,18 @@ func TestLANOpsGate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	usersAdmin := func(userID string, r model.Resource, a model.Action) bool {
-		return r == "users"
-	}
-
+	usersOnly := func(userID string, r model.Resource, a model.Action) bool { return r == "user" }
 	r := &mock.Router{}
-	r.Configure(mock.Config{Authorize: usersAdmin})
-	m.MountOperations(r)
-
-	for _, op := range []string{auth.OpRegisterLAN, auth.OpUnregisterLAN, auth.OpGetLAN} {
+	r.Configure(mock.Config{Authorize: usersOnly})
+	if err := crud.Mount(r, nil, nil, m); err != nil {
+		t.Fatalf("Mount: %v", err)
+	}
+	for _, op := range []string{"create", "read", "delete"} {
 		ctx := &mock.Context{}
 		ctx.SetUserID(u.Id)
-		r.Invoke("OP", "/"+op, ctx)
+		r.Invoke("OP", "/user.lan_identity."+op, ctx)
 		if ctx.Status != 403 {
-			t.Errorf("%s with users-only permission: status = %d, want 403", op, ctx.Status)
+			t.Errorf("lan_identity.%s with user-only permission: status = %d, want 403", op, ctx.Status)
 		}
 	}
 }
@@ -190,12 +187,9 @@ func meProfile(t *testing.T, perms *auth.Permissions) auth.ProfileDTO {
 		t.Fatal(err)
 	}
 
-	reg := &mockOpRegistry{ops: make(map[string]*mockRoute)}
-	m.MountOperations(reg)
-
 	ctx := &mock.Context{}
 	ctx.SetUserID(u.Id)
-	reg.ops[auth.OpMe].handler(ctx)
+	callMe(m, ctx)
 
 	var profile auth.ProfileDTO
 	if err := json.Decode(ctx.ResponseBody(), &profile); err != nil {

@@ -95,9 +95,12 @@ func testMountAPI(t *testing.T) {
 	r := &mock.Router{}
 	m.MountAPI(r)
 
-	// Verify that all routes registered by MountAPI are public.
-	// This module only provides pre-identity flows (login, logout, oauth).
+	// Verify that all routes registered by MountAPI are public, except the caller's own profile (GET /me), which is
+	// authenticated. This module only provides pre-identity flows (login, logout, oauth) and that profile.
 	for _, info := range r.Routes() {
+		if info.Path == auth.PathMe {
+			continue
+		}
 		if !info.IsPublic() {
 			t.Errorf("Route %s %s must be .Public()", info.Method, info.Path)
 		}
@@ -171,18 +174,9 @@ func testMeTool(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	reg := &mockOpRegistry{ops: make(map[string]*mockRoute)}
-	m.MountOperations(reg)
-
-	route := reg.ops[auth.OpMe]
-	if route == nil {
-		t.Fatal("me op not registered")
-	}
-
 	ctx := &mock.Context{}
 	ctx.SetUserID(uObj.Id)
-
-	route.handler(ctx)
+	callMe(m, ctx)
 
 	var profile auth.ProfileDTO
 	if err := json.Decode(ctx.ResponseBody(), &profile); err != nil {
