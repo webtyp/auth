@@ -31,11 +31,12 @@ Rules:
 
 ## Packages
 
-- `auth`: service, persistence, session middleware, and shared login ports
+- `auth`: the contract. Service, persistence, session middleware, and shared login ports
   (`SubjectStore`, `SessionIssuer`, `IdentityStore`, `StateStore`,
   `SecurityNotifier`, `SessionRepo`).
-- `authority`: concrete `Module` implementing the ports; owns `user`, `session`,
-  `identity`, `lanip`, `oauth_state` tables and the session cache. The session cache
+- `authority`: concrete `Module` implementing the ports; owns the data models (`user`, `session`,
+  `identity`, `lanip`, `oauth_state` tables), mounts `user` and `lan_identity` through `crud`,
+  and the session cache. The session cache
   is strictly read-through (`GetSession` loads on miss) and is intentionally not
   pre-warmed on module construction to avoid costly table scans in short-lived isolate
   environments. Schema DDL is reconciled explicitly via `authority.Migrate` at deploy
@@ -136,7 +137,7 @@ authMod, _ := authority.New(db, auth.Config{
 
 Each session row carries its own `SessionPolicy`: `AbsoluteAt` (hard cap), `IdleSeconds` and `Assurance`. `GetSession` ends a row when `now >= ExpiresAt` or `now >= AbsoluteAt`; otherwise it slides `ExpiresAt` to `min(now+IdleSeconds, AbsoluteAt)`, persisting only when the move is at least 60 s. `Config.TokenTTL` is the absolute cap of the default strategy and `Config.IdleTTL` its idle limit (0 = none).
 
-`Authenticate()` resolves, in order: a `RequestIdentifier` that handled the request, the step-up session (MultiFactor), the main session (SingleFactor), dev autologin (`-tags dev`), anonymous. It sets `ctx.SetUserID` and `ctx.SetAssurance`.
+`Authenticate()` resolves, in order: a `RequestIdentifier` that handled the request, the step-up session (MultiFactor), the main session (SingleFactor), dev autologin (`-tags dev`), anonymous. It sets `ctx.SetUserID` and `ctx.SetAssurance`. `GET /me` (i.e. `auth.PathMe`) replaces the old `me` operation.
 
 ## LAN Identity Administration Operations
 
@@ -149,11 +150,11 @@ Each session row carries its own `SessionPolicy`: `AbsoluteAt` (hard cap), `Idle
 | `lan_identity.read` | reads the registered RUT of a user | `lan_identity` + Read |
 
 They are gated on `auth.ResourceLANIdentity` (`"lan_identity"`) and deliberately
-**not** on `"user"`, which gates the user CRUD operations next to them. Registering a
+**not** on `"user"`, which gates the user CRUD operations next to them. (The resource is `user`, it was `users`: apps re-grant it). Registering a
 RUT mints a login credential: an actor who could link their own RUT to a
 privileged user's id would obtain that user's session as soon as their IP passes
 `TrustedIPStore`. Gating both on one resource would make "may create or update
-users" imply account takeover wherever `TrustedIPStore` answers per network
+user" imply account takeover wherever `TrustedIPStore` answers per network
 rather than per user. An app that never administers LAN identities simply never
 grants the resource — closed by default.
 

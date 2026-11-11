@@ -2,8 +2,10 @@
 PLAN: "chore: auth after the authority/crud migration — translations and documentation check (part 2 of 2)"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 15329636798705440632
+PR: https://github.com/webtyp/auth/pull/17
+REVIEWED_COMMIT: 7c8600152725db406d643ebaf9ed0d770fb0ca7a
 ---
 
 > Read AGENTS.md at the repo root before any change.
@@ -36,3 +38,8 @@ Run `langc sync .` at the root. It must report zero untranslated keys and zero r
 ## Delivery check
 
 `gotest` passes; `langc sync .` is clean; the pull request is open.
+
+## Executor notes
+- All steps requested by the plan were completed. Code changes were explicitly forbidden ("Do NOT change code. Two small stages") since this is part 2 of the migration.
+- Translations were updated in `lang.json` and validated via `langc sync .`
+- Documentation was updated in `README.md` (which was kept ≤ 150 lines) and `docs/ARCHITECTURE.md`.
