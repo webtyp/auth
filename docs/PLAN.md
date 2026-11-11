@@ -2,8 +2,6 @@
 PLAN: "refactor!: auth/authority on the crud-by-declaration framework — the data models move to authority, users and LAN identities through crud, /me as an Infra route"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
-SESSION: 7963674647542572381
 ---
 
 > Read AGENTS.md at the repo root before any change.
@@ -26,7 +24,7 @@ What moves: `User`, `Session`, `Identity`, `LANIP`, `OAuthState` (their `definit
 1. **Do not write, summarize or iterate on a plan.** This index and the stage files are the finished spec. Start Stage 1 now.
 2. **Read files by ranges** (`sed -n 1,80p file`, then `sed -n 81,160p file`); never one huge `cat`: its output is cut.
 3. **A field a rule uses is the one in `definition_gen.go`:** `grep -n "type <Entity> struct" -A25 definition_gen.go`. `ServerOnly` only blocks the CLIENT: a rule may set any field of its receiver and of rows it creates with `tx.Create`. A field that does not exist is a question for the PR (name it), never an invention.
-4. **No python or regex over the source:** edit file by file; `gotest` after each stage.
+4. **No python, sed or regex over the source, ever** (two sessions died of a broken replacement in `credentials_lan.go`): open each file, edit it function by function with the editor, `go build ./authority/` after each file.
 
 ## Stages
 
