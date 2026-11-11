@@ -18,7 +18,7 @@ Every exported method keeps its name and signature (other packages call them: `G
 
 | File | Change |
 |---|---|
-| `oauth2/oauth.go:142` | `var u auth.User` → `var u authority.User` (import `webtyp.com/auth/authority`; `authority` does not import `oauth2`: no cycle) |
+| `oauth2/oauth.go:142` | stays `var u auth.User`: `oauth2` uses the plain contract type that `auth.IdentityStore` returns and does NOT import `authority` (the conversion lives only inside `authority`) |
 | root `view.go` (`NewView`) | MOVE it to `authority/view.go` (it presents `User`): `view.Ops{Module: ModelName, Page: view.Page{First: view.All}}`, `func() model.TableSlice { return &UserList{} }`, `view.New(b, &User{}, view.WithTitle("Usuarios"))`; delete the root `view.go` |
 | `tests/*.go` (nested module) | Stage 4 |
 | other repos (`access`, `misitio`) | NOT in this plan: they change in their own plans |

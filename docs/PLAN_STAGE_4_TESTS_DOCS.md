@@ -6,6 +6,17 @@
 
 Keep every existing test and fix it with the compiler: `auth.User` → `authority.User` (and the other moved types), a test of a removed handler (`opUpsertUser`, `opListUsers`, `opGetLAN`…, `list_args`-style tests that build a `view.ListArgs`) becomes the crud test below; never delete a test of a kept method. Operations are `router.Operation{Module: authority.ModelName, Entity: (&authority.User{}).ModelName(), Action: model.Create}`, never a string. New tests in `tests/users_crud_test.go`, through `crud.LoopbackActingAs(nil, "admin-1", mod)` with the helpers `call` and `failedField` of the other modules (copy https://github.com/veltylabs/chat_room/blob/main/tests/crud_test.go lines 1–30):
 
+**How to port the old tests (exact, no deletion):** a test never disappears; it is rewritten against the new surface and keeps its name and its assertion.
+
+| Old test file / call | Becomes |
+|---|---|
+| `list_users_test.go`: `auth.OpListUsers` with a `view.ListArgs` | `router.Operation{Module: authority.ModelName, Entity: "user", Action: model.Read}` with `crud.ReadArgs{Search, After, Limit}` through `crud.LoopbackActingAs(nil, "admin-1", mod)`; same expected rows |
+| `permissions_me_test.go`: `auth.OpMe` | the `GET` route `auth.PathMe` (`r.Get(auth.PathMe, m.handleMe)`), called through the router the test already builds for the other routes; same expected permissions |
+| any `auth.OpXxx` of a removed user operation | the `user` / `lan_identity` operation of the mapping table in `PLAN.md` |
+| a test of `Session`/`Identity`/`LANIP` types | same test, with the type taken from `authority` (`authority.Session`…) and the plain `auth.*` contract type where the port returns it |
+
+If after this table one test still cannot be ported, keep it with a `t.Skip("<the exact symbol that no longer exists>")` and list it in the pull request; never delete it silently.
+
 | Test | setup → call → expected |
 |---|---|
 | `TestUser_CreateThroughCrud` | `user.create` `&authority.User{Email: "a@x.cl", Name: "Ana"}` → no error; `m.GetUser(id)` has `Status == "active"`, `CreatedAt != 0` |
