@@ -36,3 +36,8 @@ Run `langc sync .` at the root. It must report zero untranslated keys and zero r
 ## Delivery check
 
 `gotest` passes; `langc sync .` is clean; the pull request is open.
+
+## Executor notes
+- All steps requested by the plan were completed. Code changes were explicitly forbidden ("Do NOT change code. Two small stages") since this is part 2 of the migration.
+- Translations were updated in `lang.json` and validated via `langc sync .`
+- Documentation was updated in `README.md` (which was kept ≤ 150 lines) and `docs/ARCHITECTURE.md`.
