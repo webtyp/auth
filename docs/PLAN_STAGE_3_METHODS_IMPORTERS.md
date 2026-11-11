@@ -26,3 +26,16 @@ Every exported method keeps its name and signature (other packages call them: `G
 If a package below `authority` in the import graph (`session/cookie`, `passkey`, `cfaccess`, …) needs a moved type and importing `authority` would create a cycle, do NOT import it: declare in THAT package a narrow interface with plain types (what it needs from a user) and let `authority` satisfy it; name the file and symbol in the PR.
 
 `go build ./...` and `go vet ./...` end clean in the root module. Commit and push.
+
+## `authority/migrate.go` (exact)
+
+Keep the existing `Migrate(conn ddl.Execer, ddlCompiler ddl.Compiler) error`; there is no `orm.NewMigrator` and no `orm.Migrate`. Only the model list changes (no `auth.` prefix any more):
+
+```go
+models := []model.Model{&User{}, &Identity{}, &LANIP{}, &OAuthState{}, &Session{}}
+sorted, err := ddl.TopologicalSort(models)
+if err != nil {
+	return err
+}
+return ddl.New(conn, ddlCompiler).Sync(sorted...)
+```

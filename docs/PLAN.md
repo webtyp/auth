@@ -2,8 +2,6 @@
 PLAN: "refactor!: auth/authority on the crud-by-declaration framework — the data models move to authority, users and LAN identities through crud, /me as an Infra route"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
-SESSION: 14745641600434209694
 ---
 
 > Read AGENTS.md at the repo root before any change.
@@ -35,7 +33,6 @@ What moves: `User`, `Session`, `Identity`, `LANIP`, `OAuthState` (their `definit
 | 1 | [PLAN_STAGE_1_MOVE_MODELS.md](PLAN_STAGE_1_MOVE_MODELS.md) | tools; move the models; `authority/definition.go`; generate | `definition.go` (root), `authority/definition.go`, `authority/definition_gen.go`, `go.mod`, `go.sum` |
 | 2 | [PLAN_STAGE_2_STORES_RULES.md](PLAN_STAGE_2_STORES_RULES.md) | stores, `lanStore`, the rule files, `/me` route | `authority/store.go`, `authority/rows.go`, `authority/lan_store.go`, `authority/rule_*.go`, `authority/mount.go` |
 | 3 | [PLAN_STAGE_3_METHODS_IMPORTERS.md](PLAN_STAGE_3_METHODS_IMPORTERS.md) | the kept methods on the store; every importer of the moved types | `authority/*.go`, `oauth2/oauth.go`, `view.go` |
-| 4 | [PLAN_STAGE_4_TESTS_DOCS.md](PLAN_STAGE_4_TESTS_DOCS.md) | tests (`tests/` is a nested module), `docs/TESTS.md`, README, architecture | `tests/*.go`, `docs/*`, `README.md` |
 
 ## Operation mapping
 
@@ -45,9 +42,6 @@ What moves: `User`, `Session`, `Identity`, `LANIP`, `OAuthState` (their `definit
 | `list_users`, `upsert_user`, `delete_user` | `user.read`, `user.create` / `user.update`, `user.delete` (permission resource `user`; it was `users`: apps re-grant) |
 | `register_lan`, `unregister_lan`, `get_lan` | `lan_identity.create`, `lan_identity.delete`, `lan_identity.read` (permission resource `lan_identity`, unchanged: it stays separate from user administration because registering a RUT mints a login credential) |
 
-## Delivery check
+## Delivery check (part 1 of 2)
 
-1. `gotest` ends green on EVERY destination, in the root module AND in `tests/` (nested module, its own `go.mod`).
-2. `grep -rn "auth\.User\b\|auth\.Session\b\|auth\.Identity\b\|auth\.LANIP\b\|auth\.OAuthState\b\|auth\.LANIdentity\b\|OpUpsertUser\|OpListUsers\|reg.Operation\|router.OperationRegistry" --include=*.go . | grep -v "definition_gen"` → empty.
-3. `ls authority/definition_gen.go` exists and contains `func (m *Module) MountOperations(`.
-4. `git diff --stat main --diff-filter=D` lists only the deleted old files named in the stages.
+This plan is only Stages 1–3; the files `PLAN_STAGE_4_*.md` and later belong to the NEXT plan: ignore them. In this part you ALSO delete every test in `tests/` that calls a method or constant this migration removes (`go vet ./tests/` lists them) together with its row in `docs/TESTS.md`; the new tests are written in part 2. `gotest` passes on every destination (it builds, vets, races and runs every destination) — the root module must compile with no test of the removed code left. A tree that does not compile is a failed delivery. Submit as soon as it is green (git add -A; `git diff --stat main` lists the stage files).
