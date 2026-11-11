@@ -2,6 +2,8 @@
 PLAN: "refactor!: auth/authority on the crud-by-declaration framework — the data models move to authority, users and LAN identities through crud, /me as an Infra route"
 EXECUTOR: jules
 REVIEWER: none
+STATUS: running
+SESSION: 4625306544415130904
 ---
 
 > Read AGENTS.md at the repo root before any change.
