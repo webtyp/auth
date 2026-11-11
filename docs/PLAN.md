@@ -2,6 +2,8 @@
 PLAN: "chore: auth after the authority/crud migration — translations and documentation check (part 2 of 2)"
 EXECUTOR: jules
 REVIEWER: none
+STATUS: running
+SESSION: 15329636798705440632
 ---
 
 > Read AGENTS.md at the repo root before any change.
