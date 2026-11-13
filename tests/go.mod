@@ -25,13 +25,13 @@ replace webtyp.com/auth => ..
 
 require (
 	modernc.org/sqlite v1.58.0
-	webtyp.com/auth v0.0.114
+	webtyp.com/auth v0.0.115
 	webtyp.com/base64 v0.0.6
 	webtyp.com/crud v0.0.14
 	webtyp.com/crypto v0.0.30
 	webtyp.com/ddl v0.0.49
 	webtyp.com/events v0.1.8
-	webtyp.com/fmt v1.0.0
+	webtyp.com/fmt v1.0.1
 	webtyp.com/form v0.4.52
 	webtyp.com/json v0.5.40
 	webtyp.com/jwt v0.1.29
