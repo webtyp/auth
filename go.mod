@@ -29,7 +29,7 @@ require (
 	webtyp.com/dbus v0.1.1 // indirect
 	webtyp.com/definitioncheck v0.0.3 // indirect
 	webtyp.com/escape v0.1.0 // indirect
-	webtyp.com/filepath v0.1.0 // indirect
+	webtyp.com/filepath v0.1.3 // indirect
 	webtyp.com/keyring v0.2.9 // indirect
 	webtyp.com/lang v0.1.16 // indirect
 )
