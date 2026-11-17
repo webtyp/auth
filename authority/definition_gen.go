@@ -6,7 +6,6 @@ import (
 	"webtyp.com/model"
 	"webtyp.com/orm"
 	"webtyp.com/crud"
-	"webtyp.com/storage"
 	"webtyp.com/time"
 )
 
@@ -550,9 +549,6 @@ func (m *Module) MountOperations(reg crud.Registry) {
 		},
 		Delete: func(a crud.CurrentUser, tx crud.Tx, rec model.Model) (crud.RuleAnswer, error) {
 			return rec.(*User).Delete(a, tx, m)
-		},
-		Search: func(a crud.CurrentUser, filter model.Model, text string) ([]storage.Condition, error) {
-			return (&User{}).Search(a, filter.(*User), text, m)
 		},
 	})
 	reg.AddStoredEntity(crud.StoredEntity{
