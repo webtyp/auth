@@ -17,9 +17,11 @@ import (
 const (
 	modeDevAutologin        = "dev_autologin"
 	msgDevAutologinOpened   = "auth: DEV_AUTOLOGIN opened a session for user"
-	msgDevAutologinRejected = "auth: DEV_AUTOLOGIN was rejected by every enabled authenticator — showing the normal login. The value must be the exact JSON the login form POSTs, and this machine's IP must be allowed for that user. Not retried until restart. Credential number:"
-	msgDevAutologinPaused   = "auth: DEV_AUTOLOGIN paused after sign-out — this host shows the normal login until the server restarts:"
-	msgDevAutologinInvalid  = "auth: DEV_AUTOLOGIN is not valid JSON (one object, or a list of objects: [{\"code\":\"…\"},{\"code\":\"…\"}]) — ignored, every tab shows the normal login:"
+	// One short line each: the reason of a rejection is already in the SECURITY
+	// line the authenticator reports; this adds only which credential and tab.
+	msgDevAutologinRejected = "auth: DEV_AUTOLOGIN rejected, login form shown on"
+	msgDevAutologinPaused   = "auth: DEV_AUTOLOGIN paused after sign-out until restart on"
+	msgDevAutologinInvalid  = "auth: DEV_AUTOLOGIN ignored, not a JSON object or list of objects:"
 
 	devHostLocal  = "localhost"
 	devHostPrefix = "user"       // credential N (N ≥ 2) signs in on userN.localhost
@@ -106,7 +108,7 @@ func newDevAutologin(m *Module) devAutologin {
 			}
 			c.failed.Store(true)
 			if m.log != nil {
-				m.log(msgDevAutologinRejected, n)
+				m.log(msgDevAutologinRejected, devTabHost(n))
 			}
 			return ""
 		},
