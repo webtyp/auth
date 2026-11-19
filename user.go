@@ -53,7 +53,9 @@ func IsRUTTaken(err error) bool {
 }
 
 // EnvDevAutologin names the development auto-login variable. Its value is the
-// exact JSON body the login form POSTs (e.g. {"code":"12345678-9"}). When it
+// exact JSON body the login form POSTs (e.g. {"code":"12345678-9"}), or a JSON
+// list of them, one per user to test: [{"code":"12345678-9"},{"code":"9876543-2"}].
+// Credential 1 signs in on localhost, credential N on userN.localhost. When it
 // is set, authority replays it through the enabled authenticators' Login and
 // issues a real session. Absent or empty = production behaviour. Honored only
 // in builds with -tags dev; every other build ignores it entirely.
@@ -340,6 +342,12 @@ type Config struct {
 const (
 	PathLogin  = "/login"
 	PathLogout = "/logout"
+
+	// PathDevAutologinTabs answers, only in builds with -tags dev and only to a
+	// loopback caller, the hosts of the tabs DEV_AUTOLOGIN signs in, one per
+	// credential in its order: ["localhost","user2.localhost",…]. The webtyp
+	// dev environment opens one browser tab per host. Absent in every other build.
+	PathDevAutologinTabs = "/_dev/autologin/tabs"
 
 	// PathAfterLogin is where every authenticator redirects once a session
 	// exists. It is the WASM application shell, not the site root: "/" is

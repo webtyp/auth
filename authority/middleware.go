@@ -39,7 +39,9 @@ func (m *Module) CurrentPrincipal(ctx router.Context) (auth.Principal, error) {
 // resolve, in order: a RequestIdentifier that recognises its credential decides
 // (even if the answer is anonymous); then the step-up session; then the main
 // session; then dev autologin (only compiled with -tags dev, and only when
-// allowDev); otherwise anonymous.
+// allowDev); otherwise anonymous. Dev autologin opens BOTH sessions (one and
+// two factors), so screens that demand a second factor open in development;
+// a production build has no such path (devlogin_off.go).
 func (m *Module) resolve(ctx router.Context, allowDev bool) auth.Principal {
 	for _, a := range m.authenticators {
 		if ri, ok := a.(auth.RequestIdentifier); ok {
@@ -52,11 +54,14 @@ func (m *Module) resolve(ctx router.Context, allowDev bool) auth.Principal {
 		return p
 	}
 	if p, err := m.strategy.Identify(ctx); err == nil && p.UserID != "" {
+		if allowDev && m.dev.upgrade != nil && m.dev.upgrade(ctx, p.UserID) {
+			p.Assurance = model.AssuranceMultiFactor
+		}
 		return p
 	}
-	if allowDev && m.devAutologin != nil {
-		if userID := m.devAutologin(ctx); userID != "" {
-			return auth.Principal{UserID: userID, Assurance: model.AssuranceSingleFactor}
+	if allowDev && m.dev.open != nil {
+		if userID := m.dev.open(ctx); userID != "" {
+			return auth.Principal{UserID: userID, Assurance: model.AssuranceMultiFactor}
 		}
 	}
 	return auth.Principal{}

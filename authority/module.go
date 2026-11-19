@@ -30,7 +30,16 @@ type Module struct {
 	stepUp         auth.SessionStrategy // sessions proven by a second factor
 	authenticators []auth.Authenticator
 
-	devAutologin func(router.Context) string // non-nil only in -tags dev with DEV_AUTOLOGIN set
+	dev devAutologin // every hook nil outside -tags dev or without DEV_AUTOLOGIN
+}
+
+// devAutologin holds the DEV_AUTOLOGIN hooks (devlogin.go); devlogin_off.go
+// leaves them all nil, so production never reaches them.
+type devAutologin struct {
+	open    func(router.Context) string       // replays the credential of the request's host, issuing both sessions; "" = none
+	upgrade func(router.Context, string) bool // adds the second-factor session to a one-factor one on an autologin host
+	pause   func(router.Context)              // sign-out: that host shows the normal login until restart
+	mount   func(router.Router)               // mounts auth.PathDevAutologinTabs
 }
 
 // New conecta la estrategia de sesion por defecto (una cookie opaca sobre la
@@ -78,7 +87,7 @@ func New(db *orm.DB, cfg auth.Config) (*Module, error) {
 		return nil, err
 	}
 	m.strategy = strategy
-	m.devAutologin = newDevAutologin(m)
+	m.dev = newDevAutologin(m)
 
 	stepUp, err := cookie.New(m, cookie.Options{
 		Name: StepUpCookieName,
