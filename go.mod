@@ -46,5 +46,5 @@ require (
 	webtyp.com/keyring v0.2.9 // indirect
 	webtyp.com/msgtype v0.1.2 // indirect
 	webtyp.com/svg v0.3.30 // indirect
-	webtyp.com/widget v0.6.49 // indirect
+	webtyp.com/widget v0.6.50 // indirect
 )

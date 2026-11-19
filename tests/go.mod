@@ -25,7 +25,7 @@ replace webtyp.com/auth => ..
 
 require (
 	modernc.org/sqlite v1.58.0
-	webtyp.com/auth v0.0.122
+	webtyp.com/auth v0.0.123
 	webtyp.com/base64 v0.0.6
 	webtyp.com/crud v0.0.19
 	webtyp.com/crypto v0.0.30
@@ -109,7 +109,7 @@ require (
 	webtyp.com/tinygo v1.0.1 // indirect
 	webtyp.com/view v0.6.91 // indirect
 	webtyp.com/webauthn v0.1.16 // indirect
-	webtyp.com/widget v0.6.49 // indirect
+	webtyp.com/widget v0.6.50 // indirect
 )
 
 replace webtyp.com/view => ../../view
