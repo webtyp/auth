@@ -5,6 +5,7 @@ package tests
 import (
 	"strings"
 	"testing"
+	"webtyp.com/securityevent"
 
 	"webtyp.com/auth"
 	"webtyp.com/auth/authority"
@@ -19,7 +20,7 @@ import (
 
 func TestInternetDoor_RUTLoginNotFound(t *testing.T) {
 	db := newTestDB(t)
-	m, _ := authority.New(db, auth.Config{IDs: testIDs})
+	m, _ := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 	r := &mock.Router{}
 	m.MountAPI(r)
 
@@ -34,7 +35,7 @@ func TestInternetDoor_RUTLoginNotFound(t *testing.T) {
 
 func TestInternetDoor_SetupNotFound(t *testing.T) {
 	db := newTestDB(t)
-	m, _ := authority.New(db, auth.Config{IDs: testIDs})
+	m, _ := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 	r := &mock.Router{}
 	m.MountAPI(r)
 
@@ -49,12 +50,12 @@ func TestInternetDoor_SetupNotFound(t *testing.T) {
 
 func TestLocalDoor_RUTLoginStillWorks(t *testing.T) {
 	db := newTestDB(t)
-	m, _ := authority.New(db, auth.Config{IDs: testIDs})
+	m, _ := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 	u, _ := m.CreateUser("rut@test.com", "Test", "")
 	m.UpsertIdentity(u.Id, auth.ProviderTrustedIP, "11111111-1", "")
 
 	trusted := &fakeTrustedIP{allowed: map[string]string{u.Id: "127.0.0.1"}}
-	ti := trustedip.New(m, trusted, m, m, true)
+	ti := trustedip.New(m, trusted, m, m.Ports().Report, true)
 
 	r := &mock.Router{}
 	m.MountAPI(r)
@@ -128,7 +129,7 @@ func TestPasskeyLogin_WithoutSession(t *testing.T) {
 		t.Fatalf("expected 204, got %d. body: %s", ctxVer.Status, string(ctxVer.ResponseBody()))
 	}
 
-	assertSecurityEvent(t, env.pub, 0, auth.EventPasskeyVerified)
+	assertSecurityEvent(t, env.pub, 0, securityevent.LoginSucceeded, "")
 
 	cStep, ok := ctxVer.Cookie("__Host-stepup")
 	if !ok {

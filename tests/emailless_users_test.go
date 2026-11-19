@@ -18,7 +18,7 @@ import (
 // needed: the column was already nullable (no NotNull).
 func TestEmaillessUsers(t *testing.T) {
 	db := newTestDB(t)
-	m, err := authority.New(db, auth.Config{IDs: testIDs})
+	m, err := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,7 +53,7 @@ func TestEmaillessUsers(t *testing.T) {
 // real one.
 func TestEmailUniquenessStillHolds(t *testing.T) {
 	db := newTestDB(t)
-	m, err := authority.New(db, auth.Config{IDs: testIDs})
+	m, err := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,7 +70,7 @@ func TestEmailUniquenessStillHolds(t *testing.T) {
 // arbitrary LAN user, which is what an "" = "" match would do.
 func TestUserByEmailNeverMatchesEmpty(t *testing.T) {
 	db := newTestDB(t)
-	m, err := authority.New(db, auth.Config{IDs: testIDs})
+	m, err := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 	if err != nil {
 		t.Fatal(err)
 	}

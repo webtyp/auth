@@ -16,7 +16,7 @@ import (
 )
 
 func TestListUsers_Empty(t *testing.T) {
-	m, _ := authority.New(newTestDB(t), auth.Config{IDs: testIDs})
+	m, _ := authority.New(newTestDB(t), auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 
 	users, err := m.ListUsers()
 	if err != nil {
@@ -28,7 +28,7 @@ func TestListUsers_Empty(t *testing.T) {
 }
 
 func TestListUsers_WithAndWithoutEmail(t *testing.T) {
-	m, _ := authority.New(newTestDB(t), auth.Config{IDs: testIDs})
+	m, _ := authority.New(newTestDB(t), auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 
 	a, _ := m.CreateUser("", "Staff One", "")
 	b, _ := m.CreateUser("ana@example.com", "Ana", "")
@@ -64,7 +64,7 @@ func TestListUsers_DatabaseClosed(t *testing.T) {
 	conn, _ := sqlite.Open(":memory:")
 	db := orm.New(conn)
 	authority.Migrate(db.RawConn(), db.RawConn().(ddl.Compiler))
-	m, _ := authority.New(db, auth.Config{IDs: testIDs})
+	m, _ := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 	conn.Close()
 
 	users, err := m.ListUsers()
@@ -78,7 +78,7 @@ func TestListUsers_DatabaseClosed(t *testing.T) {
 
 func TestUsers_ListAcceptsReadArgs(t *testing.T) {
 	db := newTestDB(t)
-	m, _ := authority.New(db, auth.Config{IDs: testIDs})
+	m, _ := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 	m.CreateUser("user1@test.com", "Alice", "")
 	m.CreateUser("user2@test.com", "Bob", "")
 	m.CreateUser("user3@test.com", "Charlie", "")

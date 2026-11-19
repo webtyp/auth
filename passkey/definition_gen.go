@@ -9,11 +9,11 @@ import (
 )
 
 type PasskeyCredential struct {
-	Id string
-	UserId string
-	PublicKey string
-	SignCount int64
-	CreatedAt time.Unix
+	Id         string
+	UserId     string
+	PublicKey  string
+	SignCount  int64
+	CreatedAt  time.Unix
 	LastUsedAt time.Unix
 }
 
@@ -21,7 +21,9 @@ func (m *PasskeyCredential) ModelName() string { return "passkey_credential" }
 
 func (m *PasskeyCredential) Schema() []model.Field { return PasskeyCredentialModel.Fields }
 
-func (m *PasskeyCredential) Pointers() []any { return []any{&m.Id, &m.UserId, &m.PublicKey, &m.SignCount, (*int64)(&m.CreatedAt), (*int64)(&m.LastUsedAt)} }
+func (m *PasskeyCredential) Pointers() []any {
+	return []any{&m.Id, &m.UserId, &m.PublicKey, &m.SignCount, (*int64)(&m.CreatedAt), (*int64)(&m.LastUsedAt)}
+}
 
 func (m *PasskeyCredential) IsNil() bool { return m == nil }
 
@@ -35,20 +37,36 @@ func (m *PasskeyCredential) EncodeFields(w model.FieldWriter) {
 }
 
 func (m *PasskeyCredential) DecodeFields(r model.FieldReader) {
-	if v, ok := r.String("id"); ok { m.Id = v }
-	if v, ok := r.String("user_id"); ok { m.UserId = v }
-	if v, ok := r.String("public_key"); ok { m.PublicKey = v }
-	if v, ok := r.Int("sign_count"); ok { m.SignCount = v }
-	if v, ok := r.Int("created_at"); ok { m.CreatedAt = time.Unix(v) }
-	if v, ok := r.Int("last_used_at"); ok { m.LastUsedAt = time.Unix(v) }
+	if v, ok := r.String("id"); ok {
+		m.Id = v
+	}
+	if v, ok := r.String("user_id"); ok {
+		m.UserId = v
+	}
+	if v, ok := r.String("public_key"); ok {
+		m.PublicKey = v
+	}
+	if v, ok := r.Int("sign_count"); ok {
+		m.SignCount = v
+	}
+	if v, ok := r.Int("created_at"); ok {
+		m.CreatedAt = time.Unix(v)
+	}
+	if v, ok := r.Int("last_used_at"); ok {
+		m.LastUsedAt = time.Unix(v)
+	}
 }
 
 type PasskeyCredentialList []*PasskeyCredential
 
-func (s *PasskeyCredentialList) Len() int             { return len(*s) }
+func (s *PasskeyCredentialList) Len() int               { return len(*s) }
 func (s *PasskeyCredentialList) At(i int) model.Fielder { return (*s)[i] }
-func (s *PasskeyCredentialList) Append() model.Fielder  { v := &PasskeyCredential{}; *s = append(*s, v); return v }
-func (s *PasskeyCredentialList) IsNil() bool          { return s == nil }
+func (s *PasskeyCredentialList) Append() model.Fielder {
+	v := &PasskeyCredential{}
+	*s = append(*s, v)
+	return v
+}
+func (s *PasskeyCredentialList) IsNil() bool                      { return s == nil }
 func (s *PasskeyCredentialList) EncodeFields(_ model.FieldWriter) {}
 func (s *PasskeyCredentialList) DecodeFields(_ model.FieldReader) {}
 
@@ -60,18 +78,18 @@ func (*PasskeyCredential) Allow() model.Action     { return PasskeyCredentialMod
 func (*PasskeyCredentialList) Allow() model.Action { return PasskeyCredentialModel.Allow }
 
 var PasskeyCredential_ = struct {
-	Id string
-	UserId string
-	PublicKey string
-	SignCount string
-	CreatedAt string
+	Id         string
+	UserId     string
+	PublicKey  string
+	SignCount  string
+	CreatedAt  string
 	LastUsedAt string
 }{
-	Id: "id",
-	UserId: "user_id",
-	PublicKey: "public_key",
-	SignCount: "sign_count",
-	CreatedAt: "created_at",
+	Id:         "id",
+	UserId:     "user_id",
+	PublicKey:  "public_key",
+	SignCount:  "sign_count",
+	CreatedAt:  "created_at",
 	LastUsedAt: "last_used_at",
 }
 
@@ -93,9 +111,9 @@ func ReadAllPasskeyCredential(qb *orm.QB) (PasskeyCredentialList, error) {
 }
 
 type PasskeyChallenge struct {
-	Id string
-	UserId string
-	Purpose string
+	Id        string
+	UserId    string
+	Purpose   string
 	ExpiresAt time.Unix
 }
 
@@ -103,7 +121,9 @@ func (m *PasskeyChallenge) ModelName() string { return "passkey_challenge" }
 
 func (m *PasskeyChallenge) Schema() []model.Field { return PasskeyChallengeModel.Fields }
 
-func (m *PasskeyChallenge) Pointers() []any { return []any{&m.Id, &m.UserId, &m.Purpose, (*int64)(&m.ExpiresAt)} }
+func (m *PasskeyChallenge) Pointers() []any {
+	return []any{&m.Id, &m.UserId, &m.Purpose, (*int64)(&m.ExpiresAt)}
+}
 
 func (m *PasskeyChallenge) IsNil() bool { return m == nil }
 
@@ -115,18 +135,30 @@ func (m *PasskeyChallenge) EncodeFields(w model.FieldWriter) {
 }
 
 func (m *PasskeyChallenge) DecodeFields(r model.FieldReader) {
-	if v, ok := r.String("id"); ok { m.Id = v }
-	if v, ok := r.String("user_id"); ok { m.UserId = v }
-	if v, ok := r.String("purpose"); ok { m.Purpose = v }
-	if v, ok := r.Int("expires_at"); ok { m.ExpiresAt = time.Unix(v) }
+	if v, ok := r.String("id"); ok {
+		m.Id = v
+	}
+	if v, ok := r.String("user_id"); ok {
+		m.UserId = v
+	}
+	if v, ok := r.String("purpose"); ok {
+		m.Purpose = v
+	}
+	if v, ok := r.Int("expires_at"); ok {
+		m.ExpiresAt = time.Unix(v)
+	}
 }
 
 type PasskeyChallengeList []*PasskeyChallenge
 
-func (s *PasskeyChallengeList) Len() int             { return len(*s) }
+func (s *PasskeyChallengeList) Len() int               { return len(*s) }
 func (s *PasskeyChallengeList) At(i int) model.Fielder { return (*s)[i] }
-func (s *PasskeyChallengeList) Append() model.Fielder  { v := &PasskeyChallenge{}; *s = append(*s, v); return v }
-func (s *PasskeyChallengeList) IsNil() bool          { return s == nil }
+func (s *PasskeyChallengeList) Append() model.Fielder {
+	v := &PasskeyChallenge{}
+	*s = append(*s, v)
+	return v
+}
+func (s *PasskeyChallengeList) IsNil() bool                      { return s == nil }
 func (s *PasskeyChallengeList) EncodeFields(_ model.FieldWriter) {}
 func (s *PasskeyChallengeList) DecodeFields(_ model.FieldReader) {}
 
@@ -138,14 +170,14 @@ func (*PasskeyChallenge) Allow() model.Action     { return PasskeyChallengeModel
 func (*PasskeyChallengeList) Allow() model.Action { return PasskeyChallengeModel.Allow }
 
 var PasskeyChallenge_ = struct {
-	Id string
-	UserId string
-	Purpose string
+	Id        string
+	UserId    string
+	Purpose   string
 	ExpiresAt string
 }{
-	Id: "id",
-	UserId: "user_id",
-	Purpose: "purpose",
+	Id:        "id",
+	UserId:    "user_id",
+	Purpose:   "purpose",
 	ExpiresAt: "expires_at",
 }
 
@@ -165,4 +197,3 @@ func ReadAllPasskeyChallenge(qb *orm.QB) (PasskeyChallengeList, error) {
 	)
 	return results, err
 }
-

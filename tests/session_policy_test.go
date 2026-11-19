@@ -4,6 +4,7 @@ package tests
 
 import (
 	"testing"
+
 	"webtyp.com/time"
 
 	"webtyp.com/auth"
@@ -14,7 +15,7 @@ import (
 
 func TestSessionPolicy_Expiration(t *testing.T) {
 	db := newTestDB(t)
-	m, err := authority.New(db, auth.Config{IDs: testIDs})
+	m, err := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,7 +40,7 @@ func TestSessionPolicy_Expiration(t *testing.T) {
 		if err := db.Update(rowOf(sess), orm.Eq(authority.Session_.Id, sess.Id)); err != nil {
 			t.Fatal(err)
 		}
-		m, _ = authority.New(db, auth.Config{IDs: testIDs})
+		m, _ = authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 
 		if _, err := m.GetSession(sess.Id); err != auth.ErrSessionExpired {
 			t.Errorf("expected ErrSessionExpired, got %v", err)
@@ -61,7 +62,7 @@ func TestSessionPolicy_Expiration(t *testing.T) {
 		if err := db.Update(rowOf(sess), orm.Eq(authority.Session_.Id, sess.Id)); err != nil {
 			t.Fatal(err)
 		}
-		m, _ = authority.New(db, auth.Config{IDs: testIDs})
+		m, _ = authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 
 		if _, err := m.GetSession(sess.Id); err != auth.ErrSessionExpired {
 			t.Errorf("expected ErrSessionExpired, got %v", err)
@@ -83,7 +84,7 @@ func TestSessionPolicy_Expiration(t *testing.T) {
 		if err := db.Update(rowOf(sess), orm.Eq(authority.Session_.Id, sess.Id)); err != nil {
 			t.Fatal(err)
 		}
-		m, _ = authority.New(db, auth.Config{IDs: testIDs})
+		m, _ = authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 
 		got, err := m.GetSession(sess.Id)
 		// Because `now` is calculated again inside GetSession, it might be exactly AbsoluteAt or not.
@@ -128,7 +129,7 @@ func TestSessionPolicy_Expiration(t *testing.T) {
 		if err := db.Update(rowOf(sess), orm.Eq(authority.Session_.Id, sess.Id)); err != nil {
 			t.Fatal(err)
 		}
-		m, _ = authority.New(db, auth.Config{IDs: testIDs})
+		m, _ = authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 
 		got, err := m.GetSession(sess.Id)
 		if err != nil {
@@ -155,7 +156,7 @@ func TestSessionPolicy_Expiration(t *testing.T) {
 		if err := db.Update(rowOf(sess), orm.Eq(authority.Session_.Id, sess.Id)); err != nil {
 			t.Fatal(err)
 		}
-		m, _ = authority.New(db, auth.Config{IDs: testIDs})
+		m, _ = authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 
 		got, err := m.GetSession(sess.Id)
 		if err != nil {
@@ -170,7 +171,7 @@ func TestSessionPolicy_Expiration(t *testing.T) {
 
 func TestSessionPolicy_Refusals(t *testing.T) {
 	db := newTestDB(t)
-	m, err := authority.New(db, auth.Config{IDs: testIDs})
+	m, err := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -189,7 +190,7 @@ func TestSessionPolicy_Refusals(t *testing.T) {
 
 func TestSessionPolicy_Persistence(t *testing.T) {
 	db := newTestDB(t)
-	m, err := authority.New(db, auth.Config{IDs: testIDs})
+	m, err := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -218,7 +219,7 @@ func TestSessionPolicy_Persistence(t *testing.T) {
 
 func TestSessionPolicy_Rotate(t *testing.T) {
 	db := newTestDB(t)
-	m, err := authority.New(db, auth.Config{IDs: testIDs})
+	m, err := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -242,7 +243,7 @@ func TestSessionPolicy_Rotate(t *testing.T) {
 	if err := db.Update(rowOf(sess), orm.Eq(authority.Session_.Id, sess.Id)); err != nil {
 		t.Fatal(err)
 	}
-	m, _ = authority.New(db, auth.Config{IDs: testIDs})
+	m, _ = authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 
 	rotSess, err := m.RotateSession(sess.Id, "127.0.0.2", "ua2")
 	if err != nil {

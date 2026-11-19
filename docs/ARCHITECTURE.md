@@ -31,11 +31,12 @@ Rules:
 
 ## Packages
 
-- `auth`: the contract. Service, persistence, session middleware, and shared login ports
-  (`SubjectStore`, `SessionIssuer`, `IdentityStore`, `StateStore`,
-  `SecurityNotifier`, `SessionRepo`).
-- `authority`: concrete `Module` implementing the ports; owns the data models (`user`, `session`,
-  `identity`, `lanip`, `oauth_state` tables), mounts `user` and `lan_identity` through `crud`,
+- `auth`: the contract. `Mode` (a sign-in mode as the app chooses it), `Ports` (the pieces every mode receives),
+  `ModeWithTables` and `MigrateModes`, `Authenticator`, and the login ports (`SubjectStore`, `SessionIssuer`,
+  `IdentityStore`, `StateStore`, `SessionRepo`, `StepUpIssuer`, `PrincipalReader`).
+- `authority`: concrete `Module` implementing the ports; knows no mode. Owns the data models (`user`, `session`,
+  `identity`, `oauth_state` tables), mounts `user` and `me` through `crud`, serves sign-out, gives the modes their
+  `Ports()` and the browser `ReadMe`/`SignOut`,
   and the session cache. The session cache
   is strictly read-through (`GetSession` loads on miss) and is intentionally not
   pre-warmed on module construction to avoid costly table scans in short-lived isolate
@@ -112,51 +113,42 @@ sequenceDiagram
 
 ## Security Events
 
-All modes report `SecurityEvent` on `TopicSecurity = "auth.security"` via the
-optional `events.Publisher` injected in `auth.Config`. `nil` drops events.
-New event types:
-- `EventInvalidRUT`: `trusted_ip` rejected a login attempt because the RUT failed checksum validation.
-- `EventUnknownRUT`: `trusted_ip` rejected a login attempt because no identity or user was found for a valid RUT.
-- `EventDevAutologin`: `authority` opened a session using `DEV_AUTOLOGIN` replay (builds with `-tags dev` only).
+`authority.New` requires `Config.Events` (the app's broker) and builds a `securityevent.Reporter` over it; every mode
+receives it in `Ports.Report` and reports with the shared vocabulary of `webtyp.com/securityevent` (OWASP names):
+a refused sign-in is `LoginFailed` with its `Reason` (`unknown RUT`, `device not trusted`, `wrong setup code`…), a
+rate-limited attempt `RateLimited`, the first administrator `AdminCreated`, an unreadable administrators store
+`SecurityStoreFailed`. An event never carries what the person typed, a password, a token or a session id.
 
-## In-Library `opMe` Composition & ProfileDTO
+## Who the caller is: the crud entity `me`
 
-`opMe` composes identity with authorization in-library when `Config.Permissions` is provided:
+The browser asks who it is with a crud read of `me` (`router.Operation{Module: "user", Entity: "me", Action: model.Read}`, served as `/api/user/me`), like any other data: it is never a raw route. The rule (`authority/rule_me_read.go`) takes the caller from `crud.CurrentUser`, ignores any filter and answers one row, so nobody reads another person's profile. Any signed-in person may read it: `authority.DefaultGrants` holds that grant and the composition root applies it to `rbac.RoleAuthenticated`; without a session there is no subject and the read is refused. It composes identity with authorization in-library when `Config.Permissions` is provided:
 ```go
 authMod, _ := authority.New(db, auth.Config{
-    IDs: ids,
+    IDs:    ids,
+    Events: broker,
     Permissions: &auth.Permissions{
         Grants:    rbacSvc, // satisfies auth.GrantLister structurally
         ProjectID: "main",
     },
 })
 ```
-`ProfileDTO` provides `Grant(resource, actions)` to produce wire permissions as stored ("resource:actions", `*:crud` for a wildcard) and `Can(resource, action)` to evaluate them on the client with `model.Grant.Matches` — the same rule as the server.
+Each grant travels as `me.grants[]`: `{resource, actions}` with actions as `model.Action.String()` writes them (`"crud"`, `*` for every resource); the client parses them with `model.ParseAction` and evaluates `model.Grant.Matches`, the same rule as the server.
 
 ## Session policy
 
 Each session row carries its own `SessionPolicy`: `AbsoluteAt` (hard cap), `IdleSeconds` and `Assurance`. `GetSession` ends a row when `now >= ExpiresAt` or `now >= AbsoluteAt`; otherwise it slides `ExpiresAt` to `min(now+IdleSeconds, AbsoluteAt)`, persisting only when the move is at least 60 s. `Config.TokenTTL` is the absolute cap of the default strategy and `Config.IdleTTL` its idle limit (0 = none).
 
-`Authenticate()` resolves, in order: a `RequestIdentifier` that handled the request, the step-up session (MultiFactor), the main session (SingleFactor), dev autologin (`-tags dev`), anonymous. It sets `ctx.SetUserID` and `ctx.SetAssurance`. `GET /me` (i.e. `auth.PathMe`) replaces the old `me` operation.
+`Authenticate()` resolves, in order: a `RequestIdentifier` that handled the request, the step-up session (MultiFactor), the main session (SingleFactor), dev autologin (`-tags dev`), anonymous. It sets `ctx.SetUserID` and `ctx.SetAssurance`. The only raw routes are the ones that set or clear the session cookie (login, logout, first setup); everything else is a crud operation.
 
-## LAN Identity Administration Operations
+## Sign-in modes and the first administrator
 
-`authority` mounts the `lan_identity` entity through `crud` (the store is `lanStore`, a projection of the `trusted_ip` identities, not a table):
-
-| Operation | What it does | Permission |
-|---|---|---|
-| `lan_identity.create` | links a normalized RUT to a user id (the answer carries the normalized RUT) | `lan_identity` + Create |
-| `lan_identity.delete` | removes that identity and the user's allowed IPs | `lan_identity` + Delete |
-| `lan_identity.read` | reads the registered RUT of a user | `lan_identity` + Read |
-
-They are gated on `auth.ResourceLANIdentity` (`"lan_identity"`) and deliberately
-**not** on `"user"`, which gates the user CRUD operations next to them. (The resource is `user`, it was `users`: apps re-grant it). Registering a
-RUT mints a login credential: an actor who could link their own RUT to a
-privileged user's id would obtain that user's session as soon as their IP passes
-`TrustedIPStore`. Gating both on one resource would make "may create or update
-user" imply account takeover wherever `TrustedIPStore` answers per network
-rather than per user. An app that never administers LAN identities simply never
-grants the resource — closed by default.
+`trusted_ip` owns the RUT (`RegisterRUT`, `UnregisterRUT`; the link is an `Identity` of provider `trusted_ip`) and
+asks the app's register of devices (`trustedip.Mode{Devices}`, found with `Ports.Built`) which IP each person may use.
+`email_password` owns the hash (`SetPassword`, `CheckPassword`). The first administrator is common to every mode:
+`Ports.HasAdmin` says whether one exists and `Ports.MakeAdmin` gives the role; `trusted_ip` creates it from the local
+network, `passkey` with a one-time code written in the server log (it serves once and locks after five wrong tries).
+From the local network `GET /setup` answers 200 `{"required":true|false}` or 503 when the administrators cannot be
+read; from the Internet, 404.
 
 ## Email-less users
 

@@ -1,15 +1,12 @@
 package authority
 
 import (
-	"sync/atomic"
-
 	"webtyp.com/auth"
 	"webtyp.com/auth/session/cookie"
-	"webtyp.com/events"
-	"webtyp.com/fmt"
 	"webtyp.com/model"
 	"webtyp.com/orm"
 	"webtyp.com/router"
+	"webtyp.com/securityevent"
 	"webtyp.com/time"
 )
 
@@ -20,21 +17,20 @@ const StepUpCookieName = "stepup"
 // Module is the user/auth/rbac handle. All backend operations are methods on
 // this type. Created exclusively via New().
 type Module struct {
-	db     *orm.DB
-	users  *orm.Store // users table through crud (no tenant: users are global)
-	cache  *sessionCache
-	ucache *userCache
-	config auth.Config
-	log    func(...any)
-	ids    model.IDGenerator
-	events events.Publisher
+	db       *orm.DB
+	users    *orm.Store // users table through crud (no tenant: users are global)
+	cache    *sessionCache
+	ucache   *userCache
+	config   auth.Config
+	log      func(...any)
+	ids      model.IDGenerator
+	reporter securityevent.Reporter
 
 	strategy       auth.SessionStrategy
 	stepUp         auth.SessionStrategy // sessions proven by a second factor
 	authenticators []auth.Authenticator
 
-	devLogin       []byte      // DEV_AUTOLOGIN body; nil = production behaviour
-	devLoginFailed atomic.Bool // set after the first full rejection: never retried in this process
+	devAutologin func(router.Context) string // non-nil only in -tags dev with DEV_AUTOLOGIN set
 }
 
 // New conecta la estrategia de sesion por defecto (una cookie opaca sobre la
@@ -47,7 +43,11 @@ type Module struct {
 // un Worker se paga muchas veces y no se amortiza nunca.
 func New(db *orm.DB, cfg auth.Config) (*Module, error) {
 	if cfg.IDs == nil {
-		return nil, fmt.Err("user:", "Config.IDs", "is", "required")
+		return nil, ErrNoIDs
+	}
+	report, err := securityevent.New(cfg.Events)
+	if err != nil {
+		return nil, err
 	}
 	if cfg.CookieName == "" {
 		cfg.CookieName = "session"
@@ -57,13 +57,13 @@ func New(db *orm.DB, cfg auth.Config) (*Module, error) {
 	}
 
 	m := &Module{
-		db:     db,
-		users:  orm.GlobalStore(db, cfg.IDs),
-		cache:  newSessionCache(),
-		ucache: newUserCache(),
-		config: cfg,
-		ids:    cfg.IDs,
-		events: cfg.Events,
+		db:       db,
+		users:    orm.GlobalStore(db, cfg.IDs),
+		cache:    newSessionCache(),
+		ucache:   newUserCache(),
+		config:   cfg,
+		ids:      cfg.IDs,
+		reporter: report,
 	}
 	strategy, err := cookie.New(m, cookie.Options{
 		Name: cfg.CookieName,
@@ -78,7 +78,7 @@ func New(db *orm.DB, cfg auth.Config) (*Module, error) {
 		return nil, err
 	}
 	m.strategy = strategy
-	m.devLogin = devAutologinBody()
+	m.devAutologin = newDevAutologin(m)
 
 	stepUp, err := cookie.New(m, cookie.Options{
 		Name: StepUpCookieName,
@@ -129,12 +129,29 @@ func (m *Module) Enable(auths ...auth.Authenticator) {
 // SetLog configures optional logging. Call immediately after New(). Default: no-op.
 func (m *Module) SetLog(fn func(...any)) { m.log = fn }
 
-func (m *Module) notify(e auth.SecurityEvent) {
-	if m.events == nil {
-		return
+// reportEvent publishes a security event; one that cannot be published is written to the log, never dropped.
+func (m *Module) reportEvent(e securityevent.Event) {
+	if err := m.reporter.Report(e); err != nil && m.log != nil {
+		m.log(err)
 	}
-	e.Timestamp = time.NowUnix()
-	m.events.Publish(events.Event{Topic: auth.TopicSecurity, Payload: &e})
+}
+
+// Ports are the pieces this module gives every sign-in mode; the composition root adds MakeAdmin, HasAdmin and Built.
+//
+//	ports := users.Ports()
+func (m *Module) Ports() auth.Ports {
+	return auth.Ports{
+		Identities: m,
+		Registry:   m,
+		Sessions:   m,
+		StepUp:     m,
+		Principal:  m,
+		Report:     m.reporter,
+		DB:         m.db,
+		IDs:        m.ids,
+		TrustProxy: m.config.TrustProxy,
+		Log:        m.log,
+	}
 }
 
 // SuspendUser sets Status = "suspended". Evicts user from cache.

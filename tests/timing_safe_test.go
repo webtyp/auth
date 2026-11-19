@@ -8,56 +8,60 @@ import (
 
 	"webtyp.com/auth"
 	"webtyp.com/auth/authority"
+	emailpassword "webtyp.com/auth/email_password"
+	trustedip "webtyp.com/auth/trusted_ip"
+	"webtyp.com/router/mock"
 )
 
 func TestTimingSafeAuth(t *testing.T) {
 	db := newTestDB(t)
-	m, _ := authority.New(db, auth.Config{IDs: testIDs})
+	m, _ := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 
 	userCRUD := getHandler(m, "users")
 	resU, _ := userCRUD.Create(auth.User{Email: "timing@example.com", Name: "Timing User"})
 	u := resU.(auth.User)
-	_ = m.SetPassword(u.Id, "password123")
+	_ = emailpassword.SetPassword(m, u.Id, "password123", nil)
 
 	// Create an OAuth-only user (no local identity)
 	resO, _ := userCRUD.Create(auth.User{Email: "oauth@example.com", Name: "OAuth User"})
 	uOauth := resO.(auth.User)
-	_ = m.RegisterLAN(uOauth.Id, "12345")
+	_ = trustedip.RegisterRUT(m, uOauth.Id, "12345")
 
 	// Suspend a user
 	resS, _ := userCRUD.Create(auth.User{Email: "susp@example.com", Name: "Susp User"})
 	uSusp := resS.(auth.User)
-	_ = m.SetPassword(uSusp.Id, "password123")
+	_ = emailpassword.SetPassword(m, uSusp.Id, "password123", nil)
 	m.SuspendUser(uSusp.Id)
 
+	ep := emailpassword.New(m, m, m.Ports().Report)
 	measure := func(email, pass string) (time.Duration, error) {
 		start := time.Now()
-		_, err := m.Login(email, pass)
+		_, err := ep.Login(&mock.Context{}, []byte(`{"email":"`+email+`","password":"`+pass+`"}`))
 		return time.Since(start), err
 	}
 
 	// 1. Wrong password (baseline, real bcrypt)
 	durReal, err := measure("timing@example.com", "wrong")
-	if err != auth.ErrInvalidCredentials {
-		t.Errorf("expected ErrInvalidCredentials")
+	if err == nil {
+		t.Errorf("expected the attempt to be refused")
 	}
 
 	// 2. Non-existent user
 	durMiss, err := measure("nobody@example.com", "wrong")
-	if err != auth.ErrInvalidCredentials {
-		t.Errorf("expected ErrInvalidCredentials")
+	if err == nil {
+		t.Errorf("expected the attempt to be refused")
 	}
 
 	// 3. Suspended user
 	durSusp, err := measure("susp@example.com", "wrong")
-	if err != auth.ErrInvalidCredentials {
-		t.Errorf("expected ErrInvalidCredentials")
+	if err == nil {
+		t.Errorf("expected the attempt to be refused")
 	}
 
 	// 4. OAuth-only user
 	durOauth, err := measure("oauth@example.com", "wrong")
-	if err != auth.ErrInvalidCredentials {
-		t.Errorf("expected ErrInvalidCredentials")
+	if err == nil {
+		t.Errorf("expected the attempt to be refused")
 	}
 
 	// Real assertions on timing in CI environments can be flaky.

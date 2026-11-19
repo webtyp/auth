@@ -8,10 +8,7 @@ import (
 
 	"webtyp.com/auth"
 	"webtyp.com/auth/authority"
-	"webtyp.com/crud"
-	"webtyp.com/json"
 	"webtyp.com/model"
-	"webtyp.com/router/mock"
 )
 
 // fakeGrants stands in for rbac.Service, which auth must never import.
@@ -39,20 +36,9 @@ func TestMeComposesPermissions(t *testing.T) {
 		ProjectID: "main",
 	})
 
-	if len(profile.Permissions) != 1 {
-		t.Fatalf("permissions = %v, want exactly one entry", profile.Permissions)
-	}
-	if profile.Permissions[0] != "service_catalog:ru" {
-		t.Errorf("permissions[0] = %q, want \"service_catalog:ru\"", profile.Permissions[0])
-	}
-	if !profile.Can(resCatalog, model.Read) {
-		t.Error("Can(service_catalog, Read) = false, want true")
-	}
-	if profile.Can(resCatalog, model.Delete) {
-		t.Error("Can(service_catalog, Delete) = true, want false")
-	}
-	if profile.Can(resStaff, model.Read) {
-		t.Error("Can(staff, Read) = true, want false")
+	want := authority.MeGrant{Resource: string(resCatalog), Actions: "ru"}
+	if len(profile.Grants) != 1 || profile.Grants[0] != want {
+		t.Fatalf("grants = %v, want [%v]", profile.Grants, want)
 	}
 }
 
@@ -66,20 +52,15 @@ func TestMeSendsWildcardAsStored(t *testing.T) {
 		ProjectID: "main",
 	})
 
-	if len(profile.Permissions) != 1 {
-		t.Fatalf("permissions = %v, want exactly one entry", profile.Permissions)
-	}
-	if profile.Permissions[0] != "*:crud" {
-		t.Errorf("permissions[0] = %q, want \"*:crud\"", profile.Permissions[0])
-	}
-	if !profile.Can("anything", model.Delete) {
-		t.Error("Can(anything, Delete) = false, want true")
+	want := authority.MeGrant{Resource: string(model.Wildcard), Actions: "crud"}
+	if len(profile.Grants) != 1 || profile.Grants[0] != want {
+		t.Fatalf("grants = %v, want [%v]", profile.Grants, want)
 	}
 }
 
 func TestMeGrantsErrorIs500(t *testing.T) {
 	db := newTestDB(t)
-	m, err := authority.New(db, auth.Config{IDs: testIDs, Permissions: &auth.Permissions{
+	m, err := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}, Permissions: &auth.Permissions{
 		Grants: &fakeGrants{err: errors.New("db down")}, ProjectID: "main",
 	}})
 	if err != nil {
@@ -89,96 +70,27 @@ func TestMeGrantsErrorIs500(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx := &mock.Context{}
-	ctx.SetUserID(u.Id)
-	callMe(m, ctx)
-	if ctx.Status != 500 {
-		t.Fatalf("me with a failing GrantLister: status %d, want 500", ctx.Status)
+	if _, err := readMe(m, u.Id); model.KindOf(err) != model.ErrorInternal {
+		t.Fatalf("me with a failing GrantLister: err %v, want an internal error", err)
 	}
 }
 
 func TestMeClosedByDefault(t *testing.T) {
-	if p := meProfile(t, nil); len(p.Permissions) != 0 {
-		t.Errorf("permissions = %v, want empty with Config.Permissions nil", p.Permissions)
+	if p := meProfile(t, nil); len(p.Grants) != 0 {
+		t.Errorf("grants = %v, want empty with Config.Permissions nil", p.Grants)
 	}
 
 	p := meProfile(t, &auth.Permissions{ProjectID: "main", Grants: nil})
-	if len(p.Permissions) != 0 {
-		t.Errorf("permissions = %v, want empty with a nil Grants", p.Permissions)
+	if len(p.Grants) != 0 {
+		t.Errorf("grants = %v, want empty with a nil Grants", p.Grants)
 	}
 }
 
-func TestGrantCanRoundTrip(t *testing.T) {
-	cases := []struct {
-		actions model.Action
-		encoded string
-		allows  bool
-	}{
-		{model.Read, "service_catalog:r", true},
-		{model.Read | model.Update, "service_catalog:ru", true},
-		{model.AllActions, "service_catalog:crud", true},
-		{0, "", false},
-	}
-
-	for _, tc := range cases {
-		var p auth.ProfileDTO
-		p.Grant(resCatalog, tc.actions)
-
-		if tc.encoded == "" {
-			if len(p.Permissions) != 0 {
-				t.Errorf("Grant(%v) wrote %v, want nothing", tc.actions, p.Permissions)
-			}
-		} else if len(p.Permissions) != 1 || p.Permissions[0] != tc.encoded {
-			t.Errorf("Grant(%v) = %v, want [%q]", tc.actions, p.Permissions, tc.encoded)
-		}
-
-		if got := p.Can(resCatalog, tc.actions); got != tc.allows {
-			t.Errorf("Can after Grant(%v) = %v, want %v", tc.actions, got, tc.allows)
-		}
-	}
-}
-
-func TestCanIgnoresIllegibleEntry(t *testing.T) {
-	p := auth.ProfileDTO{Permissions: []string{"service_catalog:xyz", "nocolon"}}
-	if p.Can(resCatalog, model.Read) {
-		t.Error("Can(service_catalog, Read) = true on illegible permissions, want false")
-	}
-}
-
-// TestLANIdentity_NeedsItsOwnPermission proves the LAN identity is its own resource: a caller who may administer users
-// must NOT be able to mint a login credential. A permission check that answers "users" only refuses every lan_identity action.
-func TestLANIdentity_NeedsItsOwnPermission(t *testing.T) {
-	db := newTestDB(t)
-	m, err := authority.New(db, auth.Config{IDs: testIDs})
-	if err != nil {
-		t.Fatal(err)
-	}
-	u, err := m.CreateUser("gate@test.com", "Gate", "")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	usersOnly := func(userID string, r model.Resource, a model.Action) bool { return r == "user" }
-	r := &mock.Router{}
-	r.Configure(mock.Config{Authorize: usersOnly})
-	if err := crud.Mount(r, nil, nil, m); err != nil {
-		t.Fatalf("Mount: %v", err)
-	}
-	for _, op := range []string{"create", "read", "delete"} {
-		ctx := &mock.Context{}
-		ctx.SetUserID(u.Id)
-		r.Invoke("OP", "/user.lan_identity."+op, ctx)
-		if ctx.Status != 403 {
-			t.Errorf("lan_identity.%s with user-only permission: status = %d, want 403", op, ctx.Status)
-		}
-	}
-}
-
-// meProfile runs the real me op and returns what a client would decode.
-func meProfile(t *testing.T, perms *auth.Permissions) auth.ProfileDTO {
+// meProfile runs the real crud read me as the signed-in user and returns what a client receives.
+func meProfile(t *testing.T, perms *auth.Permissions) *authority.Me {
 	t.Helper()
 	db := newTestDB(t)
-	m, err := authority.New(db, auth.Config{IDs: testIDs, Permissions: perms})
+	m, err := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}, Permissions: perms})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -186,14 +98,9 @@ func meProfile(t *testing.T, perms *auth.Permissions) auth.ProfileDTO {
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	ctx := &mock.Context{}
-	ctx.SetUserID(u.Id)
-	callMe(m, ctx)
-
-	var profile auth.ProfileDTO
-	if err := json.Decode(ctx.ResponseBody(), &profile); err != nil {
-		t.Fatalf("decode profile: %v", err)
+	me, err := readMe(m, u.Id)
+	if err != nil {
+		t.Fatalf("read me: %v", err)
 	}
-	return profile
+	return me
 }

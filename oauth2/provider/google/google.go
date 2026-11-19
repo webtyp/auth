@@ -1,10 +1,11 @@
 package google
 
 import (
+	"webtyp.com/auth"
+	"webtyp.com/auth/oauth2"
 	"webtyp.com/fetch"
 	"webtyp.com/json"
 	"webtyp.com/model"
-	"webtyp.com/auth"
 )
 
 const (
@@ -38,11 +39,11 @@ func (p *GoogleProvider) config() auth.OAuthConfig {
 }
 
 func (p *GoogleProvider) AuthCodeURL(state string) string {
-	return AuthCodeURLHelper(p.config(), state)
+	return oauth2.AuthCodeURL(p.config(), state)
 }
 
 func (p *GoogleProvider) ExchangeCode(code string) (auth.OAuthToken, error) {
-	return ExchangeCodeHelper(p.config(), code)
+	return oauth2.ExchangeCode(p.config(), code)
 }
 
 type googleData struct {
@@ -96,77 +97,4 @@ func (p *GoogleProvider) GetUserInfo(token auth.OAuthToken) (auth.OAuthUserInfo,
 
 	<-done
 	return res, errOut
-}
-
-func AuthCodeURLHelper(cfg auth.OAuthConfig, state string) string {
-	res := cfg.AuthURL + "?response_type=code"
-	res += "&client_id=" + QueryEscapeHelper(cfg.ClientID)
-	res += "&redirect_uri=" + QueryEscapeHelper(cfg.RedirectURL)
-	res += "&state=" + QueryEscapeHelper(state)
-	if len(cfg.Scopes) > 0 {
-		res += "&scope="
-		for i, s := range cfg.Scopes {
-			if i > 0 {
-				res += "+"
-			}
-			res += QueryEscapeHelper(s)
-		}
-	}
-	return res
-}
-
-func ExchangeCodeHelper(cfg auth.OAuthConfig, code string) (auth.OAuthToken, error) {
-	body := "grant_type=authorization_code"
-	body += "&code=" + QueryEscapeHelper(code)
-	body += "&client_id=" + QueryEscapeHelper(cfg.ClientID)
-	body += "&client_secret=" + QueryEscapeHelper(cfg.ClientSecret)
-	body += "&redirect_uri=" + QueryEscapeHelper(cfg.RedirectURL)
-
-	var res auth.OAuthToken
-	var errOut error
-	done := make(chan bool)
-
-	fetch.Post(cfg.TokenURL).
-		Header("Content-Type", "application/x-www-form-urlencoded").
-		Body([]byte(body)).
-		Send(func(resp *fetch.Response, err error) {
-			defer func() { done <- true }()
-			if err != nil {
-				errOut = err
-				return
-			}
-			if resp.Status != 200 {
-				errOut = auth.ErrInvalidCredentials
-				return
-			}
-			if err := json.Decode(resp.Text(), &res); err != nil {
-				errOut = err
-				return
-			}
-		})
-
-	<-done
-	return res, errOut
-}
-
-func QueryEscapeHelper(s string) string {
-	res := ""
-	for i := 0; i < len(s); i++ {
-		c := s[i]
-		if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '_' || c == '.' || c == '~' {
-			res += string(c)
-		} else if c == ' ' {
-			res += "+"
-		} else {
-			res += "%" + hexDigit(c>>4) + hexDigit(c&0x0F)
-		}
-	}
-	return res
-}
-
-func hexDigit(c byte) string {
-	if c < 10 {
-		return string('0' + c)
-	}
-	return string('A' + (c - 10))
 }

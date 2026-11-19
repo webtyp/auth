@@ -4,12 +4,13 @@ package tests
 
 import (
 	"testing"
+	"webtyp.com/securityevent"
 
 	"webtyp.com/auth"
 	"webtyp.com/auth/authority"
 	trustedip "webtyp.com/auth/trusted_ip"
-	"webtyp.com/router"
 	"webtyp.com/json"
+	"webtyp.com/router"
 	"webtyp.com/router/mock"
 )
 
@@ -48,12 +49,12 @@ func TestLANRUTLogin(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := m.RegisterLAN(u.Id, lanRUT); err != nil {
+	if err := trustedip.RegisterRUT(m, u.Id, lanRUT); err != nil {
 		t.Fatal(err)
 	}
 
 	trusted := &fakeTrustedIP{allowed: map[string]string{u.Id: lanTrustedIP}}
-	m.Enable(trustedip.New(m, trusted, m, m, false))
+	m.Enable(trustedip.New(m, trusted, m, m.Ports().Report, false))
 
 	r := &mock.Router{}
 	r.Configure(mock.Config{})
@@ -76,7 +77,7 @@ func TestLANRUTLogin(t *testing.T) {
 		if ctx.Status != 401 {
 			t.Fatalf("status = %d, want 401", ctx.Status)
 		}
-		assertSecurityEvent(t, pub, from, auth.EventIPMismatch)
+		assertSecurityEvent(t, pub, from, securityevent.LoginFailed, "device not trusted")
 	})
 
 	t.Run("BadChecksumReportsInvalidRUT", func(t *testing.T) {
@@ -85,7 +86,7 @@ func TestLANRUTLogin(t *testing.T) {
 		if ctx.Status != 401 {
 			t.Fatalf("status = %d, want 401", ctx.Status)
 		}
-		assertSecurityEvent(t, pub, from, auth.EventInvalidRUT)
+		assertSecurityEvent(t, pub, from, securityevent.LoginFailed, "invalid RUT format")
 	})
 
 	t.Run("UnregisteredRUTReportsUnknownRUT", func(t *testing.T) {
@@ -94,7 +95,7 @@ func TestLANRUTLogin(t *testing.T) {
 		if ctx.Status != 401 {
 			t.Fatalf("status = %d, want 401", ctx.Status)
 		}
-		assertSecurityEvent(t, pub, from, auth.EventUnknownRUT)
+		assertSecurityEvent(t, pub, from, securityevent.LoginFailed, "unknown RUT")
 	})
 }
 
@@ -118,13 +119,13 @@ func TestLANRUTLogin_RateLimited(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := m.RegisterLAN(u.Id, lanRUT); err != nil {
+	if err := trustedip.RegisterRUT(m, u.Id, lanRUT); err != nil {
 		t.Fatal(err)
 	}
 
 	trusted := &fakeTrustedIP{allowed: map[string]string{u.Id: lanTrustedIP}}
 	limiter := auth.NewIPLimiter(3, 60, 60)
-	m.Enable(trustedip.New(m, trusted, m, m, false, trustedip.WithRateLimit(limiter)))
+	m.Enable(trustedip.New(m, trusted, m, m.Ports().Report, false, trustedip.WithRateLimit(limiter)))
 
 	r := &mock.Router{}
 	r.Configure(mock.Config{})
@@ -154,7 +155,7 @@ func TestLANRUTLogin_RateLimited(t *testing.T) {
 	if got := string(blocked.ResponseBody()); got != lastRejectedBody {
 		t.Errorf("blocked body = %q, want the exact same body as an ordinary rejection (%q)", got, lastRejectedBody)
 	}
-	assertSecurityEvent(t, pub, from, auth.EventRateLimited)
+	assertSecurityEvent(t, pub, from, securityevent.RateLimited, "")
 }
 
 // TestLANRUTLogin_UniformRejectionBody is the regression this whole mode
@@ -176,7 +177,7 @@ func TestLANRUTLogin_UniformRejectionBody(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := m.RegisterLAN(active.Id, lanRUT); err != nil {
+	if err := trustedip.RegisterRUT(m, active.Id, lanRUT); err != nil {
 		t.Fatal(err)
 	}
 
@@ -185,7 +186,7 @@ func TestLANRUTLogin_UniformRejectionBody(t *testing.T) {
 		t.Fatal(err)
 	}
 	const suspendedRUT = "22222222-2"
-	if err := m.RegisterLAN(suspended.Id, suspendedRUT); err != nil {
+	if err := trustedip.RegisterRUT(m, suspended.Id, suspendedRUT); err != nil {
 		t.Fatal(err)
 	}
 	if err := m.SuspendUser(suspended.Id); err != nil {
@@ -193,7 +194,7 @@ func TestLANRUTLogin_UniformRejectionBody(t *testing.T) {
 	}
 
 	trusted := &fakeTrustedIP{allowed: map[string]string{active.Id: lanTrustedIP, suspended.Id: lanTrustedIP}}
-	m.Enable(trustedip.New(m, trusted, m, m, false))
+	m.Enable(trustedip.New(m, trusted, m, m.Ports().Report, false))
 
 	r := &mock.Router{}
 	r.Configure(mock.Config{})
@@ -244,15 +245,11 @@ func postRUT(t *testing.T, r *mock.Router, rut, ip string) *mock.Context {
 	return ctx
 }
 
-// assertSecurityEvent checks that the attempt published want, looking only at
-// events produced after the index the caller captured.
-func assertSecurityEvent(t *testing.T, pub *mockPublisher, from int, want auth.SecurityEventType) {
+// assertSecurityEvent checks that the attempt published an event of kind (with reason, when not ""), looking only
+// at events produced after the index the caller captured.
+func assertSecurityEvent(t *testing.T, pub *mockPublisher, from int, kind securityevent.Kind, reason securityevent.Reason) {
 	t.Helper()
-	events := pub.SecurityEvents()
-	for _, e := range events[from:] {
-		if e.Type == want {
-			return
-		}
+	if !hasSecurityEvent(pub.SecurityEvents()[from:], kind, reason) {
+		t.Errorf("no %s event with reason %q after index %d: %+v", kind.Name(), reason, from, pub.SecurityEvents()[from:])
 	}
-	t.Errorf("no security event of type %d published, got %+v", want, events[from:])
 }

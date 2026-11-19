@@ -30,7 +30,7 @@ func (f *fakeRequestIdentifier) Mount(router.Router) {}
 
 func TestAuthenticate_Order_A1_A2(t *testing.T) {
 	db := newTestDB(t)
-	m, err := authority.New(db, auth.Config{IDs: testIDs})
+	m, err := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +82,7 @@ func TestAuthenticate_Order_A1_A2(t *testing.T) {
 	})
 
 	t.Run("SetStepUpStrategy replaces the default step-up session", func(t *testing.T) {
-		m3, _ := authority.New(db, auth.Config{IDs: testIDs})
+		m3, _ := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 		custom, err := cookie.New(m3, cookie.Options{Name: "admin", Policy: stepUpPolicy})
 		if err != nil {
 			t.Fatal(err)
@@ -102,7 +102,7 @@ func TestAuthenticate_Order_A1_A2(t *testing.T) {
 
 	t.Run("A2 - step-up cookie + main cookie -> MultiFactor", func(t *testing.T) {
 		// New module to avoid the fake RequestIdentifier from A1
-		m2, _ := authority.New(db, auth.Config{IDs: testIDs})
+		m2, _ := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 		m2.SetStrategy(mainStrat)
 		m2.SetStepUpStrategy(stepUpStrat)
 
@@ -145,7 +145,7 @@ func TestAuthenticate_Order_A1_A2(t *testing.T) {
 
 func TestAuthenticate_Order_A3_A5(t *testing.T) {
 	db := newTestDB(t)
-	m, err := authority.New(db, auth.Config{IDs: testIDs})
+	m, err := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -227,5 +227,3 @@ func TestAuthenticate_Order_A3_A5(t *testing.T) {
 		}
 	})
 }
-
-

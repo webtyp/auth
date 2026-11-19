@@ -7,13 +7,13 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
-	"encoding/base64"
 
 	"webtyp.com/auth"
 	"webtyp.com/auth/authority"
@@ -21,6 +21,7 @@ import (
 	"webtyp.com/jwt"
 	"webtyp.com/router"
 	"webtyp.com/router/mock"
+	"webtyp.com/securityevent"
 )
 
 type fakeKeys struct {
@@ -89,11 +90,11 @@ func TestCFAccess_NewValidation(t *testing.T) {
 	store := &fakeIdentityStore{}
 
 	cases := []struct {
-		name string
-		cfg  cfaccess.Config
-		keys cfaccess.KeySource
+		name  string
+		cfg   cfaccess.Config
+		keys  cfaccess.KeySource
 		store auth.IdentityStore
-		want string
+		want  string
 	}{
 		{"empty team", cfaccess.Config{TeamDomain: "", Audience: aud}, keys, store, cfaccess.ErrMsgEmptyTeamDomain},
 		{"path in team", cfaccess.Config{TeamDomain: "https://acme.cloudflareaccess.com", Audience: aud}, keys, store, cfaccess.ErrMsgTeamDomainFormat},
@@ -104,7 +105,7 @@ func TestCFAccess_NewValidation(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := cfaccess.New(tc.cfg, tc.keys, tc.store, nil)
+			_, err := cfaccess.New(tc.cfg, tc.keys, tc.store, reporterFunc(func(securityevent.Event) {}))
 			if err == nil || err.Error() != tc.want {
 				t.Errorf("New() err = %v, want %s", err, tc.want)
 			}
@@ -112,19 +113,28 @@ func TestCFAccess_NewValidation(t *testing.T) {
 	}
 }
 
-type fakeIdentityStore struct{} // just for setup validation
-func (f *fakeIdentityStore) UserByID(id string) (auth.User, error) { return auth.User{}, nil }
+type fakeIdentityStore struct{}                                          // just for setup validation
+func (f *fakeIdentityStore) UserByID(id string) (auth.User, error)       { return auth.User{}, nil }
 func (f *fakeIdentityStore) UserByEmail(email string) (auth.User, error) { return auth.User{}, nil }
-func (f *fakeIdentityStore) IdentityByProvider(provider, providerID string) (auth.Identity, error) { return auth.Identity{}, nil }
-func (f *fakeIdentityStore) UpsertIdentity(userID, provider, providerID, email string) error { return nil }
-func (f *fakeIdentityStore) CreateUser(email, name, phone string) (auth.User, error) { return auth.User{}, nil }
-func (f *fakeIdentityStore) IdentityFor(userID, provider string) (auth.Identity, error) { return auth.Identity{}, nil }
+func (f *fakeIdentityStore) IdentityByProvider(provider, providerID string) (auth.Identity, error) {
+	return auth.Identity{}, nil
+}
+func (f *fakeIdentityStore) UpsertIdentity(userID, provider, providerID, email string) error {
+	return nil
+}
+func (f *fakeIdentityStore) CreateUser(email, name, phone string) (auth.User, error) {
+	return auth.User{}, nil
+}
+func (f *fakeIdentityStore) IdentityFor(userID, provider string) (auth.Identity, error) {
+	return auth.Identity{}, nil
+}
 func (f *fakeIdentityStore) UpdateUserAvatar(userID, avatar string) error { return nil }
+func (f *fakeIdentityStore) DeleteIdentity(userID, provider string) error { return nil }
 
-func setup(t *testing.T) (*authority.Module, *rsa.PrivateKey, string, func() []auth.SecurityEvent) {
+func setup(t *testing.T) (*authority.Module, *rsa.PrivateKey, string, func() []securityevent.Event) {
 	t.Helper()
 	db := newTestDB(t)
-	m, err := authority.New(db, auth.Config{IDs: testIDs})
+	m, err := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,15 +145,15 @@ func setup(t *testing.T) (*authority.Module, *rsa.PrivateKey, string, func() []a
 	}
 	kid := "key-1"
 
-	var events []auth.SecurityEvent
-	notify := func(e auth.SecurityEvent) { events = append(events, e) }
+	var events []securityevent.Event
+	notify := func(e securityevent.Event) { events = append(events, e) }
 	_ = notify
 
-	return m, k, kid, func() []auth.SecurityEvent { return events }
+	return m, k, kid, func() []securityevent.Event { return events }
 }
 
-func createCFA(t *testing.T, m *authority.Module, keys cfaccess.KeySource, notify func(auth.SecurityEvent)) *cfaccess.Authenticator {
-	cfa, err := cfaccess.New(cfaccess.Config{TeamDomain: team, Audience: aud}, keys, m, notify)
+func createCFA(t *testing.T, m *authority.Module, keys cfaccess.KeySource, notify func(securityevent.Event)) *cfaccess.Authenticator {
+	cfa, err := cfaccess.New(cfaccess.Config{TeamDomain: team, Audience: aud}, keys, m, reporterFunc(notify))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -161,9 +171,9 @@ func parseSet(t *testing.T, kid string, k *rsa.PrivateKey) jwt.KeySet {
 
 func TestCFAccess_NoHeader(t *testing.T) {
 	m, k, kid, _ := setup(t)
-	var events []auth.SecurityEvent
+	var events []securityevent.Event
 	fk := &fakeKeys{set: parseSet(t, kid, k)}
-	cfa := createCFA(t, m, fk, func(e auth.SecurityEvent){ events = append(events, e) })
+	cfa := createCFA(t, m, fk, func(e securityevent.Event) { events = append(events, e) })
 
 	ctx := &mock.Context{InMethod: "GET", InPath: "/api/x"}
 	p, handled := cfa.IdentifyRequest(ctx)
@@ -232,8 +242,8 @@ func TestCFAccess_EmailCaseInsensitive(t *testing.T) {
 func TestCFAccess_UnknownEmail(t *testing.T) {
 	m, k, kid, _ := setup(t)
 
-	var events []auth.SecurityEvent
-	notify := func(e auth.SecurityEvent) { events = append(events, e) }
+	var events []securityevent.Event
+	notify := func(e securityevent.Event) { events = append(events, e) }
 
 	fk := &fakeKeys{set: parseSet(t, kid, k)}
 	cfa := createCFA(t, m, fk, notify)
@@ -259,8 +269,8 @@ func TestCFAccess_UnknownEmail(t *testing.T) {
 
 func TestCFAccess_WrongAudience(t *testing.T) {
 	m, k, kid, _ := setup(t)
-	var events []auth.SecurityEvent
-	notify := func(e auth.SecurityEvent) { events = append(events, e) }
+	var events []securityevent.Event
+	notify := func(e securityevent.Event) { events = append(events, e) }
 	fk := &fakeKeys{set: parseSet(t, kid, k)}
 	cfa := createCFA(t, m, fk, notify)
 
@@ -279,8 +289,8 @@ func TestCFAccess_WrongAudience(t *testing.T) {
 
 func TestCFAccess_WrongIssuer(t *testing.T) {
 	m, k, kid, _ := setup(t)
-	var events []auth.SecurityEvent
-	notify := func(e auth.SecurityEvent) { events = append(events, e) }
+	var events []securityevent.Event
+	notify := func(e securityevent.Event) { events = append(events, e) }
 	fk := &fakeKeys{set: parseSet(t, kid, k)}
 	cfa := createCFA(t, m, fk, notify)
 
@@ -300,8 +310,8 @@ func TestCFAccess_WrongIssuer(t *testing.T) {
 
 func TestCFAccess_Expired(t *testing.T) {
 	m, k, kid, _ := setup(t)
-	var events []auth.SecurityEvent
-	notify := func(e auth.SecurityEvent) { events = append(events, e) }
+	var events []securityevent.Event
+	notify := func(e securityevent.Event) { events = append(events, e) }
 	fk := &fakeKeys{set: parseSet(t, kid, k)}
 	cfa := createCFA(t, m, fk, notify)
 
@@ -320,8 +330,8 @@ func TestCFAccess_Expired(t *testing.T) {
 
 func TestCFAccess_BadSignatureRefreshesOnce(t *testing.T) {
 	m, k, kid, _ := setup(t)
-	var events []auth.SecurityEvent
-	notify := func(e auth.SecurityEvent) { events = append(events, e) }
+	var events []securityevent.Event
+	notify := func(e securityevent.Event) { events = append(events, e) }
 
 	// Key B for signature
 	kB, _ := rsa.GenerateKey(rand.Reader, 2048)
@@ -353,9 +363,9 @@ func TestCFAccess_RotatedKeyAccepted(t *testing.T) {
 	kidB := "key-b"
 
 	fk := &fakeKeys{
-		set: parseSet(t, kidA, kA),
+		set:      parseSet(t, kidA, kA),
 		hasFresh: true,
-		fresh: parseSet(t, kidB, kB),
+		fresh:    parseSet(t, kidB, kB),
 	}
 	cfa := createCFA(t, m, fk, nil)
 
@@ -377,8 +387,8 @@ func TestCFAccess_RotatedKeyAccepted(t *testing.T) {
 
 func TestCFAccess_KeysUnavailable(t *testing.T) {
 	m, k, kid, _ := setup(t)
-	var events []auth.SecurityEvent
-	notify := func(e auth.SecurityEvent) { events = append(events, e) }
+	var events []securityevent.Event
+	notify := func(e securityevent.Event) { events = append(events, e) }
 	fk := &fakeKeys{err: errors.New("down")}
 	cfa := createCFA(t, m, fk, notify)
 
@@ -397,8 +407,8 @@ func TestCFAccess_KeysUnavailable(t *testing.T) {
 
 func TestCFAccess_SuspendedUser(t *testing.T) {
 	m, k, kid, _ := setup(t)
-	var events []auth.SecurityEvent
-	notify := func(e auth.SecurityEvent) { events = append(events, e) }
+	var events []securityevent.Event
+	notify := func(e securityevent.Event) { events = append(events, e) }
 
 	u, _ := m.CreateUser("ana@clinica.cl", "Ana", "")
 	m.SuspendUser(u.Id)

@@ -7,26 +7,29 @@ import (
 
 	"webtyp.com/auth"
 	"webtyp.com/auth/authority"
+	emailpassword "webtyp.com/auth/email_password"
+	trustedip "webtyp.com/auth/trusted_ip"
+	"webtyp.com/router/mock"
 )
 
 func TestSQLBoundary(t *testing.T) {
 	db := newTestDB(t)
-	m, _ := authority.New(db, auth.Config{IDs: testIDs})
+	m, _ := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 
 	userCRUD := getHandler(m, "users")
 	resU, _ := userCRUD.Create(auth.User{Email: "sql@example.com", Name: "SQL Test"})
 	u := resU.(auth.User)
-	_ = m.SetPassword(u.Id, "password123")
+	_ = emailpassword.SetPassword(m, u.Id, "password123", nil)
 
 	t.Run("Login Injection", func(t *testing.T) {
-		_, err := m.Login("' OR 1=1 --", "password123")
-		if err != auth.ErrInvalidCredentials {
-			t.Errorf("expected ErrInvalidCredentials, got %v", err)
+		ep := emailpassword.New(m, m, m.Ports().Report)
+		if _, err := ep.Login(&mock.Context{}, []byte(`{"email":"' OR 1=1 --","password":"password123"}`)); err == nil {
+			t.Errorf("an injected e-mail must be refused")
 		}
 	})
 
 	t.Run("SetPassword Injection", func(t *testing.T) {
-		err := m.SetPassword("'; DROP TABLE users; --", "password123")
+		err := emailpassword.SetPassword(m, "'; DROP TABLE users; --", "password123", nil)
 		// The error from getting identity or updating should not be nil.
 		// It will return ErrNotFound or some identity creation error, but NOT crash or drop tables.
 		if err == nil {
@@ -41,7 +44,7 @@ func TestSQLBoundary(t *testing.T) {
 	})
 
 	t.Run("RegisterLAN Injection", func(t *testing.T) {
-		err := m.RegisterLAN(u.Id, "12345678-5'; --")
+		err := trustedip.RegisterRUT(m, u.Id, "12345678-5'; --")
 		if !auth.IsInvalidRUT(err) {
 			t.Errorf("expected ErrInvalidRUT, got %v", err)
 		}

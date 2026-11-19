@@ -4,12 +4,13 @@ package tests
 
 import (
 	"testing"
+	"webtyp.com/securityevent"
 
 	"webtyp.com/auth"
 	"webtyp.com/auth/authority"
 	trustedip "webtyp.com/auth/trusted_ip"
-	"webtyp.com/router"
 	"webtyp.com/json"
+	"webtyp.com/router"
 	"webtyp.com/router/mock"
 )
 
@@ -50,11 +51,11 @@ func newSetupHarness(t *testing.T) *setupHarness {
 		if err != nil {
 			return err
 		}
-		return m.RegisterLAN(u.Id, code)
+		return trustedip.RegisterRUT(m, u.Id, code)
 	}
 
 	trusted := &fakeTrustedIP{allowed: map[string]string{}}
-	m.Enable(trustedip.New(m, trusted, m, m, false, trustedip.WithFirstAdminSetup(m, create)))
+	m.Enable(trustedip.New(m, trusted, m, m.Ports().Report, false, trustedip.WithFirstAdminSetup(func() (bool, error) { return m.HasIdentity(auth.ProviderTrustedIP) }, create)))
 
 	h.r = &mock.Router{}
 	h.r.Configure(mock.Config{})
@@ -121,12 +122,13 @@ func TestFirstAdminSetup(t *testing.T) {
 		if c, ok := ctx.Cookie("__Host-setup_session"); !ok || c.Value == "" {
 			t.Errorf("setup must issue a session so the installer lands inside: %+v", c)
 		}
-		assertSecurityEvent(t, h.pub, from, auth.EventSetupCompleted)
+		assertSecurityEvent(t, h.pub, from, securityevent.AdminCreated, "")
 	})
 
 	t.Run("ClosesOnceAnAdminExists", func(t *testing.T) {
-		if ctx := h.get(t); ctx.Status != 404 {
-			t.Errorf("GET status = %d, want 404 once setup is done", ctx.Status)
+		// From the local network each answer has one meaning (D76): 200 and "not required" once done.
+		if ctx := h.get(t); ctx.Status != 200 || string(ctx.ResponseBody()) != `{"required":false}` {
+			t.Errorf("GET = %d %s, want 200 {\"required\":false} once setup is done", ctx.Status, ctx.ResponseBody())
 		}
 	})
 
@@ -140,7 +142,7 @@ func TestFirstAdminSetup(t *testing.T) {
 		if h.calls != before {
 			t.Errorf("create callback ran again after setup closed (%d → %d)", before, h.calls)
 		}
-		assertSecurityEvent(t, h.pub, from, auth.EventSetupRejected)
+		assertSecurityEvent(t, h.pub, from, securityevent.SetupRejected, "")
 	})
 }
 
@@ -200,8 +202,8 @@ func TestFirstAdminSetup_UnreadableRegistryStaysClosedAndSaysSo(t *testing.T) {
 	}
 	created := 0
 	create := func(string, string, string) error { created++; return nil }
-	m.Enable(trustedip.New(m, &fakeTrustedIP{allowed: map[string]string{}}, m, m, false,
-		trustedip.WithFirstAdminSetup(brokenRegistry{}, create)))
+	m.Enable(trustedip.New(m, &fakeTrustedIP{allowed: map[string]string{}}, m, m.Ports().Report, false,
+		trustedip.WithFirstAdminSetup(func() (bool, error) { return brokenRegistry{}.HasIdentity("") }, create)))
 
 	r := &mock.Router{}
 	r.Configure(mock.Config{})
@@ -213,10 +215,10 @@ func TestFirstAdminSetup_UnreadableRegistryStaysClosedAndSaysSo(t *testing.T) {
 	ctx.SetValue("RemoteAddr", setupIP+":54321")
 	r.Invoke("GET", auth.PathSetup, ctx)
 
-	if ctx.Status != 404 {
-		t.Errorf("GET status = %d, want 404 — an unreadable registry must never swing setup open", ctx.Status)
+	if ctx.Status != 503 {
+		t.Errorf("GET status = %d, want 503 — an unreadable registry must never swing setup open, and says so", ctx.Status)
 	}
-	assertSecurityEvent(t, pub, from, auth.EventSetupUnavailable)
+	assertSecurityEvent(t, pub, from, securityevent.SecurityStoreFailed, "")
 
 	// And a POST must not reach the consumer's create callback either.
 	from = len(pub.SecurityEvents())
@@ -233,11 +235,11 @@ func TestFirstAdminSetup_UnreadableRegistryStaysClosedAndSaysSo(t *testing.T) {
 	if created != 0 {
 		t.Error("create callback must not run while the registry is unreadable")
 	}
-	assertSecurityEvent(t, pub, from, auth.EventSetupUnavailable)
+	assertSecurityEvent(t, pub, from, securityevent.SecurityStoreFailed, "")
 	// The reason must be the real one: "rejected" would claim an admin
 	// already exists, which is exactly what we could not determine.
 	for _, e := range pub.SecurityEvents()[from:] {
-		if e.Type == auth.EventSetupRejected {
+		if e.Kind == securityevent.SetupRejected {
 			t.Error("an unreadable registry must not be reported as EventSetupRejected — that names the wrong cause")
 		}
 	}
@@ -251,7 +253,7 @@ func TestFirstAdminSetup_DisabledByDefault(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	m.Enable(trustedip.New(m, &fakeTrustedIP{allowed: map[string]string{}}, m, m, false))
+	m.Enable(trustedip.New(m, &fakeTrustedIP{allowed: map[string]string{}}, m, m.Ports().Report, false))
 
 	r := &mock.Router{}
 	r.Configure(mock.Config{})

@@ -23,7 +23,7 @@ func TestSessionCacheIsBounded(t *testing.T) {
 		t.Fatalf("failed to migrate: %v", err)
 	}
 
-	m, err := authority.New(db, auth.Config{IDs: testIDs})
+	m, err := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 	if err != nil {
 		t.Fatalf("failed to create authority: %v", err)
 	}

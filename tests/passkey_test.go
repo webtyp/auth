@@ -4,13 +4,16 @@ package tests
 
 import (
 	"strings"
+	"webtyp.com/securityevent"
+
 	"webtyp.com/fmt"
 
 	"crypto/sha256"
 	"testing"
+
 	"webtyp.com/time"
 
-		"webtyp.com/auth"
+	"webtyp.com/auth"
 	"webtyp.com/auth/authority"
 	"webtyp.com/auth/passkey"
 	"webtyp.com/auth/session/cookie"
@@ -21,7 +24,7 @@ import (
 	"webtyp.com/orm"
 	"webtyp.com/router"
 	"webtyp.com/router/mock"
-	)
+)
 
 func buildCreateResponse(rpID string, challenge, origin, spki []byte, signCount uint32, credID []byte, flags byte) string {
 	cdJSON := `{"type":"webauthn.create","challenge":"` + base64.URLEncode(challenge) + `","origin":"` + string(origin) + `"}`
@@ -114,7 +117,7 @@ func setupPasskeyEnv(t *testing.T) pkEnv {
 	mainStrat, _ := cookie.New(m, cookie.Options{Name: "session", Domain: "", Policy: mainPolicy})
 	m.SetStrategy(mainStrat)
 
-	pk, err := passkey.New(db, testIDs, m, "https://app.example.com")
+	pk, err := passkey.New(db, testIDs, m, m.Ports().Report, "https://app.example.com")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -179,12 +182,12 @@ func TestPasskey_K1_K2(t *testing.T) {
 		}
 
 		// Flush cache by recreating
-		m2, _ := authority.New(env2.db, auth.Config{IDs: testIDs})
+		m2, _ := authority.New(env2.db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 		mainPolicy := auth.SessionPolicy{Absolute: 3600, Idle: 900, Assurance: model.AssuranceSingleFactor}
 		mainStrat, _ := cookie.New(m2, cookie.Options{Name: "session", Domain: "", Policy: mainPolicy})
 		m2.SetStrategy(mainStrat)
 
-		pk, _ := passkey.New(env2.db, testIDs, m2, "https://app.example.com")
+		pk, _ := passkey.New(env2.db, testIDs, m2, m2.Ports().Report, "https://app.example.com")
 		r2 := &mock.Router{}
 		m2.MountAPI(r2)
 		pk.Mount(r2)
@@ -245,7 +248,7 @@ func TestPasskey_K3(t *testing.T) {
 			t.Fatalf("expected 204, got %d. body: %s, events: %+v, www-auth: %s", ctxReg.Status, string(ctxReg.ResponseBody()), env.pub.SecurityEvents(), ctxReg.GetHeader("WWW-Authenticate"))
 		}
 
-		assertSecurityEvent(t, env.pub, 0, auth.EventPasskeyRegistered)
+		assertSecurityEvent(t, env.pub, 0, securityevent.CredentialAdded, "")
 
 		// 3. Replay
 		ctxReplay := &mock.Context{InMethod: "POST", InPath: passkey.PathRegister, InBody: []byte(base64.URLEncode([]byte(respBody)))}
@@ -278,7 +281,7 @@ func TestPasskey_K4_K5(t *testing.T) {
 
 	// 1. Get verify options
 	ctxOpt := &mock.Context{InMethod: "POST", InPath: passkey.PathVerifyOptions}
-		ctxOpt.SetValue(router.ContextKeyNetwork, router.NetworkLocal)
+	ctxOpt.SetValue(router.ContextKeyNetwork, router.NetworkLocal)
 	ctxOpt.SetCookie(env.cMain)
 
 	env.m.Authenticate()(func(c router.Context) {
@@ -313,7 +316,7 @@ func TestPasskey_K4_K5(t *testing.T) {
 		if ctxVer.Status != 403 {
 			t.Errorf("expected 403, got %d", ctxVer.Status)
 		}
-		assertSecurityEvent(t, env.pub, 0, auth.EventPasskeyRejected)
+		assertSecurityEvent(t, env.pub, 0, securityevent.LoginFailed, "")
 	})
 
 	t.Run("K5 - wrong signature -> 401 empty body", func(t *testing.T) {
@@ -337,15 +340,15 @@ func TestPasskey_K4_K5(t *testing.T) {
 			t.Errorf("expected empty body, got %s", string(ctxVer.ResponseBody()))
 		}
 
-		var found auth.SecurityEvent
+		var found securityevent.Event
 		events := env.pub.SecurityEvents()
 		for _, e := range events {
-			if e.Type == auth.EventPasskeyRejected {
+			if e.Kind == securityevent.LoginFailed {
 				found = e
 			}
 		}
-		if found.Type == 0 || found.Reason == "" {
-			t.Errorf("expected EventPasskeyRejected with Reason set, got %+v", found)
+		if found.Kind == 0 || found.Reason == "" {
+			t.Errorf("expected a LoginFailed event with Reason set, got %+v", found)
 		}
 	})
 }
@@ -366,7 +369,7 @@ func TestPasskey_K6_Misc(t *testing.T) {
 
 	// 1. Get verify options
 	ctxOpt := &mock.Context{InMethod: "POST", InPath: passkey.PathVerifyOptions}
-		ctxOpt.SetValue(router.ContextKeyNetwork, router.NetworkLocal)
+	ctxOpt.SetValue(router.ContextKeyNetwork, router.NetworkLocal)
 	ctxOpt.SetCookie(env.cMain)
 
 	env.m.Authenticate()(func(c router.Context) {
@@ -396,7 +399,7 @@ func TestPasskey_K6_Misc(t *testing.T) {
 			t.Fatalf("expected 204, got %d. body: %s", ctxVer.Status, string(ctxVer.ResponseBody()))
 		}
 
-		assertSecurityEvent(t, env.pub, 0, auth.EventPasskeyVerified)
+		assertSecurityEvent(t, env.pub, 0, securityevent.LoginSucceeded, "")
 
 		// Check step-up cookie was issued
 		cStep, ok := ctxVer.Cookie("__Host-stepup")
@@ -435,18 +438,18 @@ func TestPasskey_K6_Misc(t *testing.T) {
 	})
 
 	t.Run("TestPasskey_OriginRequired", func(t *testing.T) {
-		_, err := passkey.New(env.db, testIDs, env.m, "")
-		if err == nil || err.Error() != passkey.ErrMsgOrigin {
-			t.Errorf("expected %q, got %v", passkey.ErrMsgOrigin, err)
+		_, err := passkey.New(env.db, testIDs, env.m, env.m.Ports().Report, "")
+		if err != passkey.ErrOriginRequired {
+			t.Errorf("expected ErrOriginRequired, got %v", err)
 		}
-		_, err = passkey.New(env.db, testIDs, env.m, "https://")
-		if err == nil || err.Error() != passkey.ErrMsgOrigin {
-			t.Errorf("expected %q, got %v", passkey.ErrMsgOrigin, err)
+		_, err = passkey.New(env.db, testIDs, env.m, env.m.Ports().Report, "https://")
+		if err != passkey.ErrOriginRequired {
+			t.Errorf("expected ErrOriginRequired, got %v", err)
 		}
 	})
 
 	t.Run("TestPasskey_OriginWithPort", func(t *testing.T) {
-		pk, err := passkey.New(env.db, testIDs, env.m, "https://localhost:6060")
+		pk, err := passkey.New(env.db, testIDs, env.m, env.m.Ports().Report, "https://localhost:6060")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}

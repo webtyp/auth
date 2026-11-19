@@ -5,6 +5,7 @@ package tests
 import (
 	"strings"
 	"testing"
+	"webtyp.com/securityevent"
 
 	"webtyp.com/auth"
 	"webtyp.com/auth/authority"
@@ -39,7 +40,7 @@ func setupOAuthTestModule(t *testing.T) (*authority.Module, *mockPublisher, *moc
 		ExchangeCodeVal: auth.OAuthToken{AccessToken: "mocktoken"},
 		UserInfoVal:     auth.OAuthUserInfo{ID: "mockid", Email: "mock@example.com", Name: "Mock User", EmailVerified: true},
 	}
-	m.Enable(oauth2.New(m, m, m, []auth.OAuthProvider{mockP}))
+	m.Enable(oauth2.New(m, m, m, m.Ports().Report, []auth.OAuthProvider{mockP}))
 
 	r := &mock.Router{}
 	m.MountAPI(r)
@@ -148,7 +149,7 @@ func TestOAuthStateEmitsReplayEvent(t *testing.T) {
 	evs := pub.SecurityEvents()
 	var found bool
 	for _, e := range evs {
-		if e.Type == auth.EventOAuthReplay {
+		if e.Kind == securityevent.TokenReused {
 			found = true
 			break
 		}
@@ -193,7 +194,7 @@ func TestOAuthStateEmitsExpiredEvent(t *testing.T) {
 	evs := pub.SecurityEvents()
 	var found bool
 	for _, e := range evs {
-		if e.Type == auth.EventOAuthExpiredState {
+		if e.Kind == securityevent.LoginFailed && e.Reason == "oauth state expired" {
 			found = true
 			break
 		}
@@ -216,7 +217,7 @@ func TestOAuthStateEmitsCrossProviderEvent(t *testing.T) {
 	evs := pub.SecurityEvents()
 	var found bool
 	for _, e := range evs {
-		if e.Type == auth.EventOAuthCrossProvider {
+		if e.Kind == securityevent.LoginFailed && e.Reason == "oauth state of another provider" {
 			found = true
 			break
 		}

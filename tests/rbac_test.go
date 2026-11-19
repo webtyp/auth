@@ -8,15 +8,13 @@ import (
 	"webtyp.com/auth"
 	"webtyp.com/auth/authority"
 	"webtyp.com/crud"
-	"webtyp.com/json"
 	"webtyp.com/model"
 	"webtyp.com/router"
-	"webtyp.com/router/mock"
 )
 
 func TestTools_Me(t *testing.T) {
 	db := newTestDB(t)
-	m, _ := authority.New(db, auth.Config{IDs: testIDs})
+	m, _ := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 
 	userCRUD := getHandler(m, "users")
 	res, err := userCRUD.Create(auth.User{Email: "me@test.com", Name: "Me User"})
@@ -26,18 +24,9 @@ func TestTools_Me(t *testing.T) {
 	u := res.(auth.User)
 
 	t.Run("Authenticated me returns profile", func(t *testing.T) {
-		ctx := &mock.Context{}
-		ctx.SetUserID(u.Id)
-
-		callMe(m, ctx)
-
-		if ctx.Status != 0 && ctx.Status != 200 {
-			t.Fatalf("handler returned status: %d", ctx.Status)
-		}
-
-		var profile auth.ProfileDTO
-		if err := json.Decode(ctx.ResponseBody(), &profile); err != nil {
-			t.Fatalf("Decode failed: %v", err)
+		profile, err := readMe(m, u.Id)
+		if err != nil {
+			t.Fatalf("me: %v", err)
 		}
 		if profile.Id != u.Id || profile.Email != u.Email {
 			t.Errorf("mismatch: got %v, want %v", profile, u)
@@ -45,11 +34,8 @@ func TestTools_Me(t *testing.T) {
 	})
 
 	t.Run("Anonymous me returns error", func(t *testing.T) {
-		ctx := &mock.Context{}
-		// No userID set
-		callMe(m, ctx)
-		if ctx.Status != 401 && ctx.Status != 403 {
-			t.Errorf("an anonymous caller must be refused (401 or 403), got %d", ctx.Status)
+		if _, err := readMe(m, ""); err == nil {
+			t.Error("a caller without a session must be refused")
 		}
 	})
 }
@@ -57,7 +43,7 @@ func TestTools_Me(t *testing.T) {
 // TestUser_CrudThroughLoopback walks the four actions of the user entity through crud, as the admin screen does.
 func TestUser_CrudThroughLoopback(t *testing.T) {
 	db := newTestDB(t)
-	m, _ := authority.New(db, auth.Config{IDs: testIDs})
+	m, _ := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 	caller := crud.LoopbackActingAs(nil, "admin-1", m)
 	op := func(action model.Action) router.Operation {
 		return router.Operation{Module: authority.ModelName, Entity: "user", Action: action}
@@ -100,7 +86,7 @@ func TestNew_Validation(t *testing.T) {
 	db := newTestDB(t)
 
 	t.Run("Cookie strategy (default) needs no secret", func(t *testing.T) {
-		_, err := authority.New(db, auth.Config{IDs: testIDs})
+		_, err := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 		if err != nil {
 			t.Fatal(err)
 		}

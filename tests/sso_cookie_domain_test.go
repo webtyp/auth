@@ -14,7 +14,7 @@ import (
 
 func TestWithDomain_Issue(t *testing.T) {
 	db := newTestDB(t)
-	m, err := authority.New(db, auth.Config{IDs: testIDs})
+	m, err := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,7 +71,7 @@ func TestWithDomain_Issue(t *testing.T) {
 
 func TestWithDomain_Revoke(t *testing.T) {
 	db := newTestDB(t)
-	m, err := authority.New(db, auth.Config{IDs: testIDs})
+	m, err := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,7 +103,7 @@ func TestWithDomain_Revoke(t *testing.T) {
 
 func TestWithDomain_SameSiteStays(t *testing.T) {
 	db := newTestDB(t)
-	m, err := authority.New(db, auth.Config{IDs: testIDs})
+	m, err := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 	if err != nil {
 		t.Fatal(err)
 	}

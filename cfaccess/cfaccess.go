@@ -12,20 +12,20 @@ import (
 	"webtyp.com/jwt"
 	"webtyp.com/model"
 	"webtyp.com/router"
-	"webtyp.com/time"
+	"webtyp.com/securityevent"
 )
 
 const (
 	// HeaderAssertion is the header Cloudflare Access adds to each request.
 	HeaderAssertion = "Cf-Access-Jwt-Assertion"
 
-	ErrMsgEmptyTeamDomain   = "cfaccess: team domain required"
-	ErrMsgTeamDomainFormat  = "cfaccess: invalid format"
-	ErrMsgEmptyAudience     = "cfaccess: AUD tag required"
-	ErrMsgNilKeySource      = "cfaccess: keys source required"
-	ErrMsgNilIdentityStore  = "cfaccess: store required"
+	ErrMsgEmptyTeamDomain  = "cfaccess: team domain required"
+	ErrMsgTeamDomainFormat = "cfaccess: invalid format"
+	ErrMsgEmptyAudience    = "cfaccess: AUD tag required"
+	ErrMsgNilKeySource     = "cfaccess: keys source required"
+	ErrMsgNilIdentityStore = "cfaccess: store required"
 
-	statusActive = "active" // auth.User.Status of an enabled account (same literal authority writes)
+	statusActive  = "active" // auth.User.Status of an enabled account (same literal authority writes)
 	pathSeparator = "/"
 )
 
@@ -57,7 +57,7 @@ type Authenticator struct {
 	audience string
 	keys     KeySource
 	store    auth.IdentityStore
-	notify   func(auth.SecurityEvent)
+	report   securityevent.Reporter
 }
 
 var (
@@ -65,14 +65,14 @@ var (
 	_ auth.RequestIdentifier = (*Authenticator)(nil)
 )
 
-// New builds the mode. notify may be nil (no security events).
+// New builds the mode. report receives every refused token.
 //
 // Example:
 //
 //	keys := cfaccess.NewKeySource(cfaccess.CertsURL("acme.cloudflareaccess.com"))
-//	cfa, err := cfaccess.New(cfaccess.Config{TeamDomain: "acme.cloudflareaccess.com", Audience: aud}, keys, authMod, authMod.Notify)
+//	cfa, err := cfaccess.New(cfaccess.Config{TeamDomain: "acme.cloudflareaccess.com", Audience: aud}, keys, authMod, authMod.Ports().Report)
 //	authMod.Enable(cfa)
-func New(cfg Config, keys KeySource, store auth.IdentityStore, notify func(auth.SecurityEvent)) (*Authenticator, error) {
+func New(cfg Config, keys KeySource, store auth.IdentityStore, report securityevent.Reporter) (*Authenticator, error) {
 	switch {
 	case cfg.TeamDomain == "":
 		return nil, fmt.Err(ErrMsgEmptyTeamDomain)
@@ -90,7 +90,7 @@ func New(cfg Config, keys KeySource, store auth.IdentityStore, notify func(auth.
 		audience: cfg.Audience,
 		keys:     keys,
 		store:    store,
-		notify:   notify,
+		report:   report,
 	}, nil
 }
 
@@ -164,8 +164,7 @@ func (a *Authenticator) userFor(email string) (string, bool) {
 // reject reports the refusal and answers "handled, anonymous". who is the
 // e-mail or user id when known, "" otherwise.
 func (a *Authenticator) reject(who, reason string) (auth.Principal, bool) {
-	if a.notify != nil {
-		a.notify(auth.SecurityEvent{Type: auth.EventCloudflareAccessRejected, UserID: who, Reason: reason, Timestamp: time.NowUnix()})
-	}
+	// Report fails only for a Reporter not made with securityevent.New.
+	_ = a.report.Report(securityevent.Event{Kind: securityevent.LoginFailed, UserID: who, Mode: auth.ProviderCloudflareAccess, Reason: securityevent.Reason(reason)})
 	return auth.Principal{}, true
 }

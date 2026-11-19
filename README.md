@@ -25,9 +25,9 @@ flowchart TD
 
 ## Packages
 
-- `auth` — Core ports: `SubjectStore`, `SessionIssuer`, `IdentityStore`,
-  `StateStore`, `SecurityNotifier`, `SessionRepo`, `Config`, `ProfileDTO`,
-  `ShellProfile`, OAuth types.
+- `auth` — Core contracts: `Mode` (one sign-in mode as an app chooses it), `Ports` (the pieces every mode receives),
+  `ModeWithTables`, `MigrateModes`, `Authenticator`, `SessionIssuer`, `IdentityStore`, `StateStore`, `SessionRepo`,
+  `Config`, OAuth types. Security events go through `webtyp.com/securityevent`.
 - `authority` — Concrete module (`Module`) implementing the ports, caches,
   migrations, and middleware. Configures a secure opaque cookie session strategy by default using 256-bit CSPRNG entropy (`webtyp/crypto/rand`) for session IDs and OAuth states.
 - `oauth2` + `oauth2/provider/google`, `oauth2/provider/microsoft` — OAuth flow
@@ -36,7 +36,9 @@ flowchart TD
 - `passkey` — WebAuthn authenticator: enrollment and a step-up session (`AssuranceMultiFactor`) after a verified passkey.
 - `clientassertion` — Machine clients: `private_key_jwt` (RFC 7523) bearer assertions become principals.
 - `cfaccess` — Cloudflare Access: identifies each request by the signed `Cf-Access-Jwt-Assertion` (RS256, issuer, audience), mapping the verified e-mail to a user.
-- `email_password`, `trusted_ip` — Credential authenticators.
+- `trusted_ip` — Sign-in with a RUT from a device the app's register trusts (`trustedip.Mode{Devices}`); owns the RUT
+  (`RegisterRUT`, `UnregisterRUT`) and its entry screen.
+- `email_password` — Sign-in with e-mail and password; owns the hash (`SetPassword`, `CheckPassword`).
 - `local` — Development selector authenticator; no network, no env vars.
 
 ## Local door and internet door
@@ -52,7 +54,7 @@ request counts as internet). On the internet door:
   session (the user comes from the stored credential) and issue the step-up session
   (`model.AssuranceMultiFactor`), the only kind the internet door accepts for non-public routes.
 
-`passkey/browser.SignIn` and `Enroll` are the browser half. `Enroll` registers a passkey on this device for the person signed in, and it only works on the local door. Both functions call `navigator.credentials` which requires a user gesture, so they must be called from a goroutine started by a click handler.
+`passkey.SignIn`, `passkey.Enroll` and `passkey.Setup` (files built only for the browser) are the browser half. `Enroll` registers a passkey on this device for the person signed in, and it only works on the local door. Both functions call `navigator.credentials` which requires a user gesture, so they must be called from a goroutine started by a click handler.
 
 Login challenges asked for without a session are single use, expire after 5 minutes, and the expired
 ones are deleted each time a new one is asked for.
@@ -98,22 +100,22 @@ RFC 9470 challenge; the client then runs `passkey` verify to get the step-up
 session. Run `passkey.Migrate` and `clientassertion.Migrate` next to
 `authority.Migrate`. Logout revokes both sessions.
 
-## Working without the server (remembered session)
+## Choosing the sign-in modes
 
-An offline-first app lets the person who signed in keep working on the same device, that same day,
-while the server is unreachable. No new sign-in ever happens offline, and the remembered profile
-grants nothing: the server re-authorises every request it receives.
+An app lists its modes once, in its appkit configuration; appkit builds each one with `authority.Ports()` plus the
+pieces only it can give (`MakeAdmin`, `HasAdmin`, `Built`) and never knows which mode it is:
 
 ```go
-store := localStore{} // Get/Set/Del over dom.LocalStorageGet/Set/Del
-day := time.FormatDate(time.Now())
-if err == nil {            // "me" answered
-	auth.RememberSession(store, profile, day)
-} else if p, ok := auth.RememberedSession(store, day); ok { // no answer from the server
-	profile = p
+SignIn: []auth.Mode{
+	trustedip.Mode{Devices: staffmanager.Definition},       // inside a clinic: RUT from a registered device
+	passkey.Mode{Origin: "https://app.example.com"},        // from outside
 }
-// on sign-out: auth.ForgetSession(store)
 ```
+
+Each mode serves its routes and gives its entry screen (`view.EntryScreen`); it asks its own route whether it is open
+at the door the visit came through. While no administrator exists, `trusted_ip` offers its first-run setup on the
+local network and `passkey` writes a one-time code in the server log: whoever presents it enrolls their passkey and
+becomes the administrator. `auth.MigrateModes` creates the tables of the modes that keep them (passkey).
 
 ## Local Development
 
@@ -123,7 +125,7 @@ scenarios := []local.Scenario{
     {ID: "user_viewer", Name: "Bob", Email: "bob@example.com", Avatar: "", Roles: []string{"Viewer"}},
 }
 _ = authority.Migrate(db.RawConn(), db.RawConn().(ddl.Compiler))
-authMod, _ := authority.New(db, auth.Config{IDs: ids})
+authMod, _ := authority.New(db, auth.Config{IDs: ids, Events: broker})
 rbacSvc, _ := rbac.New(db)
 // seed subjects and assignments via rbac before mounting
 for _, s := range scenarios { /* ensure user and AssignRole via rbacSvc */ }
@@ -139,6 +141,7 @@ module first, then enable the mode — `Enable` registers on the module you buil
 ```go
 authMod, _ := authority.New(db, auth.Config{
     IDs:     ids,
+    Events:  broker, // required: every security event is reported on it (webtyp.com/securityevent)
     IdleTTL: 1800, // 30 min without activity ends the session (sliding); TokenTTL (default 24 h) is the absolute cap
     Permissions: &auth.Permissions{
         Grants:    rbacSvc, // satisfies auth.GrantLister structurally
@@ -148,7 +151,7 @@ authMod, _ := authority.New(db, auth.Config{
 
 // trustProxy is explicit, not an Option: behind a reverse proxy every request
 // otherwise looks like it came from the proxy's own IP.
-authMod.Enable(trustedip.New(authMod, trustedIPStore, authMod, authMod, false))
+authMod.Enable(trustedip.New(authMod, trustedIPStore, authMod, authMod.Ports().Report, false))
 ```
 
 The client builds its single-field login form from `auth.RUTLoginDataModel` and
@@ -156,10 +159,8 @@ posts it to `auth.PathLoginRUT`. `trustedIPStore` is the consumer's
 `auth.TrustedIPStore` — answer it per user, not per network, or anyone inside
 the LAN can log in as anyone else.
 
-Administering which RUT belongs to which user goes through the `lan_identity.create`,
-`lan_identity.delete` and `lan_identity.read` operations, gated on `auth.ResourceLANIdentity`.
-Grant that resource only to LAN administrators: registering a RUT mints a login
-credential, which is a different privilege from editing user records.
+Which RUT belongs to which user is set with `trustedip.RegisterRUT` and removed with `trustedip.UnregisterRUT`;
+registering a RUT mints a login credential, so only an administrator flow should call it.
 
 > **Not yet supported: users without an email.** `CreateUser("", …)` writes an
 > empty string, and a second one fails with `ErrEmailTaken` because the column

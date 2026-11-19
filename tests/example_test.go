@@ -46,8 +46,9 @@ func Example_mustCompile() {
 
 	// 5. Construct and configure authentication modes.
 	// We inject Module 'm' which implements the narrow ports.
-	epAuth := emailpassword.New(m, m, m, emailpassword.WithTrustProxy(true))
-	tiAuth := trustedip.New(m, m, m, m, true)
+	epAuth := emailpassword.New(m, m, m.Ports().Report, emailpassword.WithTrustProxy(true))
+	devices := &fakeTrustedIP{allowed: map[string]string{}} // in an app: its register of trusted devices
+	tiAuth := trustedip.New(m, devices, m, m.Ports().Report, true)
 
 	// 6. Enable the authenticators in the authority orchestrator
 	m.Enable(epAuth, tiAuth)
@@ -79,7 +80,7 @@ func Example_mustCompile() {
 	if err != nil {
 		panic(err)
 	}
-	if err := m.SetPassword(admin.Id, "super-secure-admin-password"); err != nil {
+	if err := emailpassword.SetPassword(m, admin.Id, "super-secure-admin-password", nil); err != nil {
 		panic(err)
 	}
 }

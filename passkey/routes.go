@@ -5,6 +5,7 @@ import (
 	"webtyp.com/base64"
 	"webtyp.com/orm"
 	"webtyp.com/router"
+	"webtyp.com/securityevent"
 	"webtyp.com/webauthn/server"
 )
 
@@ -18,6 +19,9 @@ func (m *Module) Mount(r router.Router) {
 	r.Post(PathVerify, m.verify).Public()
 	r.Get(PathList, m.list).Authenticated().RequiresMFA()
 	r.Post(PathDelete, m.remove).Authenticated().RequiresMFA()
+	if m.setup != nil {
+		m.mountSetup(r)
+	}
 }
 
 func (m *Module) registerOptions(ctx router.Context) {
@@ -83,7 +87,7 @@ func (m *Module) register(ctx router.Context) {
 		ctx.WriteStatus(500)
 		return
 	}
-	m.sessions.Notify(auth.SecurityEvent{Type: auth.EventPasskeyRegistered, UserID: userID})
+	m.reportEvent(securityevent.Event{Kind: securityevent.CredentialAdded, UserID: userID})
 	ctx.WriteStatus(204)
 }
 
@@ -132,6 +136,15 @@ func (m *Module) verify(ctx router.Context) {
 	userID := ctx.UserID()
 	raw := string(ctx.Body())
 	if userID == "" {
+		ip := auth.ClientIP(ctx, false)
+		if m.limiter != nil {
+			if err := m.limiter.Check(ip); err != nil {
+				m.reportEvent(securityevent.Event{Kind: securityevent.RateLimited, IP: ip})
+				ctx.WriteStatus(401)
+				return
+			}
+			m.limiter.Fail(ip) // counted now; a verified passkey resets it below
+		}
 		rawID, err := server.UnverifiedCredentialID(raw)
 		if err != nil {
 			m.reject(ctx, 401, err.Error())
@@ -197,7 +210,10 @@ func (m *Module) completeVerify(ctx router.Context, cred *PasskeyCredential, cha
 		ctx.WriteStatus(500)
 		return
 	}
-	m.sessions.Notify(auth.SecurityEvent{Type: auth.EventPasskeyVerified, UserID: cred.UserId})
+	if m.limiter != nil {
+		m.limiter.Reset(auth.ClientIP(ctx, false))
+	}
+	m.reportEvent(securityevent.Event{Kind: securityevent.LoginSucceeded, UserID: cred.UserId})
 	ctx.WriteStatus(204)
 }
 
@@ -222,6 +238,6 @@ func (m *Module) remove(ctx router.Context) {
 		ctx.WriteStatus(500)
 		return
 	}
-	m.sessions.Notify(auth.SecurityEvent{Type: auth.EventPasskeyDeleted, UserID: userID})
+	m.reportEvent(securityevent.Event{Kind: securityevent.CredentialRemoved, UserID: userID})
 	ctx.WriteStatus(204)
 }

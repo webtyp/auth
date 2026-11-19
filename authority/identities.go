@@ -113,6 +113,25 @@ func upsertIdentity(db *orm.DB, ids model.IDGenerator, userID, provider, provide
 	}
 }
 
+// DeleteIdentity removes userID's identity of provider, even when it is the only one (a mode that owns the credential
+// decides). auth.ErrNotFound when there is none.
+func (m *Module) DeleteIdentity(userID, provider string) error {
+	qb := m.db.Query(&Identity{}).Where(Identity_.UserId).Eq(userID).Where(Identity_.Provider).Eq(provider)
+	results, err := ReadAllIdentity(qb)
+	if err != nil {
+		return err
+	}
+	if len(results) == 0 {
+		return auth.ErrNotFound
+	}
+	for _, id := range results {
+		if err := m.db.Delete(id, orm.Eq(Identity_.Id, id.Id)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (m *Module) UnlinkIdentity(userID, provider string) error {
 	identities, err := m.GetUserIdentities(userID)
 	if err != nil {

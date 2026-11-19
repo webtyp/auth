@@ -5,6 +5,7 @@ import (
 	"webtyp.com/crypto/bcrypt"
 	"webtyp.com/json"
 	"webtyp.com/router"
+	"webtyp.com/securityevent"
 )
 
 // loginFailure carries the exact HTTP answer the POST route must give for a
@@ -31,7 +32,7 @@ func writeFailure(ctx router.Context, err error) {
 type Authenticator struct {
 	store      auth.IdentityStore
 	sessions   auth.SessionIssuer
-	notify     auth.SecurityNotifier
+	report     securityevent.Reporter
 	afterLogin string
 	rateLimit  auth.RateLimiter
 	trustProxy bool
@@ -48,17 +49,32 @@ func WithRateLimit(l auth.RateLimiter) Option {
 }
 func WithTrustProxy(v bool) Option { return func(a *Authenticator) { a.trustProxy = v } }
 
-// New builds the email+password mode. store/sessions/notify are required ports;
+// New builds the email+password mode. store/sessions/report are required ports;
 // everything else is an Option with a safe zero-value default.
-func New(store auth.IdentityStore, sessions auth.SessionIssuer, notify auth.SecurityNotifier, opts ...Option) *Authenticator {
-	a := &Authenticator{store: store, sessions: sessions, notify: notify}
+func New(store auth.IdentityStore, sessions auth.SessionIssuer, report securityevent.Reporter, opts ...Option) *Authenticator {
+	a := &Authenticator{store: store, sessions: sessions, report: report}
 	for _, opt := range opts {
 		opt(a)
 	}
 	return a
 }
 
-func (a *Authenticator) Name() string { return "email_password" }
+// Provider is the auth.Identity provider name under which a user's bcrypt hash is stored.
+const Provider = "email_password"
+
+// Why a sign-in was refused, as written in the security event (never the e-mail or the password typed).
+const (
+	reasonInactive      securityevent.Reason = "inactive account"
+	reasonWrongPassword securityevent.Reason = "wrong password"
+)
+
+func (a *Authenticator) Name() string { return Provider }
+
+// reportEvent publishes e as this mode; Report fails only for a Reporter not made with securityevent.New.
+func (a *Authenticator) reportEvent(e securityevent.Event) {
+	e.Mode = Provider
+	_ = a.report.Report(e)
+}
 
 // Login runs EVERY check the POST route runs against body — the same bytes the
 // form sends — and returns the user id. It never writes a response and never
@@ -72,7 +88,7 @@ func (a *Authenticator) Login(ctx router.Context, body []byte) (string, error) {
 
 	if a.rateLimit != nil {
 		if err := a.rateLimit.Check(ip); err != nil {
-			a.notify.Notify(auth.SecurityEvent{Type: auth.EventRateLimited, IP: ip, UserID: data.Email})
+			a.reportEvent(securityevent.Event{Kind: securityevent.RateLimited, IP: ip})
 			return "", loginFailure{status: 429, body: err.Error()}
 		}
 	}
@@ -86,7 +102,7 @@ func (a *Authenticator) Login(ctx router.Context, body []byte) (string, error) {
 		return "", loginFailure{status: 401, body: auth.ErrInvalidCredentials.Error()}
 	}
 	if u.Status != "active" {
-		a.notify.Notify(auth.SecurityEvent{Type: auth.EventNonActiveAccess, UserID: u.Id})
+		a.reportEvent(securityevent.Event{Kind: securityevent.LoginFailed, UserID: u.Id, IP: ip, Reason: reasonInactive})
 		DummyCompare(data.Password, DefaultHashCost)
 		if a.rateLimit != nil {
 			a.rateLimit.Fail(ip)
@@ -94,7 +110,7 @@ func (a *Authenticator) Login(ctx router.Context, body []byte) (string, error) {
 		return "", loginFailure{status: 401, body: auth.ErrInvalidCredentials.Error()}
 	}
 
-	identity, err := a.store.IdentityFor(u.Id, "email_password")
+	identity, err := a.store.IdentityFor(u.Id, Provider)
 	if err != nil {
 		DummyCompare(data.Password, DefaultHashCost)
 		if a.rateLimit != nil {
@@ -103,7 +119,7 @@ func (a *Authenticator) Login(ctx router.Context, body []byte) (string, error) {
 		return "", loginFailure{status: 401, body: auth.ErrInvalidCredentials.Error()}
 	}
 	if err := VerifyPassword(identity.ProviderId, data.Password); err != nil {
-		a.notify.Notify(auth.SecurityEvent{Type: auth.EventAccessDenied, IP: ip, UserID: u.Id})
+		a.reportEvent(securityevent.Event{Kind: securityevent.LoginFailed, UserID: u.Id, IP: ip, Reason: reasonWrongPassword})
 		if a.rateLimit != nil {
 			a.rateLimit.Fail(ip)
 		}
@@ -163,8 +179,7 @@ func DummyCompare(password string, cost int) {
 }
 
 // HashPassword is the ONLY place bcrypt.GenerateFromPassword is called in this
-// repo. authority/credentials_password.go calls this — it never calls bcrypt
-// directly.
+// repo; SetPassword calls it.
 func HashPassword(password string, cost int) (string, error) {
 	if len(password) < 8 {
 		return "", auth.ErrWeakPassword

@@ -5,6 +5,7 @@ package tests
 import (
 	"strings"
 	"testing"
+	"webtyp.com/securityevent"
 
 	"webtyp.com/auth"
 	"webtyp.com/auth/authority"
@@ -48,7 +49,7 @@ func TestUnverifiedEmailDoesNotLinkExistingAccount(t *testing.T) {
 			EmailVerified: false, // Unverified!
 		},
 	}
-	m.Enable(oauth2.New(m, m, m, []auth.OAuthProvider{mockP}))
+	m.Enable(oauth2.New(m, m, m, m.Ports().Report, []auth.OAuthProvider{mockP}))
 
 	r := &mock.Router{}
 	m.MountAPI(r)
@@ -80,7 +81,7 @@ func TestUnverifiedEmailDoesNotLinkExistingAccount(t *testing.T) {
 	// Verify EventUnauthorizedAccess event was published
 	var found bool
 	for _, e := range pub.SecurityEvents() {
-		if e.Type == auth.EventUnauthorizedAccess && e.Provider == "unverified_provider" {
+		if e.Kind == securityevent.LoginFailed && e.Mode == "unverified_provider" {
 			found = true
 			break
 		}
@@ -103,7 +104,7 @@ func TestVerifiedEmailLinksExistingAccount(t *testing.T) {
 		t.Fatalf("failed to migrate: %v", err)
 	}
 
-	m, err := authority.New(db, auth.Config{IDs: testIDs})
+	m, err := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 	if err != nil {
 		t.Fatalf("failed to create authority: %v", err)
 	}
@@ -123,7 +124,7 @@ func TestVerifiedEmailLinksExistingAccount(t *testing.T) {
 			EmailVerified: true, // Verified!
 		},
 	}
-	m.Enable(oauth2.New(m, m, m, []auth.OAuthProvider{mockP}))
+	m.Enable(oauth2.New(m, m, m, m.Ports().Report, []auth.OAuthProvider{mockP}))
 
 	r := &mock.Router{}
 	m.MountAPI(r)

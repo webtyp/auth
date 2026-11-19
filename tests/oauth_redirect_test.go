@@ -35,12 +35,12 @@ func isVeltyCl(url string) bool {
 // afterLogin.
 func TestOAuthRedirectURI_AllowedOverridesAfterLogin(t *testing.T) {
 	db := newTestDB(t)
-	m, err := authority.New(db, auth.Config{IDs: testIDs})
+	m, err := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 	if err != nil {
 		t.Fatal(err)
 	}
 	prov := &googlemock.MockProvider{User: auth.OAuthUserInfo{ID: "g1", Email: "u@test.com", Name: "U"}}
-	m.Enable(oauth2.New(m, m, m, []auth.OAuthProvider{prov},
+	m.Enable(oauth2.New(m, m, m, m.Ports().Report, []auth.OAuthProvider{prov},
 		oauth2.WithAfterLogin("/"),
 		oauth2.WithRedirectValidator(isVeltyCl),
 	))
@@ -86,12 +86,12 @@ func TestOAuthRedirectURI_AllowedOverridesAfterLogin(t *testing.T) {
 // open-redirect guard.
 func TestOAuthRedirectURI_DisallowedFallsBackToAfterLogin(t *testing.T) {
 	db := newTestDB(t)
-	m, err := authority.New(db, auth.Config{IDs: testIDs})
+	m, err := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 	if err != nil {
 		t.Fatal(err)
 	}
 	prov := &googlemock.MockProvider{User: auth.OAuthUserInfo{ID: "g1", Email: "u@test.com", Name: "U"}}
-	m.Enable(oauth2.New(m, m, m, []auth.OAuthProvider{prov},
+	m.Enable(oauth2.New(m, m, m, m.Ports().Report, []auth.OAuthProvider{prov},
 		oauth2.WithAfterLogin("/home"),
 		oauth2.WithRedirectValidator(isVeltyCl),
 	))
@@ -122,12 +122,12 @@ func TestOAuthRedirectURI_DisallowedFallsBackToAfterLogin(t *testing.T) {
 // existed, even if a caller sends ?redirect_uri=.
 func TestOAuthRedirectURI_NoValidatorIgnoresParam(t *testing.T) {
 	db := newTestDB(t)
-	m, err := authority.New(db, auth.Config{IDs: testIDs})
+	m, err := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 	if err != nil {
 		t.Fatal(err)
 	}
 	prov := &googlemock.MockProvider{User: auth.OAuthUserInfo{ID: "g1", Email: "u@test.com", Name: "U"}}
-	m.Enable(oauth2.New(m, m, m, []auth.OAuthProvider{prov})) // no WithRedirectValidator
+	m.Enable(oauth2.New(m, m, m, m.Ports().Report, []auth.OAuthProvider{prov})) // no WithRedirectValidator
 
 	r := &mock.Router{}
 	m.MountAPI(r)
@@ -156,12 +156,12 @@ func TestOAuthRedirectURI_NoValidatorIgnoresParam(t *testing.T) {
 // validates.
 func TestOAuthReadsEncodedRedirectURI(t *testing.T) {
 	db := newTestDB(t)
-	m, err := authority.New(db, auth.Config{IDs: testIDs})
+	m, err := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 	if err != nil {
 		t.Fatal(err)
 	}
 	prov := &googlemock.MockProvider{User: auth.OAuthUserInfo{ID: "g1", Email: "u@test.com", Name: "U"}}
-	m.Enable(oauth2.New(m, m, m, []auth.OAuthProvider{prov},
+	m.Enable(oauth2.New(m, m, m, m.Ports().Report, []auth.OAuthProvider{prov},
 		oauth2.WithRedirectValidator(isVeltyCl),
 	))
 
@@ -183,12 +183,12 @@ func TestOAuthReadsEncodedRedirectURI(t *testing.T) {
 // sides must still resolve to exactly its own value.
 func TestOAuthCallbackReadsStateAndCodeThroughRouterQueryParam(t *testing.T) {
 	db := newTestDB(t)
-	m, err := authority.New(db, auth.Config{IDs: testIDs})
+	m, err := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 	if err != nil {
 		t.Fatal(err)
 	}
 	prov := &googlemock.MockProvider{User: auth.OAuthUserInfo{ID: "g1", Email: "u@test.com", Name: "U"}}
-	m.Enable(oauth2.New(m, m, m, []auth.OAuthProvider{prov}))
+	m.Enable(oauth2.New(m, m, m, m.Ports().Report, []auth.OAuthProvider{prov}))
 
 	r := &mock.Router{}
 	m.MountAPI(r)

@@ -17,6 +17,7 @@ import (
 	"webtyp.com/model"
 	"webtyp.com/orm"
 	"webtyp.com/router"
+	"webtyp.com/securityevent"
 	"webtyp.com/time"
 )
 
@@ -50,7 +51,7 @@ type Authenticator struct {
 	db       *orm.DB
 	keys     ClientKeys
 	audience string
-	notify   func(auth.SecurityEvent)
+	report   securityevent.Reporter
 }
 
 var (
@@ -60,12 +61,12 @@ var (
 
 // New builds the authenticator. audience is this server's identifier, e.g.
 // "https://iam.velty.cl": assertions must name it in aud, and htu must be
-// audience+path. notify may be nil.
-func New(db *orm.DB, keys ClientKeys, audience string, notify func(auth.SecurityEvent)) (*Authenticator, error) {
+// audience+path. report receives every refused assertion.
+func New(db *orm.DB, keys ClientKeys, audience string, report securityevent.Reporter) (*Authenticator, error) {
 	if audience == "" {
 		return nil, fmt.Err(ErrMsgEmptyAudience)
 	}
-	return &Authenticator{db: db, keys: keys, audience: audience, notify: notify}, nil
+	return &Authenticator{db: db, keys: keys, audience: audience, report: report}, nil
 }
 
 func (a *Authenticator) Name() string { return name }
@@ -83,9 +84,8 @@ func Migrate(conn ddl.Execer, ddlCompiler ddl.Compiler) error {
 }
 
 func (a *Authenticator) reject(iss, reason string) (auth.Principal, bool) {
-	if a.notify != nil {
-		a.notify(auth.SecurityEvent{Type: auth.EventClientAssertionRejected, UserID: iss, Reason: reason, Timestamp: time.NowUnix()})
-	}
+	// Report fails only for a Reporter not made with securityevent.New.
+	_ = a.report.Report(securityevent.Event{Kind: securityevent.LoginFailed, UserID: iss, Mode: name, Reason: securityevent.Reason(reason)})
 	return auth.Principal{}, true
 }
 
@@ -122,7 +122,7 @@ func (a *Authenticator) IdentifyRequest(ctx router.Context) (auth.Principal, boo
 	// Housekeeping: its failure only leaves old rows behind.
 	a.db.Delete(&ClientAssertionJti{}, orm.Lt(ClientAssertionJti_.ExpiresAt, time.NowUnix()))
 	jti := ClientAssertionJti{Id: iss + jtiSeparator + claims.Jti, ExpiresAt: time.Unix(claims.Exp)} // a JWT exp is Unix seconds on the wire
-	if err := a.db.Create(&jti); err != nil { // duplicate primary key: replay
+	if err := a.db.Create(&jti); err != nil {                                                        // duplicate primary key: replay
 		return a.reject(iss, reasonReplay)
 	}
 	return auth.Principal{UserID: iss, Assurance: model.AssuranceSingleFactor}, true

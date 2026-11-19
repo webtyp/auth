@@ -297,91 +297,6 @@ func (m *Identity) SchemaExt() []model.FieldExt {
 	}
 }
 
-type LANIP struct {
-	Id string
-	UserId string
-	Ip string
-	Label string
-	CreatedAt time.Unix
-}
-
-func (m *LANIP) ModelName() string { return "lanip" }
-
-func (m *LANIP) Schema() []model.Field { return LANIPModel.Fields }
-
-func (m *LANIP) Pointers() []any { return []any{&m.Id, &m.UserId, &m.Ip, &m.Label, (*int64)(&m.CreatedAt)} }
-
-func (m *LANIP) IsNil() bool { return m == nil }
-
-func (m *LANIP) EncodeFields(w model.FieldWriter) {
-	w.String("id", m.Id)
-	w.String("user_id", m.UserId)
-	w.String("ip", m.Ip)
-	w.String("label", m.Label)
-	w.Int("created_at", int64(m.CreatedAt))
-}
-
-func (m *LANIP) DecodeFields(r model.FieldReader) {
-	if v, ok := r.String("id"); ok { m.Id = v }
-	if v, ok := r.String("user_id"); ok { m.UserId = v }
-	if v, ok := r.String("ip"); ok { m.Ip = v }
-	if v, ok := r.String("label"); ok { m.Label = v }
-	if v, ok := r.Int("created_at"); ok { m.CreatedAt = time.Unix(v) }
-}
-
-type LANIPList []*LANIP
-
-func (s *LANIPList) Len() int             { return len(*s) }
-func (s *LANIPList) At(i int) model.Fielder { return (*s)[i] }
-func (s *LANIPList) Append() model.Fielder  { v := &LANIP{}; *s = append(*s, v); return v }
-func (s *LANIPList) IsNil() bool          { return s == nil }
-func (s *LANIPList) EncodeFields(_ model.FieldWriter) {}
-func (s *LANIPList) DecodeFields(_ model.FieldReader) {}
-
-func (m *LANIP) Validate(action byte) error {
-	return model.ValidateFields(action, m)
-}
-
-func (*LANIP) Allow() model.Action     { return LANIPModel.Allow }
-func (*LANIPList) Allow() model.Action { return LANIPModel.Allow }
-
-var LANIP_ = struct {
-	Id string
-	UserId string
-	Ip string
-	Label string
-	CreatedAt string
-}{
-	Id: "id",
-	UserId: "user_id",
-	Ip: "ip",
-	Label: "label",
-	CreatedAt: "created_at",
-}
-
-func ReadOneLANIP(qb *orm.QB, model *LANIP) (*LANIP, error) {
-	err := qb.ReadOne()
-	if err != nil {
-		return nil, err
-	}
-	return model, nil
-}
-
-func ReadAllLANIP(qb *orm.QB) (LANIPList, error) {
-	var results LANIPList
-	err := qb.ReadAll(
-		func() model.Model { return &LANIP{} },
-		func(m model.Model) { results = append(results, m.(*LANIP)) },
-	)
-	return results, err
-}
-
-func (m *LANIP) SchemaExt() []model.FieldExt {
-	return []model.FieldExt{
-		{Field: LANIPModel.Fields[1], Ref: "user", RefColumn: "id", OnDelete: ""},
-	}
-}
-
 type OAuthState struct {
 	State string
 	NonceHash string
@@ -461,68 +376,99 @@ func ReadAllOAuthState(qb *orm.QB) (OAuthStateList, error) {
 	return results, err
 }
 
-type LANIdentity struct {
-	UserId string
-	Rut string
+type Me struct {
+	Id string
+	Name string
+	Email string
+	Avatar string
+	Grants []MeGrant
 }
 
-func (m *LANIdentity) ModelName() string { return "lan_identity" }
+func (m *Me) ModelName() string { return "me" }
 
-func (m *LANIdentity) Schema() []model.Field { return LANIdentityModel.Fields }
+func (m *Me) Schema() []model.Field { return MeModel.Fields }
 
-func (m *LANIdentity) Pointers() []any { return []any{&m.UserId, &m.Rut} }
+func (m *Me) Pointers() []any { return []any{&m.Id, &m.Name, &m.Email, &m.Avatar, &m.Grants} }
 
-func (m *LANIdentity) IsNil() bool { return m == nil }
+func (m *Me) IsNil() bool { return m == nil }
 
-func (m *LANIdentity) EncodeFields(w model.FieldWriter) {
-	w.String("user_id", m.UserId)
-	w.String("rut", m.Rut)
+func (m *Me) EncodeFields(w model.FieldWriter) {
+	w.String("id", m.Id)
+	w.String("name", m.Name)
+	w.String("email", m.Email)
+	w.String("avatar", m.Avatar)
+		{
+			arr := w.Array("grants", len(m.Grants))
+			for _, x := range m.Grants {
+				arr.Object(&x)
+			}
+		}
 }
 
-func (m *LANIdentity) DecodeFields(r model.FieldReader) {
-	if v, ok := r.String("user_id"); ok { m.UserId = v }
-	if v, ok := r.String("rut"); ok { m.Rut = v }
+func (m *Me) DecodeFields(r model.FieldReader) {
+	if v, ok := r.String("id"); ok { m.Id = v }
+	if v, ok := r.String("name"); ok { m.Name = v }
+	if v, ok := r.String("email"); ok { m.Email = v }
+	if v, ok := r.String("avatar"); ok { m.Avatar = v }
+	if arr, ok := r.Array("grants"); ok {
+		n := arr.Len()
+		m.Grants = make([]MeGrant, n)
+		for i := 0; i < n; i++ {
+			arr.Object(i, &m.Grants[i])
+		}
+	}
 }
 
-type LANIdentityList []*LANIdentity
+type MeList []*Me
 
-func (s *LANIdentityList) Len() int             { return len(*s) }
-func (s *LANIdentityList) At(i int) model.Fielder { return (*s)[i] }
-func (s *LANIdentityList) Append() model.Fielder  { v := &LANIdentity{}; *s = append(*s, v); return v }
-func (s *LANIdentityList) IsNil() bool          { return s == nil }
-func (s *LANIdentityList) EncodeFields(_ model.FieldWriter) {}
-func (s *LANIdentityList) DecodeFields(_ model.FieldReader) {}
+func (s *MeList) Len() int             { return len(*s) }
+func (s *MeList) At(i int) model.Fielder { return (*s)[i] }
+func (s *MeList) Append() model.Fielder  { v := &Me{}; *s = append(*s, v); return v }
+func (s *MeList) IsNil() bool          { return s == nil }
+func (s *MeList) EncodeFields(_ model.FieldWriter) {}
+func (s *MeList) DecodeFields(_ model.FieldReader) {}
 
-func (m *LANIdentity) Validate(action byte) error {
+func (m *Me) Validate(action byte) error {
 	return model.ValidateFields(action, m)
 }
 
-func (*LANIdentity) Allow() model.Action     { return LANIdentityModel.Allow }
-func (*LANIdentityList) Allow() model.Action { return LANIdentityModel.Allow }
+func (*Me) Allow() model.Action     { return MeModel.Allow }
+func (*MeList) Allow() model.Action { return MeModel.Allow }
 
-var LANIdentity_ = struct {
-	UserId string
-	Rut string
-}{
-	UserId: "user_id",
-	Rut: "rut",
+type MeGrant struct {
+	Resource string
+	Actions string
 }
 
-func ReadOneLANIdentity(qb *orm.QB, model *LANIdentity) (*LANIdentity, error) {
-	err := qb.ReadOne()
-	if err != nil {
-		return nil, err
-	}
-	return model, nil
+func (m *MeGrant) ModelName() string { return "me_grant" }
+
+func (m *MeGrant) Schema() []model.Field { return MeGrantModel.Fields }
+
+func (m *MeGrant) Pointers() []any { return []any{&m.Resource, &m.Actions} }
+
+func (m *MeGrant) IsNil() bool { return m == nil }
+
+func (m *MeGrant) EncodeFields(w model.FieldWriter) {
+	w.String("resource", m.Resource)
+	w.String("actions", m.Actions)
 }
 
-func ReadAllLANIdentity(qb *orm.QB) (LANIdentityList, error) {
-	var results LANIdentityList
-	err := qb.ReadAll(
-		func() model.Model { return &LANIdentity{} },
-		func(m model.Model) { results = append(results, m.(*LANIdentity)) },
-	)
-	return results, err
+func (m *MeGrant) DecodeFields(r model.FieldReader) {
+	if v, ok := r.String("resource"); ok { m.Resource = v }
+	if v, ok := r.String("actions"); ok { m.Actions = v }
+}
+
+type MeGrantList []*MeGrant
+
+func (s *MeGrantList) Len() int             { return len(*s) }
+func (s *MeGrantList) At(i int) model.Fielder { return (*s)[i] }
+func (s *MeGrantList) Append() model.Fielder  { v := &MeGrant{}; *s = append(*s, v); return v }
+func (s *MeGrantList) IsNil() bool          { return s == nil }
+func (s *MeGrantList) EncodeFields(_ model.FieldWriter) {}
+func (s *MeGrantList) DecodeFields(_ model.FieldReader) {}
+
+func (m *MeGrant) Validate(action byte) error {
+	return model.ValidateFields(action, m)
 }
 
 // ModelName is the module identity: Definition.Name.
@@ -551,11 +497,7 @@ func (m *Module) MountOperations(reg crud.Registry) {
 			return rec.(*User).Delete(a, tx, m)
 		},
 	})
-	reg.AddStoredEntity(crud.StoredEntity{
-		Model: &LANIdentity{},
-		NewList: func() model.ModelSlice { return &LANIdentityList{} },
-		Store: m.StoreLANIdentity(),
-		Rules: LANIdentityModel.Rules,
-		MFA: LANIdentityModel.MFA,
+	reg.AddReadOnlyEntity(&Me{}, func() model.Model { return &Me{} }, func(a crud.CurrentUser, args crud.ReadArgs, filter model.Model) (model.ModelSlice, error) {
+		return (&Me{}).Read(a, filter.(*Me), args, m)
 	})
 }

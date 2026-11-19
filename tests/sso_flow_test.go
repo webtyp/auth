@@ -24,7 +24,7 @@ func TestDefaultStrategyIssuesAnUnguessableCookie(t *testing.T) {
 	}
 
 	// authority.New without SetStrategy uses default cookie strategy
-	m, err := authority.New(db, auth.Config{IDs: testIDs})
+	m, err := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 	if err != nil {
 		t.Fatalf("failed to create authority: %v", err)
 	}

@@ -14,7 +14,7 @@ import (
 
 func TestDevAutologin_OffWithoutDevTag(t *testing.T) {
 	db := newTestDB(t)
-	mInit, err := authority.New(db, auth.Config{IDs: testIDs})
+	mInit, err := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -22,7 +22,7 @@ func TestDevAutologin_OffWithoutDevTag(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := mInit.RegisterLAN(u.Id, lanRUT); err != nil {
+	if err := trustedip.RegisterRUT(mInit, u.Id, lanRUT); err != nil {
 		t.Fatal(err)
 	}
 
@@ -34,7 +34,7 @@ func TestDevAutologin_OffWithoutDevTag(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	m.Enable(trustedip.New(m, trusted, m, m, false))
+	m.Enable(trustedip.New(m, trusted, m, m.Ports().Report, false))
 
 	var capturedUserID string
 	handler := m.Authenticate()(func(ctx router.Context) {

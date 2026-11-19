@@ -1,11 +1,11 @@
 package microsoft
 
 import (
+	"webtyp.com/auth"
+	"webtyp.com/auth/oauth2"
 	"webtyp.com/fetch"
 	"webtyp.com/json"
 	"webtyp.com/model"
-	"webtyp.com/auth"
-	"webtyp.com/auth/oauth2/provider/google"
 )
 
 const (
@@ -39,11 +39,11 @@ func (p *MicrosoftProvider) config() auth.OAuthConfig {
 }
 
 func (p *MicrosoftProvider) AuthCodeURL(state string) string {
-	return google.AuthCodeURLHelper(p.config(), state)
+	return oauth2.AuthCodeURL(p.config(), state)
 }
 
 func (p *MicrosoftProvider) ExchangeCode(code string) (auth.OAuthToken, error) {
-	return google.ExchangeCodeHelper(p.config(), code)
+	return oauth2.ExchangeCode(p.config(), code)
 }
 
 type msData struct {

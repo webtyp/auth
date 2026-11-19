@@ -52,86 +52,6 @@ func IsRUTTaken(err error) bool {
 	return ok && e == ErrRUTTaken
 }
 
-type SecurityEventType uint8
-
-const (
-	EventJWTTampered              SecurityEventType = iota // validateJWT: jwt.Forged (never jwt.Expired)
-	EventOAuthReplay                                       // consumeState: state already consumed (2nd use)
-	EventOAuthExpiredState                                 // consumeState: state found but past ExpiresAt
-	EventOAuthCrossProvider                                // consumeState: provider mismatch (state preserved)
-	EventIPMismatch                                        // LoginLAN: IP not registered
-	EventNonActiveAccess                                   // Login/LoginLAN: status != "active"
-	EventUnauthorizedAccess                                // validateSession: cookie present but session invalid
-	EventAccessDenied                                      // AccessCheck: RBAC denied with valid session
-	EventPermissionCorrupt                                 // HasPermission: permissions.action is not a CRUD string
-	EventRateLimited                                       // POST /login: Config.RateLimit rejected the attempt before bcrypt
-	EventInvalidRUT                                        // trusted_ip: the typed value is not a checksum-valid RUT (probe or typo)
-	EventUnknownRUT                                        // trusted_ip: valid RUT, no identity registered for it
-	EventSetupCompleted                                    // trusted_ip: the first administrator was created through PathSetup
-	EventSetupRejected                                     // trusted_ip: PathSetup was hit after an admin already existed
-	EventSetupUnavailable                                  // trusted_ip: the registry could not be read, so PathSetup stayed shut
-	EventDevAutologin                                      // authority: DEV_AUTOLOGIN opened a session (development builds only)
-	EventPasskeyRegistered                                 // passkey: a credential was enrolled
-	EventPasskeyVerified                                   // passkey: an assertion verified and a step-up session was issued
-	EventPasskeyRejected                                   // passkey: enrollment or verification refused (Reason says why)
-	EventPasskeyDeleted                                    // passkey: a credential was removed
-	EventClientAssertionRejected                           // clientassertion: a private_key_jwt bearer was refused (Reason says why)
-	EventCloudflareAccessRejected                          // cfaccess: a Cf-Access-Jwt-Assertion was refused (Reason says why)
-)
-
-// String returns the event's stable name (lower snake_case), so a logger
-// prints "unauthorized_access" instead of 6. Names are identifiers for log
-// search and alerting: never translated, never changed once published.
-func (t SecurityEventType) String() string {
-	switch t {
-	case EventJWTTampered:
-		return "jwt_tampered"
-	case EventOAuthReplay:
-		return "oauth_replay"
-	case EventOAuthExpiredState:
-		return "oauth_expired_state"
-	case EventOAuthCrossProvider:
-		return "oauth_cross_provider"
-	case EventIPMismatch:
-		return "ip_mismatch"
-	case EventNonActiveAccess:
-		return "non_active_access"
-	case EventUnauthorizedAccess:
-		return "unauthorized_access"
-	case EventAccessDenied:
-		return "access_denied"
-	case EventPermissionCorrupt:
-		return "permission_corrupt"
-	case EventRateLimited:
-		return "rate_limited"
-	case EventInvalidRUT:
-		return "invalid_rut"
-	case EventUnknownRUT:
-		return "unknown_rut"
-	case EventSetupCompleted:
-		return "setup_completed"
-	case EventSetupRejected:
-		return "setup_rejected"
-	case EventSetupUnavailable:
-		return "setup_unavailable"
-	case EventDevAutologin:
-		return "dev_autologin"
-	case EventPasskeyRegistered:
-		return "passkey_registered"
-	case EventPasskeyVerified:
-		return "passkey_verified"
-	case EventPasskeyRejected:
-		return "passkey_rejected"
-	case EventPasskeyDeleted:
-		return "passkey_deleted"
-	case EventClientAssertionRejected:
-		return "client_assertion_rejected"
-	case EventCloudflareAccessRejected:
-		return "cloudflare_access_rejected"
-	}
-	return "unknown"
-}
-
 // EnvDevAutologin names the development auto-login variable. Its value is the
 // exact JSON body the login form POSTs (e.g. {"code":"12345678-9"}). When it
 // is set, authority replays it through the enabled authenticators' Login and
@@ -147,28 +67,6 @@ const EnvDevAutologin = "DEV_AUTOLOGIN"
 type FormLogin interface {
 	Login(ctx router.Context, body []byte) (userID string, err error)
 }
-
-type SecurityEvent struct {
-	Type      SecurityEventType
-	IP        string // client IP, empty if not available
-	UserID    string // empty if user not yet identified
-	Provider  string // OAuth provider name, for OAuth events
-	Resource  string // RBAC resource, for EventAccessDenied
-	Reason    string // why a passkey or client assertion was refused
-	Timestamp time.Unix
-}
-
-func (e *SecurityEvent) EncodeFields(w model.FieldWriter) {
-	w.Int("type", int64(e.Type))
-	w.String("ip", e.IP)
-	w.String("user_id", e.UserID)
-	w.String("provider", e.Provider)
-	w.String("resource", e.Resource)
-	w.String("reason", e.Reason)
-	w.Int("timestamp", int64(e.Timestamp))
-}
-
-func (e *SecurityEvent) IsNil() bool { return e == nil }
 
 type OAuthUserInfo struct {
 	ID            string
@@ -291,6 +189,8 @@ type IdentityStore interface {
 	// reads its bcrypt hash from Identity.ProviderId here.
 	IdentityFor(userID, provider string) (Identity, error)
 	UpsertIdentity(userID, provider, providerID, email string) error
+	// DeleteIdentity removes userID's identity of provider (the mode that owns the credential removes it).
+	DeleteIdentity(userID, provider string) error
 	UpdateUserAvatar(userID, avatar string) error
 }
 
@@ -315,12 +215,6 @@ type StateStore interface {
 // applied AFTER the RUT already identified the auth.
 type TrustedIPStore interface {
 	IsTrustedIP(userID, ip string) bool
-}
-
-// SecurityNotifier lets a mode report a SecurityEvent without knowing whether
-// anything is subscribed.
-type SecurityNotifier interface {
-	Notify(e SecurityEvent)
 }
 
 // ProviderRegistry answers whether a provider has ANY identity registered yet
@@ -399,8 +293,8 @@ type GrantLister interface {
 	SubjectGrants(projectID, subjectID string) ([]model.Grant, error)
 }
 
-// Permissions configures opMe to send ProfileDTO.Permissions.
-// nil (the default) ⇒ opMe sends no permissions — closed by default.
+// Permissions configures the crud read me to send the caller's grants.
+// nil (the default) ⇒ me sends no grants — closed by default.
 type Permissions struct {
 	Grants    GrantLister
 	ProjectID string
@@ -427,17 +321,13 @@ type Config struct {
 	// generator.
 	IDs model.IDGenerator
 
-	// Events receives security events (TopicSecurity). Optional: nil = events
-	// are dropped (fire-and-forget contract), never an error.
+	// Events is the app's broker. REQUIRED: New fails if nil. Every security
+	// event of this module and of its modes is reported on it through
+	// webtyp.com/securityevent, so an attack is never dropped silently.
 	Events events.Publisher
 
-	// OnPasswordValidate is consulted by Module.SetPassword before hashing.
-	// Return a non-nil error to reject the password. nil = only the built-in
-	// len>=8 check applies.
-	OnPasswordValidate func(password string) error
-
-	// Permissions, when set, makes opMe compose identity (this module) with
-	// authorization (the injected GrantLister) into ProfileDTO.Permissions.
+	// Permissions, when set, makes the crud read me compose identity (this module) with
+	// authorization (the injected GrantLister) into me.grants.
 	Permissions *Permissions
 
 	// IdleTTL, when > 0, ends a session of the default strategy after IdleTTL
@@ -450,7 +340,6 @@ type Config struct {
 const (
 	PathLogin  = "/login"
 	PathLogout = "/logout"
-	PathMe     = "/me" // the authenticated caller's profile
 
 	// PathAfterLogin is where every authenticator redirects once a session
 	// exists. It is the WASM application shell, not the site root: "/" is
@@ -512,9 +401,6 @@ func PathOAuthCallback(provider string) string {
 	return PathOAuthPrefix + "callback/" + provider
 }
 
-// TopicSecurity is the events topic every SecurityEvent is published on.
-const TopicSecurity = "auth.security"
-
 // User is the contract's view of a user: what the identity ports hand to callers. The module stores it as
 // authority.User (a model it mounts through crud) and converts at the port.
 type User struct {
@@ -548,128 +434,4 @@ type Session struct {
 	AbsoluteAt  time.Unix
 	IdleSeconds time.Unix
 	Assurance   int64
-}
-
-// ResourceLANIdentity gates the LAN identity ops. It is deliberately NOT the
-// "users" resource those ops sit next to: registering a RUT MINTS A LOGIN
-// CREDENTIAL, while user administration only edits records. Bundling them
-// would make "may create/update users" imply "may log in as anyone" wherever
-// TrustedIPStore answers per-network rather than per-user.
-//
-// An app that never administers LAN identities simply never grants it —
-// closed by default.
-const ResourceLANIdentity model.Resource = "lan_identity"
-
-// ProfileDTO is a safe subset of User data for public/API consumption.
-type ProfileDTO struct {
-	Id          string
-	Name        string
-	Email       string
-	Avatar      string
-	Roles       []string
-	RoleNames   []string
-	Permissions []string // "resource:actions" entries as stored, e.g. "service:rc", "*:crud"
-	Locale      string
-}
-
-func (p ProfileDTO) EncodeFields(w model.FieldWriter) {
-	w.String("id", p.Id)
-	w.String("name", p.Name)
-	w.String("email", p.Email)
-	w.String("avatar", p.Avatar)
-	w.String("locale", p.Locale)
-	aw := w.Array("roles", len(p.Roles))
-	for _, r := range p.Roles {
-		aw.String(r)
-	}
-	awn := w.Array("role_names", len(p.RoleNames))
-	for _, rn := range p.RoleNames {
-		awn.String(rn)
-	}
-	pw := w.Array("permissions", len(p.Permissions))
-	for _, perm := range p.Permissions {
-		pw.String(perm)
-	}
-}
-
-func (p ProfileDTO) IsNil() bool { return false }
-
-// Grant appends one "resource:actions" entry — the ONLY producer of the
-// wire format documented on Permissions.
-func (p *ProfileDTO) Grant(resource model.Resource, actions model.Action) {
-	if actions == 0 {
-		return
-	}
-	p.Permissions = append(p.Permissions, string(resource)+":"+actions.String())
-}
-
-// Can reports whether the profile holds action on resource — the ONLY consumer of
-// the wire format. Each entry is parsed back into a model.Grant and evaluated with
-// model.Grant.Matches, the same rule the server applies, so "*:crud" means every
-// resource on both sides. An illegible entry grants nothing.
-func (p ProfileDTO) Can(resource model.Resource, action model.Action) bool {
-	for _, perm := range p.Permissions {
-		i := fmt.LastIndex(perm, ":")
-		if i < 0 {
-			continue
-		}
-		actions, err := model.ParseAction(perm[i+1:])
-		if err != nil {
-			continue
-		}
-		if (model.Grant{Resource: model.Resource(perm[:i]), Actions: actions}).Matches(resource, action) {
-			return true
-		}
-	}
-	return false
-}
-
-func (p *ProfileDTO) DecodeFields(r model.FieldReader) {
-	p.Id, _ = r.String("id")
-	p.Name, _ = r.String("name")
-	p.Email, _ = r.String("email")
-	p.Avatar, _ = r.String("avatar")
-	p.Locale, _ = r.String("locale")
-	if ar, ok := r.Array("roles"); ok {
-		p.Roles = make([]string, ar.Len())
-		for i := 0; i < ar.Len(); i++ {
-			p.Roles[i] = ar.String(i)
-		}
-	}
-	if arn, ok := r.Array("role_names"); ok {
-		p.RoleNames = make([]string, arn.Len())
-		for i := 0; i < arn.Len(); i++ {
-			p.RoleNames[i] = arn.String(i)
-		}
-	}
-	if ap, ok := r.Array("permissions"); ok {
-		p.Permissions = make([]string, ap.Len())
-		for i := 0; i < ap.Len(); i++ {
-			p.Permissions[i] = ap.String(i)
-		}
-	}
-}
-
-// ShellProfile is the read-only view of a session that an application shell
-// renders.
-//
-// NOT to be confused with Identity in this package, which is the ORM row tying
-// a user to an auth provider.
-type ShellProfile struct {
-	Name   string
-	Avatar string
-	Roles  []string // display names, never codes
-}
-
-func (p ShellProfile) UserName() string    { return p.Name }
-func (p ShellProfile) UserAvatar() string  { return p.Avatar }
-func (p ShellProfile) UserRoles() []string { return p.Roles }
-
-// Shell converts a profile into the shape an application shell renders.
-func (p ProfileDTO) Shell() ShellProfile {
-	return ShellProfile{
-		Name:   p.Name,
-		Avatar: p.Avatar,
-		Roles:  p.RoleNames,
-	}
 }

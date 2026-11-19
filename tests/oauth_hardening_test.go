@@ -49,7 +49,7 @@ func TestCallbackNeverLeaksProviderError(t *testing.T) {
 		t.Fatalf("failed to migrate: %v", err)
 	}
 
-	m, err := authority.New(db, auth.Config{IDs: testIDs})
+	m, err := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 	if err != nil {
 		t.Fatalf("failed to create authority: %v", err)
 	}
@@ -65,7 +65,7 @@ func TestCallbackNeverLeaksProviderError(t *testing.T) {
 		GetUserInfoErr: errors.New(secretErrText),
 	}
 
-	m.Enable(oauth2.New(m, m, m, []auth.OAuthProvider{provFailExchange, provFailUserInfo}))
+	m.Enable(oauth2.New(m, m, m, m.Ports().Report, []auth.OAuthProvider{provFailExchange, provFailUserInfo}))
 
 	r := &mock.Router{}
 	m.MountAPI(r)

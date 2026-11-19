@@ -54,7 +54,7 @@ func (m *Module) resolve(ctx router.Context, allowDev bool) auth.Principal {
 	if p, err := m.strategy.Identify(ctx); err == nil && p.UserID != "" {
 		return p
 	}
-	if allowDev && m.devLogin != nil {
+	if allowDev && m.devAutologin != nil {
 		if userID := m.devAutologin(ctx); userID != "" {
 			return auth.Principal{UserID: userID, Assurance: model.AssuranceSingleFactor}
 		}

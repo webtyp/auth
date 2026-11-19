@@ -13,6 +13,7 @@ import (
 	"webtyp.com/model"
 	"webtyp.com/orm"
 	"webtyp.com/router"
+	"webtyp.com/securityevent"
 	"webtyp.com/time"
 	"webtyp.com/webauthn/server"
 )
@@ -34,7 +35,6 @@ const (
 	// first passkey is enrolled from a session older than freshLoginWindow.
 	ChallengeRecentLogin = `Bearer error="insufficient_user_authentication", error_description="sign in again to enroll a passkey", max_age=300`
 
-	ErrMsgOrigin     = "passkey: origin is required, e.g. https://app.example.com"
 	ErrMsgNoSessions = "passkey: empty sessions"
 )
 
@@ -49,9 +49,8 @@ const (
 
 // Sessions are the ports of *authority.Module this package needs.
 type Sessions interface {
-	CurrentPrincipal(ctx router.Context) (auth.Principal, error)
-	IssueStepUpSession(ctx router.Context, userID string) error
-	Notify(e auth.SecurityEvent)
+	auth.PrincipalReader
+	auth.StepUpIssuer
 }
 
 // Module is the passkey authenticator.
@@ -59,21 +58,24 @@ type Module struct {
 	db       *orm.DB
 	ids      model.IDGenerator
 	sessions Sessions
+	report   securityevent.Reporter
 	rp       server.RelyingParty
+	setup    *firstAdminSetup // nil: no first-administrator setup (an administrator exists or the app did not ask)
+	limiter  auth.RateLimiter // the app's limit of anonymous sign-in attempts per IP; nil = none
 }
 
 // New builds the passkey authenticator. db stores credentials and challenges;
 // origin must be exactly what the browser shows in the address bar, port included
 // (https://localhost:6060 in development) — WebAuthn compares it byte for byte.
-func New(db *orm.DB, ids model.IDGenerator, sessions Sessions, origin string) (*Module, error) {
+func New(db *orm.DB, ids model.IDGenerator, sessions Sessions, report securityevent.Reporter, origin string) (*Module, error) {
 	if origin == "" || hostOf(origin) == "" {
-		return nil, fmt.Err(ErrMsgOrigin)
+		return nil, ErrOriginRequired
 	}
 	if sessions == nil {
 		return nil, fmt.Err(ErrMsgNoSessions)
 	}
 	rp := server.RelyingParty{ID: hostOf(origin), Origin: origin}
-	return &Module{db: db, ids: ids, sessions: sessions, rp: rp}, nil
+	return &Module{db: db, ids: ids, sessions: sessions, report: report, rp: rp}, nil
 }
 
 // hostOf strips https:// or http://, then cuts at the first : or /
@@ -199,8 +201,14 @@ func (m *Module) credential(id string) (*PasskeyCredential, bool) {
 	return rows[0], true
 }
 
+// reportEvent publishes e as this mode; Report fails only for a Reporter not made with securityevent.New.
+func (m *Module) reportEvent(e securityevent.Event) {
+	e.Mode = name
+	_ = m.report.Report(e)
+}
+
 func (m *Module) reject(ctx router.Context, status int, reason string) {
-	m.sessions.Notify(auth.SecurityEvent{Type: auth.EventPasskeyRejected, UserID: ctx.UserID(), Reason: reason})
+	m.reportEvent(securityevent.Event{Kind: securityevent.LoginFailed, UserID: ctx.UserID(), Reason: securityevent.Reason(reason)})
 	ctx.WriteStatus(status)
 }
 

@@ -14,13 +14,13 @@ import (
 
 func TestOAuthRoutesMatchExportedPaths(t *testing.T) {
 	db := newTestDB(t)
-	m, err := authority.New(db, auth.Config{IDs: testIDs})
+	m, err := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	gProv := &google.GoogleProvider{}
-	m.Enable(oauth2.New(m, m, m, []auth.OAuthProvider{gProv}))
+	m.Enable(oauth2.New(m, m, m, m.Ports().Report, []auth.OAuthProvider{gProv}))
 
 	r := &mock.Router{}
 	m.MountAPI(r)

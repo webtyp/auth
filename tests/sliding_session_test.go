@@ -16,7 +16,7 @@ import (
 // idle TTL, so every authenticated read must push the expiry forward.
 func TestSlidingSessionExtendsOnActivity(t *testing.T) {
 	db := newTestDB(t)
-	m, err := authority.New(db, auth.Config{IDs: testIDs, IdleTTL: 200})
+	m, err := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}, IdleTTL: 200})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,7 +38,7 @@ func TestSlidingSessionExtendsOnActivity(t *testing.T) {
 
 	sess.ExpiresAt -= 61
 	db.Update(rowOf(sess), orm.Eq(authority.Session_.Id, sess.Id))
-	m, _ = authority.New(db, auth.Config{IDs: testIDs, IdleTTL: 200})
+	m, _ = authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}, IdleTTL: 200})
 
 	got, err := m.GetSession(sess.Id)
 	if err != nil {
@@ -64,7 +64,7 @@ func TestSlidingSessionExtendsOnActivity(t *testing.T) {
 // today's behavior, byte for byte.
 func TestFixedSessionNeverSlides(t *testing.T) {
 	db := newTestDB(t)
-	m, err := authority.New(db, auth.Config{IDs: testIDs})
+	m, err := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,7 +80,7 @@ func TestFixedSessionNeverSlides(t *testing.T) {
 
 	sess.ExpiresAt -= 61
 	db.Update(rowOf(sess), orm.Eq(authority.Session_.Id, sess.Id))
-	m, _ = authority.New(db, auth.Config{IDs: testIDs})
+	m, _ = authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 
 	got, err := m.GetSession(sess.Id)
 	if err != nil {

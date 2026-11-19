@@ -54,7 +54,7 @@ func setupTestModule(t *testing.T) *authority.Module {
 	if err := authority.Migrate(db.RawConn(), compiler); err != nil {
 		t.Fatalf("failed to migrate: %v", err)
 	}
-	mod, err := authority.New(db, auth.Config{IDs: testIDs})
+	mod, err := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 	if err != nil {
 		t.Fatalf("failed to create authority: %v", err)
 	}

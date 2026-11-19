@@ -5,6 +5,7 @@ package tests
 import (
 	"sync/atomic"
 	"testing"
+	"webtyp.com/securityevent"
 
 	"webtyp.com/auth"
 	"webtyp.com/auth/authority"
@@ -29,7 +30,7 @@ func TestDevAutologin_Cases(t *testing.T) {
 	db := newTestDB(t)
 
 	// Setup user & trusted IP
-	mInit, err := authority.New(db, auth.Config{IDs: testIDs})
+	mInit, err := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,10 +38,10 @@ func TestDevAutologin_Cases(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := mInit.RegisterLAN(u.Id, lanRUT); err != nil {
+	if err := trustedip.RegisterRUT(mInit, u.Id, lanRUT); err != nil {
 		t.Fatal(err)
 	}
-	if err := mInit.SetPassword(u.Id, "secret1234"); err != nil {
+	if err := emailpassword.SetPassword(mInit, u.Id, "secret1234", nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -54,7 +55,7 @@ func TestDevAutologin_Cases(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		m.Enable(trustedip.New(m, trusted, m, m, false))
+		m.Enable(trustedip.New(m, trusted, m, m.Ports().Report, false))
 
 		var capturedUserID string
 		handler := m.Authenticate()(func(ctx router.Context) {
@@ -74,7 +75,7 @@ func TestDevAutologin_Cases(t *testing.T) {
 			t.Errorf("expected session cookie to be set on context response")
 		}
 
-		assertSecurityEvent(t, pub1, 0, auth.EventDevAutologin)
+		assertSecurityEvent(t, pub1, 0, securityevent.LoginSucceeded, "")
 	})
 
 	t.Run("Case2_SessionIsRealAcrossAuthorityInstances", func(t *testing.T) {
@@ -85,7 +86,7 @@ func TestDevAutologin_Cases(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		m1.Enable(trustedip.New(m1, trusted, m1, m1, false))
+		m1.Enable(trustedip.New(m1, trusted, m1, m1.Ports().Report, false))
 
 		reqCtx1 := &mock.Context{}
 		reqCtx1.SetValue("RemoteAddr", lanTrustedIP+":54321")
@@ -103,7 +104,7 @@ func TestDevAutologin_Cases(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		m2.Enable(trustedip.New(m2, trusted, m2, m2, false))
+		m2.Enable(trustedip.New(m2, trusted, m2, m2.Ports().Report, false))
 
 		var capturedUserID string
 		handler2 := m2.Authenticate()(func(ctx router.Context) {
@@ -128,7 +129,7 @@ func TestDevAutologin_Cases(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		m.Enable(trustedip.New(m, trusted, m, m, false))
+		m.Enable(trustedip.New(m, trusted, m, m.Ports().Report, false))
 
 		var capturedUserID string
 		handler := m.Authenticate()(func(ctx router.Context) {
@@ -143,7 +144,7 @@ func TestDevAutologin_Cases(t *testing.T) {
 			t.Errorf("capturedUserID = %q, want empty for untrusted IP", capturedUserID)
 		}
 
-		assertSecurityEvent(t, pub3, 0, auth.EventIPMismatch)
+		assertSecurityEvent(t, pub3, 0, securityevent.LoginFailed, "device not trusted")
 	})
 
 	t.Run("Case4_DoesNotRetryAfterFullRejection", func(t *testing.T) {
@@ -156,7 +157,7 @@ func TestDevAutologin_Cases(t *testing.T) {
 		}
 
 		counter := &countingFormLogin{}
-		m.Enable(trustedip.New(m, trusted, m, m, false), counter)
+		m.Enable(trustedip.New(m, trusted, m, m.Ports().Report, false), counter)
 
 		handler := m.Authenticate()(func(ctx router.Context) {})
 
@@ -189,7 +190,7 @@ func TestDevAutologin_Cases(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		m.Enable(trustedip.New(m, trusted, m, m, false))
+		m.Enable(trustedip.New(m, trusted, m, m.Ports().Report, false))
 
 		var capturedUserID string
 		handler := m.Authenticate()(func(ctx router.Context) {
@@ -216,8 +217,8 @@ func TestDevAutologin_Cases(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		epMode := emailpassword.New(m, m, m)
-		tipMode := trustedip.New(m, trusted, m, m, false)
+		epMode := emailpassword.New(m, m, m.Ports().Report)
+		tipMode := trustedip.New(m, trusted, m, m.Ports().Report, false)
 		m.Enable(epMode, tipMode)
 
 		var capturedUserID string

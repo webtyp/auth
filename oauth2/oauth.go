@@ -3,12 +3,14 @@ package oauth2
 import (
 	"webtyp.com/auth"
 	"webtyp.com/router"
+	"webtyp.com/securityevent"
 )
 
 type Authenticator struct {
 	store      auth.IdentityStore
 	states     auth.StateStore
 	sessions   auth.SessionIssuer
+	report     securityevent.Reporter
 	providers  []auth.OAuthProvider
 	afterLogin string
 	// isAllowedRedirect validates a caller-supplied ?redirect_uri= before
@@ -32,13 +34,16 @@ func WithRedirectValidator(fn func(string) bool) Option {
 	return func(a *Authenticator) { a.isAllowedRedirect = fn }
 }
 
-func New(store auth.IdentityStore, states auth.StateStore, sessions auth.SessionIssuer, providers []auth.OAuthProvider, opts ...Option) *Authenticator {
-	a := &Authenticator{store: store, states: states, sessions: sessions, providers: providers}
+func New(store auth.IdentityStore, states auth.StateStore, sessions auth.SessionIssuer, report securityevent.Reporter, providers []auth.OAuthProvider, opts ...Option) *Authenticator {
+	a := &Authenticator{store: store, states: states, sessions: sessions, report: report, providers: providers}
 	for _, opt := range opts {
 		opt(a)
 	}
 	return a
 }
+
+// reasonEmailTaken: the provider's e-mail already belongs to a user who did not link this provider.
+const reasonEmailTaken securityevent.Reason = "e-mail of another account"
 
 func (a *Authenticator) Name() string { return "oauth2" }
 
@@ -92,7 +97,7 @@ func (a *Authenticator) Mount(r router.Router) {
 				SameSite: router.SameSiteLax, MaxAge: oauthCookieMaxAge, Path: "/",
 			})
 			if a.isAllowedRedirect != nil {
-				if redirectURI, ok := router.QueryParam(ctx.Path(), "redirect_uri"); ok && a.isAllowedRedirect(redirectURI) {
+				if redirectURI, ok := router.QueryReader(ctx.RawQuery()).String("redirect_uri"); ok && a.isAllowedRedirect(redirectURI) {
 					ctx.SetCookie(router.Cookie{
 						Name: oauthRedirectCookie, Value: redirectURI, HttpOnly: true, Secure: true,
 						SameSite: router.SameSiteLax, MaxAge: oauthCookieMaxAge, Path: "/",
@@ -104,8 +109,9 @@ func (a *Authenticator) Mount(r router.Router) {
 		}).Public()
 
 		r.Get(auth.PathOAuthCallback(providerName), func(ctx router.Context) {
-			state, _ := router.QueryParam(ctx.Path(), "state")
-			code, _ := router.QueryParam(ctx.Path(), "code")
+			query := router.QueryReader(ctx.RawQuery())
+			state, _ := query.String("state")
+			code, _ := query.String("code")
 
 			var nonce string
 			if c, ok := ctx.Cookie(oauthNonceCookie); ok {
@@ -161,9 +167,8 @@ func (a *Authenticator) Mount(r router.Router) {
 				}
 			} else {
 				if _, err := a.store.UserByEmail(info.Email); err == nil {
-					if notifier, ok := a.store.(auth.SecurityNotifier); ok {
-						notifier.Notify(auth.SecurityEvent{Type: auth.EventUnauthorizedAccess, Provider: providerName})
-					}
+					// Report fails only for a Reporter not made with securityevent.New.
+					_ = a.report.Report(securityevent.Event{Kind: securityevent.LoginFailed, Mode: providerName, Reason: reasonEmailTaken})
 					ctx.WriteStatus(401)
 					ctx.Write([]byte(bodyOAuthFailed))
 					return
@@ -201,6 +206,5 @@ func (a *Authenticator) Mount(r router.Router) {
 		}).Public()
 	}
 }
-
 
 var _ auth.Authenticator = (*Authenticator)(nil)

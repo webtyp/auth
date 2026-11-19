@@ -89,21 +89,6 @@ func getUserByEmail(db *orm.DB, cache *userCache, email string) (auth.User, erro
 	return auth.User(*u), nil
 }
 
-func updateUser(db *orm.DB, cache *userCache, id, name, phone string) error {
-	if cache != nil {
-		cache.Delete(id)
-	}
-	qb := db.Query(&User{}).Where(User_.Id).Eq(id)
-	results, err := ReadAllUser(qb)
-	if err != nil || len(results) == 0 {
-		return auth.ErrNotFound
-	}
-	u := results[0]
-	u.Name = name
-	u.Phone = phone
-	return db.Update(u, orm.Eq(User_.Id, u.Id))
-}
-
 func updateUserAvatar(db *orm.DB, cache *userCache, id, avatar string) error {
 	if cache != nil {
 		cache.Delete(id)
@@ -164,19 +149,6 @@ func listUsers(db *orm.DB, search, after string, limit int64) ([]auth.User, erro
 		res[i] = auth.User(*u)
 	}
 	return res, nil
-}
-
-func deleteUser(db *orm.DB, cache *userCache, id string) error {
-	if cache != nil {
-		cache.Delete(id)
-	}
-	qb := db.Query(&User{}).Where(User_.Id).Eq(id)
-	results, err := ReadAllUser(qb)
-	if err != nil || len(results) == 0 {
-		return auth.ErrNotFound
-	}
-	u := results[0]
-	return db.Delete(u, orm.Eq(User_.Id, u.Id))
 }
 
 func isUniqueViolation(err error) bool {

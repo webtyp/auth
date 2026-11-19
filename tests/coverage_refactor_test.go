@@ -5,22 +5,23 @@ package tests
 import (
 	"strings"
 	"testing"
+	"webtyp.com/securityevent"
 
 	"webtyp.com/auth"
 	"webtyp.com/auth/authority"
-	"webtyp.com/router"
 	emailpassword "webtyp.com/auth/email_password"
 	"webtyp.com/auth/oauth2"
 	"webtyp.com/auth/session/cookie"
 	trustedip "webtyp.com/auth/trusted_ip"
 	"webtyp.com/json"
 	"webtyp.com/model"
+	"webtyp.com/router"
 	"webtyp.com/router/mock"
 )
 
 func TestCoverage_SessionCookie(t *testing.T) {
 	db := newTestDB(t)
-	m, _ := authority.New(db, auth.Config{IDs: testIDs})
+	m, _ := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 
 	strategy, _ := cookie.New(m, cookie.Options{Name: "custom_cookie", Policy: testPolicy})
 
@@ -86,10 +87,10 @@ func TestCoverage_EmailPassword(t *testing.T) {
 	userCRUD := getHandler(m, "users")
 	res, _ := userCRUD.Create(auth.User{Email: "ep_cov@test.com", Name: "EP Cov User"})
 	u := res.(auth.User)
-	_ = m.SetPassword(u.Id, "password123")
+	_ = emailpassword.SetPassword(m, u.Id, "password123", nil)
 
 	r := &mock.Router{}
-	m.Enable(emailpassword.New(m, m, m, emailpassword.WithTrustProxy(true), emailpassword.WithAfterLogin("/custom_after")))
+	m.Enable(emailpassword.New(m, m, m.Ports().Report, emailpassword.WithTrustProxy(true), emailpassword.WithAfterLogin("/custom_after")))
 	m.MountAPI(r)
 
 	t.Run("Rate limit error emission", func(t *testing.T) {
@@ -99,7 +100,7 @@ func TestCoverage_EmailPassword(t *testing.T) {
 
 		// Recreate with rate limit
 		m2, _ := authority.New(db, auth.Config{IDs: testIDs, Events: pub})
-		m2.Enable(emailpassword.New(m2, m2, m2, emailpassword.WithRateLimit(limiter)))
+		m2.Enable(emailpassword.New(m2, m2, m2.Ports().Report, emailpassword.WithRateLimit(limiter)))
 		r2 := &mock.Router{}
 		m2.MountAPI(r2)
 
@@ -118,7 +119,7 @@ func TestCoverage_EmailPassword(t *testing.T) {
 
 		found := false
 		for _, ev := range pub.SecurityEvents() {
-			if ev.Type == auth.EventRateLimited && ev.IP == blockedIP {
+			if ev.Kind == securityevent.RateLimited && ev.IP == blockedIP {
 				found = true
 			}
 		}
@@ -170,11 +171,11 @@ func TestCoverage_TrustedIP(t *testing.T) {
 	res, _ := userCRUD.Create(auth.User{Email: "ip_cov@test.com", Name: "IP Cov User"})
 	u := res.(auth.User)
 
-	_ = m.RegisterLAN(u.Id, "12345678-5")
-	_ = m.AssignLANIP(u.Id, "192.168.10.10", "Office")
+	_ = trustedip.RegisterRUT(m, u.Id, "12345678-5")
+	trusted := &fakeTrustedIP{allowed: map[string]string{u.Id: "192.168.10.10"}}
 
 	r := &mock.Router{}
-	m.Enable(trustedip.New(m, m, m, m, true, trustedip.WithAfterLogin("/custom_after")))
+	m.Enable(trustedip.New(m, trusted, m, m.Ports().Report, true, trustedip.WithAfterLogin("/custom_after")))
 	m.MountAPI(r)
 
 	t.Run("RUT valid and trusted IP success", func(t *testing.T) {
@@ -212,7 +213,7 @@ func TestCoverage_TrustedIP(t *testing.T) {
 
 		found := false
 		for _, ev := range pub.SecurityEvents() {
-			if ev.Type == auth.EventIPMismatch && ev.IP == "192.168.10.99" {
+			if ev.Kind == securityevent.LoginFailed && ev.Reason == "device not trusted" && ev.IP == "192.168.10.99" {
 				found = true
 			}
 		}
@@ -240,7 +241,7 @@ func TestCoverage_TrustedIP(t *testing.T) {
 
 func TestCoverage_OAuth2(t *testing.T) {
 	db := newTestDB(t)
-	m, _ := authority.New(db, auth.Config{IDs: testIDs})
+	m, _ := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 
 	mockP := &MockProvider{
 		NameVal:         "covmock",
@@ -249,7 +250,7 @@ func TestCoverage_OAuth2(t *testing.T) {
 	}
 
 	r := &mock.Router{}
-	m.Enable(oauth2.New(m, m, m, []auth.OAuthProvider{mockP}, oauth2.WithAfterLogin("/custom_after")))
+	m.Enable(oauth2.New(m, m, m, m.Ports().Report, []auth.OAuthProvider{mockP}, oauth2.WithAfterLogin("/custom_after")))
 	m.MountAPI(r)
 
 	t.Run("Replay state token error", func(t *testing.T) {
@@ -299,7 +300,7 @@ func TestCoverage_OAuth2(t *testing.T) {
 			UserInfoVal:     auth.OAuthUserInfo{ID: "cSubject2", Email: "link@test.com", Name: "Same Email OAuth", EmailVerified: true},
 		}
 
-		m.Enable(oauth2.New(m, m, m, []auth.OAuthProvider{mockP2}))
+		m.Enable(oauth2.New(m, m, m, m.Ports().Report, []auth.OAuthProvider{mockP2}))
 		m.MountAPI(r)
 
 		ctxBegin := &mock.Context{InMethod: "GET", InPath: "/oauth/covmock2"}
@@ -337,10 +338,10 @@ func TestCoverage_OAuth2(t *testing.T) {
 
 func TestCoverage_CompositionIsolatedRoutes(t *testing.T) {
 	db := newTestDB(t)
-	m, _ := authority.New(db, auth.Config{IDs: testIDs})
+	m, _ := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 
 	// Enable only email_password
-	m.Enable(emailpassword.New(m, m, m))
+	m.Enable(emailpassword.New(m, m, m.Ports().Report))
 
 	r := &mock.Router{}
 	m.MountAPI(r)
@@ -366,30 +367,9 @@ func TestCoverage_CompositionIsolatedRoutes(t *testing.T) {
 	}
 }
 
-func TestCoverage_SecurityEventEncode(t *testing.T) {
-	e := &auth.SecurityEvent{
-		Type:      auth.EventJWTTampered,
-		IP:        "127.0.0.1",
-		UserID:    "u1",
-		Provider:  "google",
-		Resource:  "res",
-		Timestamp: 123456,
-	}
-	if e.IsNil() {
-		t.Error("expected non-nil")
-	}
-	var out string
-	if err := json.Encode(e, &out); err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(out, `"type":0`) {
-		t.Errorf("unexpected json: %s", out)
-	}
-}
-
 func TestCoverage_AuthorityPortsAndHelper(t *testing.T) {
 	db := newTestDB(t)
-	m, _ := authority.New(db, auth.Config{IDs: testIDs})
+	m, _ := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 
 	m.SetLog(func(args ...any) {})
 
@@ -423,7 +403,7 @@ func TestCoverage_OAuthTokenDecode(t *testing.T) {
 func TestCoverage_GeneratedTypes(t *testing.T) {
 	models := []model.Model{
 		&authority.User{},
-		&authority.Identity{}, &authority.LANIP{},
+		&authority.Identity{},
 		&authority.OAuthState{},
 		&authority.Session{},
 	}
@@ -440,7 +420,7 @@ func TestCoverage_GeneratedTypes(t *testing.T) {
 
 	lists := []model.ModelSlice{
 		&authority.UserList{},
-		&authority.IdentityList{}, &authority.LANIPList{},
+		&authority.IdentityList{},
 		&authority.OAuthStateList{},
 		&authority.SessionList{},
 	}

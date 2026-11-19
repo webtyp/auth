@@ -50,6 +50,7 @@ func testInit(t *testing.T) {
 	db := newTestDB(t)
 	cfg := auth.Config{
 		IDs:        testIDs,
+		Events:     &mockPublisher{},
 		CookieName: "test_session",
 		TokenTTL:   3600,
 	}
@@ -57,7 +58,7 @@ func testInit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New failed: %v", err)
 	}
-	m.Enable(emailpassword.New(m, m, m))
+	m.Enable(emailpassword.New(m, m, m.Ports().Report))
 	_ = m // to be used later
 }
 
@@ -94,7 +95,7 @@ func (h *userHandler) Delete(id string) error {
 
 func testCRUD(t *testing.T) {
 	db := newTestDB(t)
-	m, err := authority.New(db, auth.Config{IDs: testIDs})
+	m, err := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -104,7 +105,7 @@ func testCRUD(t *testing.T) {
 		t.Fatal("userCRUD handler not found")
 	}
 
-	res, err := userCRUD.Create(auth.User{Email: "test@example.com", Name: "Test User", Phone: "123456789"})
+	res, err := userCRUD.Create(auth.User{Email: "test@example.com", Name: "Test User", Phone: "+56911111111"})
 	if err != nil {
 		t.Fatalf("CreateUser failed: %v", err)
 	}
@@ -135,11 +136,11 @@ func testCRUD(t *testing.T) {
 
 func testAuth(t *testing.T) {
 	db := newTestDB(t)
-	m, err := authority.New(db, auth.Config{IDs: testIDs})
+	m, err := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	m.Enable(emailpassword.New(m, m, m))
+	m.Enable(emailpassword.New(m, m, m.Ports().Report))
 
 	userCRUD := getHandler(m, "users")
 	res, err := userCRUD.Create(auth.User{Email: "auth@example.com", Name: "Auth User"})
@@ -148,35 +149,35 @@ func testAuth(t *testing.T) {
 	}
 	u := res.(auth.User)
 
-	if err := m.SetPassword(u.Id, "password123"); err != nil {
+	if err := emailpassword.SetPassword(m, u.Id, "password123", nil); err != nil {
 		t.Fatalf("SetPassword failed: %v", err)
 	}
 
-	u2, err := m.Login("auth@example.com", "password123")
+	ep := emailpassword.New(m, m, m.Ports().Report)
+	id, err := ep.Login(&mock.Context{}, []byte(`{"email":"auth@example.com","password":"password123"}`))
 	if err != nil {
 		t.Fatalf("Login failed: %v", err)
 	}
-	if u2.Id != u.Id {
+	if id != u.Id {
 		t.Errorf("Login returned wrong user")
 	}
 
-	_, err = m.Login("auth@example.com", "wrongpass")
-	if err != auth.ErrInvalidCredentials {
-		t.Errorf("expected ErrInvalidCredentials, got %v", err)
+	if _, err := ep.Login(&mock.Context{}, []byte(`{"email":"auth@example.com","password":"wrongpass"}`)); err == nil {
+		t.Errorf("a wrong password must be refused")
 	}
 
-	if err := m.VerifyPassword(u.Id, "password123"); err != nil {
+	if err := emailpassword.CheckPassword(m, u.Id, "password123"); err != nil {
 		t.Fatalf("VerifyPassword failed: %v", err)
 	}
 }
 
 func testSessions(t *testing.T) {
 	db := newTestDB(t)
-	m, err := authority.New(db, auth.Config{IDs: testIDs, TokenTTL: 3600})
+	m, err := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}, TokenTTL: 3600})
 	if err != nil {
 		t.Fatal(err)
 	}
-	m.Enable(emailpassword.New(m, m, m))
+	m.Enable(emailpassword.New(m, m, m.Ports().Report))
 
 	userCRUD := getHandler(m, "users")
 	res, err := userCRUD.Create(auth.User{Email: "sess@example.com", Name: "Sess User"})
@@ -205,8 +206,8 @@ func testSessions(t *testing.T) {
 	}
 
 	// Re-init to flush memory cache
-	m, _ = authority.New(db, auth.Config{IDs: testIDs, TokenTTL: 3600})
-	m.Enable(emailpassword.New(m, m, m))
+	m, _ = authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}, TokenTTL: 3600})
+	m.Enable(emailpassword.New(m, m, m.Ports().Report))
 
 	_, err = m.GetSession(sess.Id)
 	if err != auth.ErrSessionExpired {
@@ -237,12 +238,12 @@ func testOAuth(t *testing.T) {
 		UserInfoVal:     auth.OAuthUserInfo{ID: "mockid", Email: "mock@example.com", Name: "Mock User"},
 	}
 
-	cfg := auth.Config{IDs: testIDs}
+	cfg := auth.Config{IDs: testIDs, Events: &mockPublisher{}}
 	m, err := authority.New(db, cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
-	m.Enable(oauth2.New(m, m, m, []auth.OAuthProvider{mockP}))
+	m.Enable(oauth2.New(m, m, m, m.Ports().Report, []auth.OAuthProvider{mockP}))
 
 	r := &mock.Router{}
 	m.MountAPI(r)
@@ -320,11 +321,13 @@ func testOAuth(t *testing.T) {
 
 func testLAN(t *testing.T) {
 	db := newTestDB(t)
-	m, err := authority.New(db, auth.Config{IDs: testIDs, TrustProxy: true})
+	m, err := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}, TrustProxy: true})
 	if err != nil {
 		t.Fatal(err)
 	}
-	m.Enable(trustedip.New(m, m, m, m, true))
+	trusted := &fakeTrustedIP{allowed: map[string]string{}}
+	ti := trustedip.New(m, trusted, m, m.Ports().Report, true)
+	m.Enable(ti)
 
 	userCRUD := getHandler(m, "users")
 	res, err := userCRUD.Create(auth.User{Email: "lan@example.com", Name: "LAN User"})
@@ -333,70 +336,52 @@ func testLAN(t *testing.T) {
 	}
 	u := res.(auth.User)
 
-	if err := m.RegisterLAN(u.Id, "12345678-5"); err != nil {
-		t.Fatalf("RegisterLAN failed: %v", err)
+	if err := trustedip.RegisterRUT(m, u.Id, "12345678-5"); err != nil {
+		t.Fatalf("RegisterRUT failed: %v", err)
 	}
-
-	if err := m.AssignLANIP(u.Id, "192.168.1.10", "Home"); err != nil {
-		t.Fatalf("AssignLANIP failed: %v", err)
-	}
+	trusted.allowed[u.Id] = "192.168.1.10"
+	body := []byte(`{"code":"12345678-5"}`)
 
 	ctx := &mock.Context{}
 	ctx.SetValue("RemoteAddr", "192.168.1.10:1234")
-
-	u2, err := m.LoginLAN("12345678-5", ctx)
-	if err != nil {
-		t.Fatalf("LoginLAN failed: %v", err)
-	}
-	if u2.Id != u.Id {
-		t.Errorf("expected same user ID")
+	if id, err := ti.Login(ctx, body); err != nil || id != u.Id {
+		t.Fatalf("Login from the trusted device: id %q err %v", id, err)
 	}
 
-	_, err = m.LoginLAN("123", ctx)
-	if !auth.IsInvalidRUT(err) {
-		t.Errorf("expected ErrInvalidRUT, got %v", err)
+	if _, err := ti.Login(ctx, []byte(`{"code":"123"}`)); err == nil {
+		t.Errorf("an invalid RUT must be refused")
 	}
 
 	ctxW := &mock.Context{}
 	ctxW.SetValue("RemoteAddr", "10.0.0.1:1234")
-	_, err = m.LoginLAN("12345678-5", ctxW)
-	if err != auth.ErrInvalidCredentials {
-		t.Errorf("expected ErrInvalidCredentials for wrong IP, got %v", err)
+	if _, err := ti.Login(ctxW, body); err == nil {
+		t.Errorf("a device that is not trusted must be refused")
 	}
 
 	ctxP := &mock.Context{}
 	ctxP.SetValue("RemoteAddr", "10.0.0.1:1234")
 	ctxP.SetHeader("X-Forwarded-For", "192.168.1.10")
-	u3, err := m.LoginLAN("12345678-5", ctxP)
-	if err != nil {
-		t.Fatalf("LoginLAN with proxy failed: %v", err)
-	}
-	if u3.Id != u.Id {
-		t.Errorf("expected same user ID")
+	if id, err := ti.Login(ctxP, body); err != nil || id != u.Id {
+		t.Fatalf("Login behind a trusted proxy: id %q err %v", id, err)
 	}
 
-	if err := m.RevokeLANIP(u.Id, "192.168.1.10"); err != nil {
-		t.Fatalf("RevokeLANIP failed: %v", err)
+	delete(trusted.allowed, u.Id)
+	if _, err := ti.Login(ctxP, body); err == nil {
+		t.Errorf("a device removed from the register must be refused")
 	}
 
-	_, err = m.LoginLAN("12345678-5", ctxP)
-	if err != auth.ErrInvalidCredentials {
-		t.Errorf("expected ErrInvalidCredentials after revoke, got %v", err)
+	trusted.allowed[u.Id] = "192.168.1.10"
+	if err := trustedip.UnregisterRUT(m, u.Id); err != nil {
+		t.Fatalf("UnregisterRUT failed: %v", err)
 	}
-
-	if err := m.UnregisterLAN(u.Id); err != nil {
-		t.Fatalf("UnregisterLAN failed: %v", err)
-	}
-
-	_, err = m.LoginLAN("12345678-5", ctxP)
-	if err != auth.ErrInvalidCredentials {
-		t.Errorf("expected ErrInvalidCredentials after unregister, got %v", err)
+	if _, err := ti.Login(ctxP, body); err == nil {
+		t.Errorf("a RUT removed from the person must be refused")
 	}
 }
 
 func setupModule(t *testing.T) *authority.Module {
 	db := newTestDB(t)
-	m, _ := authority.New(db, auth.Config{IDs: testIDs})
-	m.Enable(emailpassword.New(m, m, m))
+	m, _ := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
+	m.Enable(emailpassword.New(m, m, m.Ports().Report))
 	return m
 }

@@ -46,17 +46,17 @@ func TestCookieSecurity(t *testing.T) {
 
 	t.Run("Cookie Mode Flags", func(t *testing.T) {
 		db := newTestDB(t)
-		m, err := authority.New(db, auth.Config{IDs: testIDs, TokenTTL: 3600, CookieName: "session"})
+		m, err := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}, TokenTTL: 3600, CookieName: "session"})
 		if err != nil {
 			t.Fatalf("authority.New failed: %v", err)
 		}
-		m.Enable(emailpassword.New(m, m, m))
+		m.Enable(emailpassword.New(m, m, m.Ports().Report))
 		email, pass := "cookie1@example.com", "password123"
 		admin, err := m.CreateUser(email, "Admin", "")
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := m.SetPassword(admin.Id, pass); err != nil {
+		if err := emailpassword.SetPassword(m, admin.Id, pass, nil); err != nil {
 			t.Fatal(err)
 		}
 
@@ -84,17 +84,17 @@ func TestCookieSecurity(t *testing.T) {
 
 	t.Run("Custom Cookie Name", func(t *testing.T) {
 		db := newTestDB(t)
-		m, err := authority.New(db, auth.Config{IDs: testIDs, CookieName: "custom_auth"})
+		m, err := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}, CookieName: "custom_auth"})
 		if err != nil {
 			t.Fatalf("authority.New failed: %v", err)
 		}
-		m.Enable(emailpassword.New(m, m, m))
+		m.Enable(emailpassword.New(m, m, m.Ports().Report))
 		email, pass := "cookie3@example.com", "password123"
 		admin, err := m.CreateUser(email, "Admin", "")
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := m.SetPassword(admin.Id, pass); err != nil {
+		if err := emailpassword.SetPassword(m, admin.Id, pass, nil); err != nil {
 			t.Fatal(err)
 		}
 
@@ -118,7 +118,7 @@ func TestNewDoesNotQueryOnConstruction(t *testing.T) {
 	db := orm.New(conn)
 
 	// Do NOT run authority.Migrate — the 'session' table does not exist.
-	m, err := authority.New(db, auth.Config{IDs: testIDs})
+	m, err := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 	if err != nil {
 		t.Fatalf("authority.New failed on unmigrated DB: %v", err)
 	}
@@ -132,11 +132,11 @@ func TestNewDoesNotQueryOnConstruction(t *testing.T) {
 
 func TestSessionRotation(t *testing.T) {
 	db := newTestDB(t)
-	m, err := authority.New(db, auth.Config{IDs: testIDs, TokenTTL: 3600})
+	m, err := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}, TokenTTL: 3600})
 	if err != nil {
 		t.Fatalf("authority.New failed: %v", err)
 	}
-	m.Enable(emailpassword.New(m, m, m))
+	m.Enable(emailpassword.New(m, m, m.Ports().Report))
 
 	userCRUD := getHandler(m, "users")
 	res, err := userCRUD.Create(auth.User{Email: "rot@example.com", Name: "Rot"})
@@ -174,11 +174,11 @@ func TestSessionRotation(t *testing.T) {
 		sess3, _ := m.CreateSession(u.Id, "10.0.0.1", "ua1", testPolicy)
 		// Manually expire
 		db.RawConn().Exec("UPDATE session SET expires_at = 0 WHERE id = ?", sess3.Id)
-		m, err = authority.New(db, auth.Config{IDs: testIDs, TokenTTL: 3600}) // Clear cache
+		m, err = authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}, TokenTTL: 3600}) // Clear cache
 		if err != nil {
 			t.Fatalf("authority.New failed: %v", err)
 		}
-		m.Enable(emailpassword.New(m, m, m))
+		m.Enable(emailpassword.New(m, m, m.Ports().Report))
 
 		_, err := m.RotateSession(sess3.Id, "10.0.0.1", "ua1")
 		if err != auth.ErrSessionExpired {
@@ -222,20 +222,18 @@ func TestPasswordHook(t *testing.T) {
 	db := newTestDB(t)
 
 	errHook := errors.New("custom password hook error")
-	cfg := auth.Config{
-		IDs: testIDs,
-		OnPasswordValidate: func(password string) error {
-			if strings.Contains(password, "bad") {
-				return errHook
-			}
-			return nil
-		},
+	hook := func(password string) error {
+		if strings.Contains(password, "bad") {
+			return errHook
+		}
+		return nil
 	}
+	cfg := auth.Config{IDs: testIDs, Events: &mockPublisher{}}
 	m, err := authority.New(db, cfg)
 	if err != nil {
 		t.Fatalf("authority.New failed: %v", err)
 	}
-	m.Enable(emailpassword.New(m, m, m))
+	m.Enable(emailpassword.New(m, m, m.Ports().Report))
 
 	userCRUD := getHandler(m, "users")
 	resU, err := userCRUD.Create(auth.User{Email: "hook@example.com", Name: "Hook"})
@@ -243,33 +241,33 @@ func TestPasswordHook(t *testing.T) {
 		t.Fatalf("userCRUD.Create failed: %v", err)
 	}
 	u := resU.(auth.User)
-	_ = m.SetPassword(u.Id, "goodpass123") // Baseline
+	_ = emailpassword.SetPassword(m, u.Id, "goodpass123", hook) // Baseline
 
 	t.Run("Hook rejection", func(t *testing.T) {
-		err := m.SetPassword(u.Id, "thisisbadpass")
+		err := emailpassword.SetPassword(m, u.Id, "thisisbadpass", hook)
 		if err != errHook {
 			t.Errorf("expected custom hook error, got %v", err)
 		}
 
 		// Old password should still work
-		if err := m.VerifyPassword(u.Id, "goodpass123"); err != nil {
+		if err := emailpassword.CheckPassword(m, u.Id, "goodpass123"); err != nil {
 			t.Errorf("expected old password to still be valid")
 		}
 	})
 
 	t.Run("Hook success", func(t *testing.T) {
-		err := m.SetPassword(u.Id, "thisisokpass")
+		err := emailpassword.SetPassword(m, u.Id, "thisisokpass", hook)
 		if err != nil {
 			t.Errorf("expected nil, got %v", err)
 		}
 
-		if err := m.VerifyPassword(u.Id, "thisisokpass"); err != nil {
+		if err := emailpassword.CheckPassword(m, u.Id, "thisisokpass"); err != nil {
 			t.Errorf("expected new password to work")
 		}
 	})
 
 	t.Run("Length runs before hook", func(t *testing.T) {
-		err := m.SetPassword(u.Id, "bad") // short and "bad"
+		err := emailpassword.SetPassword(m, u.Id, "bad", hook) // short and "bad"
 		if err != auth.ErrWeakPassword {
 			t.Errorf("expected ErrWeakPassword, got %v", err)
 		}

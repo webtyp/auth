@@ -4,6 +4,7 @@ package tests
 
 import (
 	"testing"
+	"webtyp.com/securityevent"
 
 	"webtyp.com/auth"
 	"webtyp.com/auth/authority"
@@ -14,8 +15,8 @@ import (
 
 func TestOWASP(t *testing.T) {
 	db := newTestDB(t)
-	m, _ := authority.New(db, auth.Config{IDs: testIDs})
-	m.Enable(emailpassword.New(m, m, m))
+	m, _ := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
+	m.Enable(emailpassword.New(m, m, m.Ports().Report))
 
 	email := "active@test.com"
 	pass := "password123"
@@ -23,7 +24,7 @@ func TestOWASP(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := m.SetPassword(admin.Id, pass); err != nil {
+	if err := emailpassword.SetPassword(m, admin.Id, pass, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -32,7 +33,7 @@ func TestOWASP(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := m.SetPassword(uSuspNew.Id, pass); err != nil {
+	if err := emailpassword.SetPassword(m, uSuspNew.Id, pass, nil); err != nil {
 		t.Fatal(err)
 	}
 	m.SuspendUser(uSuspNew.Id)
@@ -83,7 +84,7 @@ func TestOWASP(t *testing.T) {
 		})
 		limiter := auth.NewIPLimiter(1, 60, 60) // 1 failure blocks immediately
 		limiter.Fail("1.2.3.4")
-		m.Enable(emailpassword.New(m, m, m, emailpassword.WithRateLimit(limiter)))
+		m.Enable(emailpassword.New(m, m, m.Ports().Report, emailpassword.WithRateLimit(limiter)))
 		r := &mock.Router{}
 		m.MountAPI(r)
 
@@ -108,10 +109,10 @@ func TestOWASP(t *testing.T) {
 
 			found := false
 			for _, e := range pub.SecurityEvents() {
-				if e.Type == auth.EventRateLimited {
+				if e.Kind == securityevent.RateLimited {
 					found = true
-					if e.UserID != email {
-						t.Errorf("expected UserID %s, got %s", email, e.UserID)
+					if e.UserID != "" {
+						t.Errorf("a rate-limited attempt must not carry the typed e-mail, got UserID %s", e.UserID)
 					}
 					if e.IP != "1.2.3.4" {
 						t.Errorf("expected IP 1.2.3.4, got %s", e.IP)

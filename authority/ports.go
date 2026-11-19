@@ -8,9 +8,18 @@ import (
 	"webtyp.com/fmt"
 	"webtyp.com/orm"
 	"webtyp.com/router"
+	"webtyp.com/securityevent"
 	"webtyp.com/time"
 	"webtyp.com/auth"
 	"webtyp.com/user"
+)
+
+// Why an OAuth state was refused, as written in the security event.
+const (
+	reasonStateUnknown       securityevent.Reason = "oauth state unknown or already used"
+	reasonStateNonce         securityevent.Reason = "oauth state presented by another browser"
+	reasonStateOtherProvider securityevent.Reason = "oauth state of another provider"
+	reasonStateExpired       securityevent.Reason = "oauth state expired"
 )
 
 // oauthStateBytes: 32 bytes. El state es el token anti-CSRF del intercambio
@@ -20,10 +29,10 @@ const oauthStateBytes = 32
 var (
 	_ auth.IdentityStore    = (*Module)(nil)
 	_ auth.StateStore       = (*Module)(nil)
-	_ auth.TrustedIPStore   = (*Module)(nil)
 	_ auth.SessionRepo      = (*Module)(nil)
-	_ auth.SecurityNotifier = (*Module)(nil)
 	_ auth.SessionIssuer    = (*Module)(nil)
+	_ auth.StepUpIssuer     = (*Module)(nil)
+	_ auth.PrincipalReader  = (*Module)(nil)
 	_ auth.SubjectStore     = (*Module)(nil)
 	_ auth.ProviderRegistry = (*Module)(nil)
 )
@@ -93,10 +102,6 @@ func (m *Module) PurgeExpiredOAuthStates() error {
 	return nil
 }
 
-func (m *Module) IsTrustedIP(userID, ip string) bool { return checkLANIP(m.db, userID, ip) == nil }
-
-func (m *Module) Notify(e auth.SecurityEvent) { m.notify(e) }
-
 func (m *Module) IssueSession(ctx router.Context, userID string) error {
 	return m.strategy.Issue(ctx, userID)
 }
@@ -153,7 +158,7 @@ func consumeState(db *orm.DB, m *Module, state, nonce, provider string) error {
 		return err
 	}
 	if len(results) == 0 {
-		m.notify(auth.SecurityEvent{Type: auth.EventOAuthReplay, Provider: provider})
+		m.reportEvent(securityevent.Event{Kind: securityevent.TokenReused, Mode: provider, Reason: reasonStateUnknown})
 		return auth.ErrInvalidOAuthState
 	}
 	stateObj := results[0]
@@ -165,20 +170,20 @@ func consumeState(db *orm.DB, m *Module, state, nonce, provider string) error {
 
 	// 3. Compare provider
 	if stateObj.Provider != provider {
-		m.notify(auth.SecurityEvent{Type: auth.EventOAuthCrossProvider, Provider: provider})
+		m.reportEvent(securityevent.Event{Kind: securityevent.LoginFailed, Mode: provider, Reason: reasonStateOtherProvider})
 		return auth.ErrInvalidOAuthState
 	}
 
 	// 4. Compare nonce in constant time
 	computedHash := base64.URLEncode(hmac.HMACSHA256([]byte(state), []byte(nonce)))
 	if !hmac.HMACEqual([]byte(stateObj.NonceHash), []byte(computedHash)) {
-		m.notify(auth.SecurityEvent{Type: auth.EventOAuthReplay, Provider: provider})
+		m.reportEvent(securityevent.Event{Kind: securityevent.TokenReused, Mode: provider, Reason: reasonStateNonce})
 		return auth.ErrInvalidOAuthState
 	}
 
 	// 5. Check expiry
 	if stateObj.ExpiresAt < time.NowUnix() {
-		m.notify(auth.SecurityEvent{Type: auth.EventOAuthExpiredState, Provider: provider})
+		m.reportEvent(securityevent.Event{Kind: securityevent.LoginFailed, Mode: provider, Reason: reasonStateExpired})
 		return auth.ErrInvalidOAuthState
 	}
 

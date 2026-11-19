@@ -5,6 +5,7 @@ package tests
 import (
 	"errors"
 	"testing"
+	"webtyp.com/securityevent"
 
 	"webtyp.com/auth"
 	"webtyp.com/auth/authority"
@@ -53,14 +54,14 @@ func TestClientAssertion(t *testing.T) {
 	}
 
 	// Constructor validation
-	if _, err := clientassertion.New(db, keys, "", nil); err == nil || err.Error() != clientassertion.ErrMsgEmptyAudience {
+	if _, err := clientassertion.New(db, keys, "", reporterFunc(func(securityevent.Event) {})); err == nil || err.Error() != clientassertion.ErrMsgEmptyAudience {
 		t.Errorf("expected ErrMsgEmptyAudience, got %v", err)
 	}
 
-	var events []auth.SecurityEvent
-	ca, err := clientassertion.New(db, keys, audience, func(ev auth.SecurityEvent) {
+	var events []securityevent.Event
+	ca, err := clientassertion.New(db, keys, audience, reporterFunc(func(ev securityevent.Event) {
 		events = append(events, ev)
-	})
+	}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -84,8 +85,8 @@ func TestClientAssertion(t *testing.T) {
 		if !handled || p.UserID != "" {
 			t.Errorf("expected handled anonymous rejection for %s, got %+v, handled=%v", wantReason, p, handled)
 		}
-		if len(events) != 1 || events[0].Type != auth.EventClientAssertionRejected || events[0].Reason != wantReason {
-			t.Errorf("expected EventClientAssertionRejected(%q), got %+v", wantReason, events)
+		if len(events) != 1 || events[0].Kind != securityevent.LoginFailed || events[0].Reason != securityevent.Reason(wantReason) {
+			t.Errorf("expected LoginFailed(%q), got %+v", wantReason, events)
 		}
 	}
 
@@ -180,7 +181,7 @@ func TestClientAssertion(t *testing.T) {
 	expectReject(t, tokValid, "POST", "/api/token", "replay")
 
 	// notify == nil must not panic
-	caNilNotify, err := clientassertion.New(db, keys, audience, nil)
+	caNilNotify, err := clientassertion.New(db, keys, audience, reporterFunc(func(securityevent.Event) {}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -191,7 +192,7 @@ func TestClientAssertion(t *testing.T) {
 	}
 
 	// Cookie ignored on a machine request: valid session cookie + invalid bearer -> anonymous through Authenticate()
-	m, err := authority.New(db, auth.Config{IDs: testIDs})
+	m, err := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 	if err != nil {
 		t.Fatal(err)
 	}

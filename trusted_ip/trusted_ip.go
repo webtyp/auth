@@ -5,6 +5,7 @@ import (
 	"webtyp.com/input"
 	"webtyp.com/json"
 	"webtyp.com/router"
+	"webtyp.com/securityevent"
 )
 
 // loginFailure carries the exact HTTP answer the POST route must give for a
@@ -17,7 +18,21 @@ type loginFailure struct {
 
 func (f loginFailure) Error() string { return f.body }
 
-const statusNotFound = 404
+const (
+	statusNotFound    = 404
+	statusUnavailable = 503
+	setupRequired     = `{"required":true}`
+	setupDone         = `{"required":false}`
+)
+
+// Why a sign-in or a setup was refused, as written in the security event (never what the person typed).
+const (
+	reasonInvalidRUT    securityevent.Reason = "invalid RUT format"
+	reasonUnknownRUT    securityevent.Reason = "unknown RUT"
+	reasonInactive      securityevent.Reason = "inactive account"
+	reasonUntrusted     securityevent.Reason = "device not trusted"
+	reasonAdminRegistry securityevent.Reason = "administrators could not be read"
+)
 
 func writeFailure(ctx router.Context, err error) {
 	if f, ok := err.(loginFailure); ok {
@@ -34,11 +49,11 @@ type Authenticator struct {
 	store       auth.IdentityStore
 	trusted     auth.TrustedIPStore
 	sessions    auth.SessionIssuer
-	notify      auth.SecurityNotifier
+	report      securityevent.Reporter
 	trustProxy  bool
 	afterLogin  string
 	rateLimit   auth.RateLimiter
-	registry    auth.ProviderRegistry
+	hasAdmin    func() (bool, error)
 	createAdmin func(code, name, ip string) error
 }
 
@@ -57,7 +72,7 @@ func WithRateLimit(l auth.RateLimiter) Option {
 }
 
 // WithFirstAdminSetup enables the one-time setup routes at auth.PathSetup,
-// open ONLY while reg reports no identity for this provider. It solves this
+// open ONLY while hasAdmin reports that no administrator exists (created by any mode). It solves this
 // mode's chicken-and-egg — only an admin can assign devices, but nobody can
 // log in until an admin exists — so the consumer does not have to carry
 // bootstrap credentials in its environment.
@@ -69,12 +84,11 @@ func WithRateLimit(l auth.RateLimiter) Option {
 // device record, a staff member, a role) is the consumer's job — this mode
 // knows only that it must happen before the session is issued.
 //
-// Both routes answer 404 once an admin exists, and a POST after that point
-// publishes EventSetupRejected: from the outside, a finished install is
-// indistinguishable from one that never offered setup at all.
-func WithFirstAdminSetup(reg auth.ProviderRegistry, create func(code, name, ip string) error) Option {
+// From the local network GET answers 200 {"required":false} once an admin exists and 503 when the administrators
+// cannot be read; a POST after that point answers 404 and reports SetupRejected. From the Internet both answer 404.
+func WithFirstAdminSetup(hasAdmin func() (bool, error), create func(code, name, ip string) error) Option {
 	return func(a *Authenticator) {
-		a.registry = reg
+		a.hasAdmin = hasAdmin
 		a.createAdmin = create
 	}
 }
@@ -83,8 +97,8 @@ func WithFirstAdminSetup(reg auth.ProviderRegistry, create func(code, name, ip s
 // mode's entire security property is "the request's real IP is on the
 // allowlist" — silently defaulting it to false behind a real proxy would make
 // every request look like it came from the proxy's own IP.
-func New(store auth.IdentityStore, trusted auth.TrustedIPStore, sessions auth.SessionIssuer, notify auth.SecurityNotifier, trustProxy bool, opts ...Option) *Authenticator {
-	a := &Authenticator{store: store, trusted: trusted, sessions: sessions, notify: notify, trustProxy: trustProxy}
+func New(store auth.IdentityStore, trusted auth.TrustedIPStore, sessions auth.SessionIssuer, report securityevent.Reporter, trustProxy bool, opts ...Option) *Authenticator {
+	a := &Authenticator{store: store, trusted: trusted, sessions: sessions, report: report, trustProxy: trustProxy}
 	for _, opt := range opts {
 		opt(a)
 	}
@@ -92,6 +106,13 @@ func New(store auth.IdentityStore, trusted auth.TrustedIPStore, sessions auth.Se
 }
 
 func (a *Authenticator) Name() string { return auth.ProviderTrustedIP }
+
+// reportEvent publishes e as this mode. Report fails only for a Reporter not made with securityevent.New, and the
+// one this mode receives is authority's, built in authority.New.
+func (a *Authenticator) reportEvent(e securityevent.Event) {
+	e.Mode = auth.ProviderTrustedIP
+	_ = a.report.Report(e)
+}
 
 // Login runs EVERY check the POST route runs against body — the same bytes the
 // form sends — and returns the user id. It never writes a response and never
@@ -105,7 +126,7 @@ func (a *Authenticator) Login(ctx router.Context, body []byte) (string, error) {
 	// message, either of which would tell an outsider the block exists.
 	if a.rateLimit != nil {
 		if err := a.rateLimit.Check(ip); err != nil {
-			a.notify.Notify(auth.SecurityEvent{Type: auth.EventRateLimited, IP: ip})
+			a.reportEvent(securityevent.Event{Kind: securityevent.RateLimited, IP: ip})
 			return "", loginFailure{status: 401, body: auth.ErrInvalidCredentials.Error()}
 		}
 	}
@@ -117,7 +138,7 @@ func (a *Authenticator) Login(ctx router.Context, body []byte) (string, error) {
 
 	normalized, err := ValidateRUT(data.Code)
 	if err != nil {
-		a.notify.Notify(auth.SecurityEvent{Type: auth.EventInvalidRUT, IP: ip})
+		a.reportEvent(securityevent.Event{Kind: securityevent.LoginFailed, IP: ip, Reason: reasonInvalidRUT})
 		if a.rateLimit != nil {
 			a.rateLimit.Fail(ip)
 		}
@@ -131,7 +152,7 @@ func (a *Authenticator) Login(ctx router.Context, body []byte) (string, error) {
 
 	identity, err := a.store.IdentityByProvider(auth.ProviderTrustedIP, normalized)
 	if err != nil {
-		a.notify.Notify(auth.SecurityEvent{Type: auth.EventUnknownRUT, IP: ip})
+		a.reportEvent(securityevent.Event{Kind: securityevent.LoginFailed, IP: ip, Reason: reasonUnknownRUT})
 		if a.rateLimit != nil {
 			a.rateLimit.Fail(ip)
 		}
@@ -139,21 +160,21 @@ func (a *Authenticator) Login(ctx router.Context, body []byte) (string, error) {
 	}
 	u, err := a.store.UserByID(identity.UserId)
 	if err != nil {
-		a.notify.Notify(auth.SecurityEvent{Type: auth.EventUnknownRUT, IP: ip})
+		a.reportEvent(securityevent.Event{Kind: securityevent.LoginFailed, IP: ip, Reason: reasonUnknownRUT})
 		if a.rateLimit != nil {
 			a.rateLimit.Fail(ip)
 		}
 		return "", loginFailure{status: 401, body: auth.ErrInvalidCredentials.Error()}
 	}
 	if u.Status != "active" {
-		a.notify.Notify(auth.SecurityEvent{Type: auth.EventNonActiveAccess, UserID: u.Id})
+		a.reportEvent(securityevent.Event{Kind: securityevent.LoginFailed, UserID: u.Id, IP: ip, Reason: reasonInactive})
 		if a.rateLimit != nil {
 			a.rateLimit.Fail(ip)
 		}
 		return "", loginFailure{status: 401, body: auth.ErrInvalidCredentials.Error()}
 	}
 	if !a.trusted.IsTrustedIP(u.Id, ip) {
-		a.notify.Notify(auth.SecurityEvent{Type: auth.EventIPMismatch, UserID: u.Id, IP: ip})
+		a.reportEvent(securityevent.Event{Kind: securityevent.LoginFailed, UserID: u.Id, IP: ip, Reason: reasonUntrusted})
 		if a.rateLimit != nil {
 			a.rateLimit.Fail(ip)
 		}
@@ -172,7 +193,7 @@ func (a *Authenticator) Mount(r router.Router) {
 		afterLogin = auth.PathAfterLogin
 	}
 
-	if a.createAdmin != nil && a.registry != nil {
+	if a.createAdmin != nil && a.hasAdmin != nil {
 		a.mountSetup(r, afterLogin)
 	}
 
@@ -190,6 +211,7 @@ func (a *Authenticator) Mount(r router.Router) {
 			ctx.WriteStatus(500)
 			return
 		}
+		a.reportEvent(securityevent.Event{Kind: securityevent.LoginSucceeded, UserID: userID, IP: auth.ClientIP(ctx, a.trustProxy)})
 		ctx.SetHeader("Location", afterLogin)
 		ctx.WriteStatus(302)
 	}).Public()
@@ -217,9 +239,9 @@ func (a *Authenticator) mountSetup(r router.Router, afterLogin string) {
 	// "the registry could not answer" (already reported here as Unavailable —
 	// reporting it a second time as a rejection would name the wrong cause).
 	open := func(ip string) (bool, error) {
-		exists, err := a.registry.HasIdentity(auth.ProviderTrustedIP)
+		exists, err := a.hasAdmin()
 		if err != nil {
-			a.notify.Notify(auth.SecurityEvent{Type: auth.EventSetupUnavailable, IP: ip})
+			a.reportEvent(securityevent.Event{Kind: securityevent.SecurityStoreFailed, IP: ip, Reason: reasonAdminRegistry})
 			return false, err
 		}
 		return !exists, nil
@@ -230,12 +252,19 @@ func (a *Authenticator) mountSetup(r router.Router, afterLogin string) {
 			ctx.WriteStatus(statusNotFound)
 			return
 		}
-		if ok, _ := open(auth.ClientIP(ctx, a.trustProxy)); !ok {
-			ctx.WriteStatus(404)
-			return
+		// From the local network every answer has one meaning (D76): pending, done, or the store did not answer.
+		ok, err := open(auth.ClientIP(ctx, a.trustProxy))
+		switch {
+		case err != nil:
+			ctx.WriteStatus(statusUnavailable)
+			ctx.Write([]byte(ErrAdminsUnreadable.Error()))
+		case ok:
+			ctx.WriteStatus(200)
+			ctx.Write([]byte(setupRequired))
+		default:
+			ctx.WriteStatus(200)
+			ctx.Write([]byte(setupDone))
 		}
-		ctx.WriteStatus(200)
-		ctx.Write([]byte(`{"required":true}`))
 	}).Public()
 
 	r.Post(auth.PathSetup, func(ctx router.Context) {
@@ -247,7 +276,7 @@ func (a *Authenticator) mountSetup(r router.Router, afterLogin string) {
 		ok, err := open(ip)
 		if !ok {
 			if err == nil {
-				a.notify.Notify(auth.SecurityEvent{Type: auth.EventSetupRejected, IP: ip})
+				a.reportEvent(securityevent.Event{Kind: securityevent.SetupRejected, IP: ip})
 			}
 			ctx.WriteStatus(404)
 			return
@@ -267,7 +296,7 @@ func (a *Authenticator) mountSetup(r router.Router, afterLogin string) {
 		// with a credential the login would later reject could never sign in.
 		normalized, err := ValidateRUT(data.Code)
 		if err != nil {
-			a.notify.Notify(auth.SecurityEvent{Type: auth.EventInvalidRUT, IP: ip})
+			a.reportEvent(securityevent.Event{Kind: securityevent.InputRejected, IP: ip, Reason: reasonInvalidRUT})
 			ctx.WriteStatus(400)
 			// Setup is the ONE place the specific reason is safe to return:
 			// the person reading it is the installer typing their own
@@ -291,7 +320,7 @@ func (a *Authenticator) mountSetup(r router.Router, afterLogin string) {
 			ctx.Write([]byte(auth.ErrNotFound.Error()))
 			return
 		}
-		a.notify.Notify(auth.SecurityEvent{Type: auth.EventSetupCompleted, UserID: identity.UserId, IP: ip})
+		a.reportEvent(securityevent.Event{Kind: securityevent.AdminCreated, UserID: identity.UserId, IP: ip})
 
 		// Signing the installer in is the proof the assignment worked: if the
 		// device binding were wrong, they would land on the login screen
@@ -308,8 +337,7 @@ func (a *Authenticator) mountSetup(r router.Router, afterLogin string) {
 var _ auth.Authenticator = (*Authenticator)(nil)
 
 // ValidateRUT normalizes and checksum-validates a Chilean RUT with the only RUT validator of the ecosystem,
-// input.NormalizeRUT, and answers auth.ErrInvalidRUT when it is not one. Both this package's Mount handler and
-// authority/credentials_lan.go (LoginLAN, RegisterLAN) call it.
+// input.NormalizeRUT, and answers auth.ErrInvalidRUT when it is not one. The login, the setup and RegisterRUT call it.
 //
 // Example: norm, err := trustedip.ValidateRUT("08.123.456-6") // "8123456-6", nil
 func ValidateRUT(rut string) (string, error) {

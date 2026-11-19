@@ -75,12 +75,13 @@ func testMountAPI(t *testing.T) {
 	db := newTestDB(t)
 	m, err := authority.New(db, auth.Config{
 		IDs:        testIDs,
+		Events:     &mockPublisher{},
 		CookieName: "test_session",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	m.Enable(emailpassword.New(m, m, m))
+	m.Enable(emailpassword.New(m, m, m.Ports().Report))
 
 	email := "user@test.com"
 	pass := "password123"
@@ -88,19 +89,16 @@ func testMountAPI(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := m.SetPassword(admin.Id, pass); err != nil {
+	if err := emailpassword.SetPassword(m, admin.Id, pass, nil); err != nil {
 		t.Fatal(err)
 	}
 
 	r := &mock.Router{}
 	m.MountAPI(r)
 
-	// Verify that all routes registered by MountAPI are public, except the caller's own profile (GET /me), which is
-	// authenticated. This module only provides pre-identity flows (login, logout, oauth) and that profile.
+	// Verify that all routes registered by MountAPI are public: this module only provides pre-identity flows (login,
+	// logout, oauth); who the caller is travels through crud (the entity me).
 	for _, info := range r.Routes() {
-		if info.Path == auth.PathMe {
-			continue
-		}
 		if !info.IsPublic() {
 			t.Errorf("Route %s %s must be .Public()", info.Method, info.Path)
 		}
@@ -166,7 +164,7 @@ func testMountAPI(t *testing.T) {
 // same response composes this with rbac.Service in its own handler.
 func testMeTool(t *testing.T) {
 	db := newTestDB(t)
-	m, _ := authority.New(db, auth.Config{IDs: testIDs})
+	m, _ := authority.New(db, auth.Config{IDs: testIDs, Events: &mockPublisher{}})
 
 	email := "tools@test.com"
 	uObj, err := m.CreateUser(email, "Tools", "")
@@ -174,19 +172,15 @@ func testMeTool(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ctx := &mock.Context{}
-	ctx.SetUserID(uObj.Id)
-	callMe(m, ctx)
-
-	var profile auth.ProfileDTO
-	if err := json.Decode(ctx.ResponseBody(), &profile); err != nil {
-		t.Fatalf("failed to decode profile: %v", err)
+	profile, err := readMe(m, uObj.Id)
+	if err != nil {
+		t.Fatalf("me: %v", err)
 	}
 
 	if profile.Id != uObj.Id || profile.Email != email {
 		t.Errorf("expected profile for %s, got %+v", email, profile)
 	}
-	if len(profile.Permissions) != 0 {
-		t.Errorf("expected no permissions from authority alone, got %v", profile.Permissions)
+	if len(profile.Grants) != 0 {
+		t.Errorf("expected no grants from authority alone, got %v", profile.Grants)
 	}
 }

@@ -6,7 +6,7 @@ import (
 )
 
 // Migrate reconciles the database schema this package owns: User, Identity,
-// LANIP, OAuthState and Session, in dependency order.
+// OAuthState and Session, in dependency order.
 //
 // It is deliberately NOT called by New. Schema reconciliation is deploy-time
 // work — running it per process start costs a network round trip per model,
@@ -26,7 +26,7 @@ import (
 //	err := authority.Migrate(db.RawConn(), db.RawConn().(ddl.Compiler))
 func Migrate(conn ddl.Execer, ddlCompiler ddl.Compiler) error {
 	models := []model.Model{
-		&User{}, &Identity{}, &LANIP{},
+		&User{}, &Identity{},
 		&OAuthState{}, &Session{},
 	}
 	sorted, err := ddl.TopologicalSort(models)
