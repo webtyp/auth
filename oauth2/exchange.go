@@ -4,6 +4,7 @@ import (
 	"webtyp.com/auth"
 	"webtyp.com/fetch"
 	"webtyp.com/json"
+	"webtyp.com/router"
 )
 
 // AuthCodeURL is the provider URL that starts the authorization-code exchange; every provider shares it.
@@ -37,7 +38,7 @@ func ExchangeCode(cfg auth.OAuthConfig, code string) (auth.OAuthToken, error) {
 	done := make(chan bool)
 
 	fetch.Post(cfg.TokenURL).
-		Header("Content-Type", "application/x-www-form-urlencoded").
+		Header(router.HeaderContentType, "application/x-www-form-urlencoded").
 		Body([]byte(body)).
 		Send(func(resp *fetch.Response, err error) {
 			defer func() { done <- true }()

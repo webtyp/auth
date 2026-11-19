@@ -85,7 +85,7 @@ func (a *Authenticator) Mount(r router.Router) {
 		afterLogin = auth.PathAfterLogin
 	}
 	r.Get(PathStart, func(ctx router.Context) {
-		ctx.SetHeader("Content-Type", "text/html; charset=utf-8")
+		ctx.SetHeader(router.HeaderContentType, "text/html; charset=utf-8")
 		ctx.WriteStatus(200)
 		html := buildSelector(a.scenarios)
 		_, _ = ctx.Write([]byte(html))

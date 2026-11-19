@@ -4,11 +4,11 @@ package authority
 
 import (
 	"encoding/json"
-	"errors"
 	"sync/atomic"
 
 	"webtyp.com/auth"
 	"webtyp.com/env"
+	"webtyp.com/fmt"
 	"webtyp.com/input"
 	"webtyp.com/router"
 	"webtyp.com/securityevent"
@@ -21,10 +21,9 @@ const (
 	msgDevAutologinPaused   = "auth: DEV_AUTOLOGIN paused after sign-out — this host shows the normal login until the server restarts:"
 	msgDevAutologinInvalid  = "auth: DEV_AUTOLOGIN is not valid JSON (one object, or a list of objects: [{\"code\":\"…\"},{\"code\":\"…\"}]) — ignored, every tab shows the normal login:"
 
-	devHostLocal   = "localhost"
-	devHostPrefix  = "user"       // credential N (N ≥ 2) signs in on userN.localhost
-	devHostSuffix  = ".localhost" // Chrome resolves *.localhost to loopback: same IP, own cookies
-	devContentJSON = "application/json"
+	devHostLocal  = "localhost"
+	devHostPrefix = "user"       // credential N (N ≥ 2) signs in on userN.localhost
+	devHostSuffix = ".localhost" // Chrome resolves *.localhost to loopback: same IP, own cookies
 )
 
 // devCredential is one entry of DEV_AUTOLOGIN and the state of its host.
@@ -65,7 +64,7 @@ func newDevAutologin(m *Module) devAutologin {
 		creds[i] = &devCredential{body: b}
 	}
 	pick := func(ctx router.Context) (*devCredential, int) {
-		i := devCredentialIndex(ctx.GetHeader("Host"), len(creds))
+		i := devCredentialIndex(ctx.GetHeader(router.HeaderHost), len(creds))
 		if i < 0 {
 			return nil, 0
 		}
@@ -134,7 +133,7 @@ func newDevAutologin(m *Module) devAutologin {
 				return
 			}
 			if m.log != nil {
-				m.log(msgDevAutologinPaused, ctx.GetHeader("Host"))
+				m.log(msgDevAutologinPaused, ctx.GetHeader(router.HeaderHost))
 			}
 		},
 		mount: func(r router.Router) {
@@ -143,7 +142,7 @@ func newDevAutologin(m *Module) devAutologin {
 					ctx.WriteStatus(404)
 					return
 				}
-				ctx.SetHeader("Content-Type", devContentJSON)
+				ctx.SetHeader(router.HeaderContentType, router.ContentTypeJSON)
 				ctx.WriteStatus(200)
 				ctx.Write(devTabHostsJSON(len(creds)))
 			}).Public()
@@ -213,7 +212,7 @@ func devItoa(n int) string {
 	return string(b[i:])
 }
 
-var errDevNotObject = errors.New("every credential must be a JSON object")
+var errDevNotObject = fmt.Err("every credential must be a JSON object")
 
 // splitDevCredentials returns the JSON objects of value: the object itself, or
 // each object of a list, byte for byte (each is replayed as the exact body the
