@@ -21,7 +21,7 @@ var LoginDataModel = model.Definition{
 var RUTLoginDataModel = model.Definition{
 	Name: "rut_login_data",
 	Fields: model.Fields{
-		{Name: "code", Type: input.Text(), NotNull: true},
+		{Name: "code", Type: input.Password(), Label: "Key", NotNull: true},
 	},
 }
 
@@ -32,8 +32,8 @@ var RUTLoginDataModel = model.Definition{
 var SetupDataModel = model.Definition{
 	Name: "setup_data",
 	Fields: model.Fields{
-		{Name: "code", Type: input.Text(), NotNull: true},
-		{Name: "name", Type: input.Text(), NotNull: true},
+		{Name: "code", Type: input.Text(), Label: "Key", NotNull: true},
+		{Name: "name", Type: input.Text(), Label: "Name", NotNull: true},
 	},
 }
 

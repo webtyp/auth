@@ -16,19 +16,15 @@ import (
 // screen applies at this door (ARCHITECTURE D78): 404 = not open here (the Internet), "required" = first setup,
 // otherwise the key form.
 const (
-	textKey           lang.Text = "Key"
 	textSignIn        lang.Text = "Sign in"
-	textName          lang.Text = "Name"
 	textCreateAdmin   lang.Text = "Create administrator"
 	textSetupFailed   lang.Text = "The administrator could not be created. Check the RUT entered."
 	textLoginDenied   lang.Text = "Access not authorized on this device"
 	textLoginSubtitle lang.Text = "Enter your key to continue"
 	textSetupSubtitle lang.Text = "First setup: create the administrator"
-	labelRUT                    = "RUT"
 	loginWrapperID              = "login-wrapper"
 	setupWrapperID              = "setup-wrapper"
 	fieldCode                   = "code"
-	fieldName                   = "name"
 )
 
 // EntryScreen is this mode's entry screen at this door: the first-setup form while no administrator exists, the key
@@ -57,12 +53,7 @@ func loginEntry(d view.BrowserDeps) (view.Entry, error) {
 	if err != nil {
 		return view.Entry{}, err
 	}
-	if inp := f.Input(fieldCode); inp != nil {
-		title(inp, lang.Translate(textKey).String(), true)
-		if m, ok := inp.(interface{ SetMasked(bool) }); ok {
-			m.SetMasked(true)
-		}
-	}
+	skipValidation(f.Input(fieldCode))
 	f.SubmitLabel(lang.Translate(textSignIn).String())
 	f.OnSubmit(func(fd model.Fielder, done func(error)) {
 		post(auth.PathLoginRUT, data, done, func() {
@@ -81,8 +72,7 @@ func setupEntry(d view.BrowserDeps) (view.Entry, error) {
 	if err != nil {
 		return view.Entry{}, err
 	}
-	title(f.Input(fieldCode), labelRUT, true)
-	title(f.Input(fieldName), lang.Translate(textName).String(), false)
+	skipValidation(f.Input(fieldCode))
 	f.SubmitLabel(lang.Translate(textCreateAdmin).String())
 	f.OnSubmit(func(fd model.Fielder, done func(error)) {
 		post(auth.PathSetup, data, done, func() {
@@ -94,12 +84,9 @@ func setupEntry(d view.BrowserDeps) (view.Entry, error) {
 	return view.Entry{Subtitle: textSetupSubtitle, Form: f.Render(), Message: message}, nil
 }
 
-// title labels an input and, when skipValidation, lets any text through (the server checks the RUT).
-func title(inp any, label string, skipValidation bool) {
-	if t, ok := inp.(interface{ SetTitle(string) }); ok {
-		t.SetTitle(label)
-	}
-	if s, ok := inp.(interface{ SetSkipValidation(bool) }); ok && skipValidation {
+// skipValidation lets any text through to the server so client-side rules do not reveal the credential format.
+func skipValidation(inp any) {
+	if s, ok := inp.(interface{ SetSkipValidation(bool) }); ok {
 		s.SetSkipValidation(true)
 	}
 }

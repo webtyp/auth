@@ -18,6 +18,7 @@ import (
 	"webtyp.com/model"
 	"webtyp.com/view"
 	"webtyp.com/webauthn"
+	"webtyp.com/widget"
 )
 
 const errStatus = "passkey: server answered "
@@ -167,14 +168,11 @@ const (
 	textSignInPasskey   lang.Text = "Sign in with a passkey"
 	textPasskeySubtitle lang.Text = "Unlock your phone or computer to continue"
 	textPasskeyFailed   lang.Text = "Your passkey could not be verified"
-	textSetupCode       lang.Text = "One-time code from the server log"
-	textSetupName       lang.Text = "Your name"
 	textCreateAdmin     lang.Text = "Create administrator"
 	textSetupSubtitle   lang.Text = "First setup: create the administrator with your passkey"
 	textSetupFailed     lang.Text = "Wrong code: check it and try again"
 	setupWrapperID                = "passkey-setup-wrapper"
 	fieldSetupCode                = "code"
-	fieldSetupName                = "name"
 )
 
 // EntryScreen is this mode's entry screen: the setup form while the server waits for its first administrator, the
@@ -189,15 +187,19 @@ func (k Mode) EntryScreen(d view.BrowserDeps) (view.Entry, bool, error) {
 		return e, err == nil, err
 	}
 	message := NewString("")
-	button := Button().Text(lang.Translate(textSignInPasskey).String()).OnClick(func(Event) {
-		go func() {
-			if err := SignIn(); err != nil {
-				message.Set(lang.Translate(textPasskeyFailed).String())
-				return
-			}
-			Navigate("")
-		}()
-	})
+	button := Button().
+		Class(widget.NameField.Class(widget.PartSubmit).String()).
+		Attr("type", "button").
+		Text(lang.Translate(textSignInPasskey).String()).
+		OnClick(func(Event) {
+			go func() {
+				if err := SignIn(); err != nil {
+					message.Set(lang.Translate(textPasskeyFailed).String())
+					return
+				}
+				Navigate("")
+			}()
+		})
 	return view.Entry{Subtitle: textPasskeySubtitle, Form: button, Message: message}, true, nil
 }
 
@@ -208,11 +210,8 @@ func setupEntry(d view.BrowserDeps) (view.Entry, error) {
 	if err != nil {
 		return view.Entry{}, err
 	}
-	if t, ok := f.Input(fieldSetupCode).(interface{ SetTitle(string) }); ok {
-		t.SetTitle(lang.Translate(textSetupCode).String())
-	}
-	if t, ok := f.Input(fieldSetupName).(interface{ SetTitle(string) }); ok {
-		t.SetTitle(lang.Translate(textSetupName).String())
+	if s, ok := f.Input(fieldSetupCode).(interface{ SetSkipValidation(bool) }); ok {
+		s.SetSkipValidation(true)
 	}
 	f.SubmitLabel(lang.Translate(textCreateAdmin).String())
 	f.OnSubmit(func(fd model.Fielder, done func(error)) {

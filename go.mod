@@ -7,17 +7,17 @@ require (
 	webtyp.com/crud v0.0.19
 	webtyp.com/crypto v0.0.30
 	webtyp.com/ddl v0.0.59
-	webtyp.com/dom v0.13.31
+	webtyp.com/dom v0.13.32
 	webtyp.com/env v0.1.3
 	webtyp.com/events v0.1.15
 	webtyp.com/fetch v0.1.33
 	webtyp.com/fmt v1.0.3
-	webtyp.com/form v0.4.68
+	webtyp.com/form v0.4.72
 	webtyp.com/html v0.0.33
 	webtyp.com/input v0.2.5
 	webtyp.com/json v0.5.40
 	webtyp.com/jwt v0.1.29
-	webtyp.com/lang v0.1.19
+	webtyp.com/lang v0.1.22
 	webtyp.com/model v0.2.26
 	webtyp.com/orm v0.12.42
 	webtyp.com/router v0.5.9
@@ -27,13 +27,14 @@ require (
 	webtyp.com/user v0.3.13
 	webtyp.com/view v0.6.91
 	webtyp.com/webauthn v0.1.16
+	webtyp.com/widget v0.6.50
 )
 
 require (
 	webtyp.com/await v0.1.2 // indirect
 	webtyp.com/calendar v0.1.0 // indirect
 	webtyp.com/color v0.1.2 // indirect
-	webtyp.com/components v0.8.75 // indirect
+	webtyp.com/components v0.8.76 // indirect
 	webtyp.com/country v0.0.2 // indirect
 	webtyp.com/css v0.4.30 // indirect
 	webtyp.com/dbus v0.1.1 // indirect
@@ -45,6 +46,5 @@ require (
 	webtyp.com/icons v0.0.42 // indirect
 	webtyp.com/keyring v0.2.9 // indirect
 	webtyp.com/msgtype v0.1.2 // indirect
-	webtyp.com/svg v0.3.30 // indirect
-	webtyp.com/widget v0.6.50 // indirect
+	webtyp.com/svg v0.3.43 // indirect
 )
