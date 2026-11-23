@@ -179,6 +179,15 @@ type SubjectStore interface {
 
 // IdentityStore is the persistence port a mode uses to resolve or register the
 // domain User/Identity behind a credential. A mode never queries *orm.DB itself.
+// GivesSignIn is an optional capability of an Authenticator: it creates the account a person signs in with from the
+// credential that mode uses (a RUT for trusted_ip), or returns the one that already has it. The app's staff module
+// calls it when a professional is saved, so the person can sign in without a second form.
+//
+//	userID, err := giver.GiveSignIn("8.123.456-6", "Dra. Ana Rojas")
+type GivesSignIn interface {
+	GiveSignIn(credential, name string) (userID string, err error)
+}
+
 type IdentityStore interface {
 	UserByID(id string) (User, error)
 	UserByEmail(email string) (User, error)

@@ -30,3 +30,31 @@ func RegisterRUT(store auth.IdentityStore, userID, rut string) error {
 func UnregisterRUT(store auth.IdentityStore, userID string) error {
 	return store.DeleteIdentity(userID, auth.ProviderTrustedIP)
 }
+
+// GiveSignIn creates the account a person signs in with by RUT (user + RUT identity), or returns the user that already
+// has that RUT (auth.GivesSignIn). The app's staff module calls it when a professional is saved.
+//
+//	userID, err := authenticator.GiveSignIn("8.123.456-6", "Dra. Ana Rojas")
+func (a *Authenticator) GiveSignIn(rut, name string) (string, error) {
+	normalized, err := ValidateRUT(rut)
+	if err != nil {
+		return "", err
+	}
+	id, err := a.store.IdentityByProvider(auth.ProviderTrustedIP, normalized)
+	if err == nil {
+		return id.UserId, nil
+	}
+	if !auth.IsNotFound(err) {
+		return "", err
+	}
+	u, err := a.store.CreateUser("", name, "")
+	if err != nil {
+		return "", err
+	}
+	if err := RegisterRUT(a.store, u.Id, normalized); err != nil {
+		return "", err
+	}
+	return u.Id, nil
+}
+
+var _ auth.GivesSignIn = (*Authenticator)(nil)

@@ -7,7 +7,7 @@ require (
 	webtyp.com/crud v0.0.19
 	webtyp.com/crypto v0.0.30
 	webtyp.com/ddl v0.0.59
-	webtyp.com/dom v0.13.32
+	webtyp.com/dom v0.13.34
 	webtyp.com/env v0.1.3
 	webtyp.com/events v0.1.15
 	webtyp.com/fetch v0.1.33
@@ -25,9 +25,9 @@ require (
 	webtyp.com/storage v0.2.8
 	webtyp.com/time v0.6.7
 	webtyp.com/user v0.3.13
-	webtyp.com/view v0.6.91
+	webtyp.com/view v0.6.95
 	webtyp.com/webauthn v0.1.16
-	webtyp.com/widget v0.6.50
+	webtyp.com/widget v0.6.52
 )
 
 require (
