@@ -31,7 +31,7 @@ require (
 	webtyp.com/fetch v0.1.33 // indirect
 	webtyp.com/filepath v0.1.3 // indirect
 	webtyp.com/files v0.0.4 // indirect
-	webtyp.com/fmt v1.0.3 // indirect
+	webtyp.com/fmt v1.0.4 // indirect
 	webtyp.com/font v0.0.5 // indirect
 	webtyp.com/html v0.0.34 // indirect
 	webtyp.com/image v0.1.16 // indirect
@@ -43,7 +43,7 @@ require (
 	webtyp.com/modfind v0.0.11 // indirect
 	webtyp.com/postgres v0.4.48 // indirect
 	webtyp.com/pwa v0.2.24 // indirect
-	webtyp.com/router v0.5.9 // indirect
+	webtyp.com/router v0.5.10 // indirect
 	webtyp.com/sitec v0.2.100 // indirect
 	webtyp.com/storage v0.2.8 // indirect
 	webtyp.com/svg v0.3.43 // indirect
