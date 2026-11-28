@@ -31,13 +31,13 @@ require (
 	webtyp.com/crypto v0.0.30
 	webtyp.com/ddl v0.0.59
 	webtyp.com/events v0.1.15
-	webtyp.com/fmt v1.0.3
+	webtyp.com/fmt v1.0.4
 	webtyp.com/form v0.4.72
 	webtyp.com/json v0.5.40
 	webtyp.com/jwt v0.1.29
 	webtyp.com/model v0.2.26
 	webtyp.com/orm v0.12.42
-	webtyp.com/router v0.5.9
+	webtyp.com/router v0.5.10
 	webtyp.com/securityevent v0.0.2
 	webtyp.com/server v0.2.130
 	webtyp.com/sitec v0.2.87
